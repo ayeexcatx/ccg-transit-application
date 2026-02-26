@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Truck, Inbox } from 'lucide-react';
 import { subDays } from 'date-fns';
+import { notifyTruckConfirmation } from '../components/notifications/createNotifications';
 
 export default function Portal() {
   const { session } = useSession();
@@ -101,6 +102,10 @@ export default function Portal() {
       confirmation_type: confType,
       confirmed_at: new Date().toISOString(),
     });
+
+    // Notify admin of truck confirmation
+    const companyName = companyMap[dispatch.company_id];
+    notifyTruckConfirmation(dispatch, truck, companyName);
   };
 
   const handleTimeEntry = (dispatch, truck, start, end) => {
