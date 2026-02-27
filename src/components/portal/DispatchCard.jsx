@@ -64,7 +64,7 @@ export default function DispatchCard({
       .sort((a, b) => new Date(b.confirmed_at || 0) - new Date(a.confirmed_at || 0));
 
   const handleConfirmTruck = (truck) => {
-    onConfirm(dispatch, truck);
+    onConfirm(dispatch, truck, currentConfType);
   };
 
   const handleTimeEntry = (truck) => {
