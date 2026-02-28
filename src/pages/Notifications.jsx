@@ -13,6 +13,15 @@ import { createPageUrl } from '@/utils';
 export default function Notifications() {
   const { session } = useSession();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  const handleNotificationClick = (n) => {
+    if (!n.read_flag) markAsReadMutation.mutate(n.id);
+    if (n.related_dispatch_id) {
+      const page = session?.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
+      navigate(createPageUrl(`${page}?dispatchId=${n.related_dispatch_id}`));
+    }
+  };
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ['notifications', session?.id],
