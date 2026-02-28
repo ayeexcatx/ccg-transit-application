@@ -43,6 +43,14 @@ export default function Notifications() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
+  const handleNotificationClick = (n) => {
+    if (!n.read_flag) markAsReadMutation.mutate(n.id);
+    if (n.related_dispatch_id) {
+      const targetPage = session?.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
+      navigate(createPageUrl(`${targetPage}?dispatchId=${n.related_dispatch_id}`));
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.read_flag).length;
 
   return (
