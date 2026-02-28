@@ -250,6 +250,16 @@ export default function AdminDispatches() {
     }
   };
 
+  // Auto-open preview for dispatch from notification link
+  useEffect(() => {
+    if (!targetDispatchId || didAutoScroll.current || dispatches.length === 0) return;
+    const found = dispatches.find(d => d.id === targetDispatchId);
+    if (found) {
+      setPreviewDispatch(found);
+    }
+    didAutoScroll.current = true;
+  }, [targetDispatchId, dispatches]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
