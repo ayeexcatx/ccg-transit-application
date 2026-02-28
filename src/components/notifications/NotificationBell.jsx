@@ -78,7 +78,7 @@ export default function NotificationBell({ session }) {
               <div
                 key={n.id}
                 className={`p-3 border-b hover:bg-slate-50 cursor-pointer ${!n.read_flag ? 'bg-blue-50/30' : ''}`}
-                onClick={() => !n.read_flag && markAsReadMutation.mutate(n.id)}
+                onClick={() => handleNotificationClick(n)}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
