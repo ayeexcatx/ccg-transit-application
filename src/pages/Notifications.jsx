@@ -5,23 +5,14 @@ import { useSession } from '@/components/session/SessionContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bell, CheckCircle2 } from 'lucide-react';
+import { Bell, CheckCircle2, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { useNavigate } from 'react-router-dom';
 
 export default function Notifications() {
   const { session } = useSession();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-
-  const handleNotificationClick = (n) => {
-    if (!n.read_flag) markAsReadMutation.mutate(n.id);
-    if (n.related_dispatch_id) {
-      const page = session?.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
-      navigate(createPageUrl(`${page}?dispatchId=${n.related_dispatch_id}`));
-    }
-  };
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ['notifications', session?.id],
@@ -92,7 +83,7 @@ export default function Notifications() {
             <Card 
               key={n.id} 
               className={`hover:shadow-sm transition-shadow cursor-pointer ${!n.read_flag ? 'border-blue-200 bg-blue-50/30' : ''}`}
-              onClick={() => handleNotificationClick(n)}
+              onClick={() => !n.read_flag && markAsReadMutation.mutate(n.id)}
             >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-3">
