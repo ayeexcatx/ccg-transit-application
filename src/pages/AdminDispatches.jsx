@@ -327,7 +327,8 @@ export default function AdminDispatches() {
       ) : (
         <div className="grid gap-3">
           {filtered.map(d => (
-            <Card key={d.id} className="hover:shadow-sm transition-shadow">
+            <div key={d.id} ref={el => dispatchRefs.current[d.id] = el} className="rounded-lg transition-all duration-500">
+            <Card className="hover:shadow-sm transition-shadow">
               <CardContent className="p-4 sm:p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
