@@ -62,19 +62,37 @@ export default function Portal() {
       const existing = timeEntries.find(te =>
         te.dispatch_id === dispatch.id && te.truck_number === truck && te.access_code_id === session.id
       );
+      let savedEntry;
       if (existing) {
-        return base44.entities.TimeEntry.update(existing.id, {
+        savedEntry = await base44.entities.TimeEntry.update(existing.id, {
           start_time: start || existing.start_time,
           end_time: end || existing.end_time,
         });
+      } else {
+        savedEntry = await base44.entities.TimeEntry.create({
+          dispatch_id: dispatch.id,
+          access_code_id: session.id,
+          truck_number: truck,
+          start_time: start,
+          end_time: end,
+        });
       }
-      return base44.entities.TimeEntry.create({
-        dispatch_id: dispatch.id,
-        access_code_id: session.id,
-        truck_number: truck,
-        start_time: start,
-        end_time: end,
-      });
+
+      // Auto-archive if both times set and dispatch date is today or past
+      const effectiveStart = start || existing?.start_time;
+      const effectiveEnd = end || existing?.end_time;
+      const dispatchDate = dispatch.date ? startOfDay(new Date(dispatch.date)) : null;
+      const isPastOrToday = dispatchDate && dispatchDate <= today;
+      if (effectiveStart && effectiveEnd && isPastOrToday && !dispatch.archived_flag) {
+        await base44.entities.Dispatch.update(dispatch.id, {
+          archived_flag: true,
+          archived_at: new Date().toISOString(),
+          archived_reason: 'Time logged',
+        });
+        queryClient.invalidateQueries({ queryKey: ['portal-dispatches', session?.company_id] });
+      }
+
+      return savedEntry;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['time-entries'] }),
   });
