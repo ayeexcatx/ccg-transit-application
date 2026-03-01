@@ -201,8 +201,11 @@ export default function Portal() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="bg-slate-100">
-          <TabsTrigger value="active" className="text-xs">
-            Active ({activeDispatches.length})
+          <TabsTrigger value="today" className="text-xs">
+            Today ({todayDispatches.length})
+          </TabsTrigger>
+          <TabsTrigger value="upcoming" className="text-xs">
+            Upcoming ({upcomingDispatches.length})
           </TabsTrigger>
           <TabsTrigger value="history" className="text-xs">
             History ({historyDispatches.length})
@@ -214,7 +217,7 @@ export default function Portal() {
         <div className="text-center py-16">
           <Inbox className="h-12 w-12 text-slate-300 mx-auto mb-3" />
           <p className="text-sm text-slate-500">
-            {tab === 'active' ? 'No active dispatches' : 'No history in the last 30 days'}
+            {tab === 'today' ? 'No dispatches today' : tab === 'upcoming' ? 'No upcoming dispatches' : 'No history'}
           </p>
         </div>
       ) : (
