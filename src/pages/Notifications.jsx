@@ -29,6 +29,14 @@ export default function Notifications() {
       }, '-created_date', 100);
     },
     enabled: !!session,
+    refetchInterval: 30000,
+  });
+
+  const { data: confirmations = [] } = useQuery({
+    queryKey: ['confirmations-notif-page'],
+    queryFn: () => base44.entities.Confirmation.list('-confirmed_at', 500),
+    enabled: session?.code_type === 'CompanyOwner',
+    refetchInterval: 30000,
   });
 
   const markAsReadMutation = useMutation({
