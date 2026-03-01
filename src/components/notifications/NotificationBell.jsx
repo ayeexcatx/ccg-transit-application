@@ -12,6 +12,7 @@ import {
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { Link, useNavigate } from 'react-router-dom';
+import NotificationStatusBadge from './NotificationStatusBadge';
 
 export default function NotificationBell({ session }) {
   const queryClient = useQueryClient();
