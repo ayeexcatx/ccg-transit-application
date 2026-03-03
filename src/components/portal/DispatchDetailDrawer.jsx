@@ -280,7 +280,7 @@ export default function DispatchDetailDrawer({
           )}
 
           {/* Actions */}
-          {dispatch.status !== 'Canceled' && (
+          {dispatch.status !== 'Canceled' && (isOwner || isAdmin) && (
             <div className="space-y-4 pt-2 border-t border-slate-100">
 
               {/* CompanyOwner confirm */}
@@ -343,36 +343,40 @@ export default function DispatchDetailDrawer({
                 </div>
               )}
 
-              {/* Time Entry (Truck only) */}
-              {session.code_type === 'Truck' && singleTruck && (
+              {/* Time Log — CompanyOwner (editable) */}
+              {isOwner && myTrucks.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Log Time</p>
-                  {existingEntry && (
-                    <p className="text-xs text-slate-500 mb-2">
-                      Logged: {existingEntry.start_time || '—'} → {existingEntry.end_time || '—'}
-                    </p>
-                  )}
-                  <div className="flex gap-2">
-                    <Input
-                      type="time"
-                      value={startTime}
-                      onChange={e => setStartTime(e.target.value)}
-                      className="bg-white text-sm"
-                    />
-                    <Input
-                      type="time"
-                      value={endTime}
-                      onChange={e => setEndTime(e.target.value)}
-                      className="bg-white text-sm"
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={() => handleTimeEntry(singleTruck)}
-                      disabled={!startTime && !endTime}
-                      className="shrink-0"
-                    >
-                      <Clock className="h-4 w-4" />
-                    </Button>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Time Log</p>
+                  <div className="space-y-2">
+                    {myTrucks.map(truck => (
+                      <TruckTimeRow
+                        key={truck}
+                        truck={truck}
+                        dispatch={dispatch}
+                        timeEntries={timeEntries}
+                        onTimeEntry={onTimeEntry}
+                        readOnly={false}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Time Log — Admin (read-only) */}
+              {isAdmin && (dispatch.trucks_assigned || []).length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Time Log (Read-only)</p>
+                  <div className="space-y-1.5">
+                    {(dispatch.trucks_assigned || []).map(truck => (
+                      <TruckTimeRow
+                        key={truck}
+                        truck={truck}
+                        dispatch={dispatch}
+                        timeEntries={timeEntries}
+                        onTimeEntry={() => {}}
+                        readOnly={true}
+                      />
+                    ))}
                   </div>
                 </div>
               )}
