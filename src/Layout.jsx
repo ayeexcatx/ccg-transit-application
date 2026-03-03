@@ -119,6 +119,9 @@ function LayoutInner({ children, currentPageName }) {
             <Link to={createPageUrl('AdminTemplateNotes')}>
               <Button variant="ghost" size="sm" className="text-xs whitespace-nowrap">Notes</Button>
             </Link>
+            <Link to={createPageUrl('AdminAnnouncements')}>
+              <Button variant="ghost" size="sm" className="text-xs whitespace-nowrap">Announcements</Button>
+            </Link>
           </div>
         )}
       </header>
