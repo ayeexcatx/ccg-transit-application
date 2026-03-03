@@ -84,7 +84,7 @@ export default function Portal() {
       // Auto-archive if both times set and dispatch date is today or past
       const effectiveStart = start || existing?.start_time;
       const effectiveEnd = end || existing?.end_time;
-      const dispatchDate = dispatch.date ? startOfDay(new Date(dispatch.date)) : null;
+      const dispatchDate = dispatch.date ? startOfDay(parseISO(dispatch.date)) : null;
       const isPastOrToday = dispatchDate && dispatchDate <= today;
       if (effectiveStart && effectiveEnd && isPastOrToday && !dispatch.archived_flag) {
         await base44.entities.Dispatch.update(dispatch.id, {
