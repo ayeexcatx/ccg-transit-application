@@ -262,6 +262,12 @@ export default function AdminDispatches() {
     didAutoScroll.current = true;
     setPreviewDispatch(target);
 
+    // Mark notification as read after opening
+    if (targetNotificationId) {
+      base44.entities.Notification.update(targetNotificationId, { read_flag: true })
+        .then(() => queryClient.invalidateQueries({ queryKey: ['notifications'] }));
+    }
+
     setTimeout(() => {
       const el = dispatchRefs.current[targetDispatchId];
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
