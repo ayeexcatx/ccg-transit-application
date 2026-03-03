@@ -6,7 +6,7 @@ import DispatchCard from '../components/portal/DispatchCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Truck, Inbox } from 'lucide-react';
-import { format, isToday, isBefore, startOfDay } from 'date-fns';
+import { isToday, isBefore, startOfDay } from 'date-fns';
 import { notifyTruckConfirmation, resolveOwnerNotificationIfComplete } from '../components/notifications/createNotifications';
 
 function myTrucksForHistory(dispatch, timeEntries, session) {
