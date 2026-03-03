@@ -65,13 +65,6 @@ export default function Home() {
     enabled: !!session?.company_id,
   });
 
-  const { data: confirmations = [] } = useQuery({
-    queryKey: ['confirmations'],
-    queryFn: () => base44.entities.Confirmation.list('-confirmed_at', 500),
-    enabled: !!session,
-    refetchInterval: 30000,
-  });
-
   const { data: allAnnouncements = [] } = useQuery({
     queryKey: ['announcements'],
     queryFn: () => base44.entities.Announcement.filter({ active_flag: true }, 'priority', 50),
