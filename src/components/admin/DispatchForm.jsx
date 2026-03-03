@@ -113,6 +113,9 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
       }
     }
 
+    // Ensure date is stored as plain YYYY-MM-DD string (no Date conversion)
+    finalForm.date = form.date;
+
     const oldStatus = dispatch && !dispatch._isCopy ? dispatch.status : null;
     const newStatus = finalForm.status;
 
@@ -154,6 +157,7 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
         </div>
         <div>
           <Label>Date *</Label>
+          {/* value is kept as YYYY-MM-DD string — no Date object conversion */}
           <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
         </div>
         <div>
@@ -215,14 +219,14 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
               <Label>Notes</Label>
               <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
-          </div>
 
-          {isCanceled && (
-            <div>
-              <Label>Cancellation Reason *</Label>
-              <Textarea value={form.canceled_reason} onChange={e => setForm({ ...form, canceled_reason: e.target.value })} rows={2} placeholder="Reason for cancellation..." />
-            </div>
-          )}
+            {isCanceled && (
+              <div>
+                <Label>Cancellation Reason *</Label>
+                <Textarea value={form.canceled_reason} onChange={e => setForm({ ...form, canceled_reason: e.target.value })} rows={2} placeholder="Reason for cancellation..." />
+              </div>
+            )}
+          </div>
         </>
       )}
 
