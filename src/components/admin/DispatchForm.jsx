@@ -58,7 +58,7 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
   const addAssignment = () => {
     setForm(prev => ({
       ...prev,
-      additional_assignments: [...prev.additional_assignments, { job_number: '', start_time: '', start_location: '', instructions: '' }]
+      additional_assignments: [...prev.additional_assignments, { job_number: '', start_time: '', start_location: '', instructions: '', notes: '', toll_status: '' }]
     }));
   };
 
