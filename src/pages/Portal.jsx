@@ -216,6 +216,12 @@ export default function Portal() {
     didAutoOpen.current = true;
     setDrawerDispatchId(targetDispatchId);
 
+    // Mark notification as read after drawer opens
+    if (targetNotificationId) {
+      base44.entities.Notification.update(targetNotificationId, { read_flag: true })
+        .then(() => queryClient.invalidateQueries({ queryKey: ['notifications'] }));
+    }
+
     setTimeout(() => {
       const el = dispatchRefs.current[targetDispatchId];
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
