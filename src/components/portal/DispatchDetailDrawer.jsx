@@ -165,14 +165,33 @@ export default function DispatchDetailDrawer({
               {(dispatch.additional_assignments || []).length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Additional Assignments</p>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {dispatch.additional_assignments.map((a, i) => (
-                      <div key={i} className="bg-slate-50 rounded-lg border border-slate-200 p-3 text-sm">
-                        <div className="flex items-center gap-2 text-slate-600 mb-1">
-                          <Clock className="h-3.5 w-3.5 text-slate-400" />{a.start_time}
-                          <MapPin className="h-3.5 w-3.5 text-slate-400 ml-2" />{a.start_location}
+                      <div key={i} className={`rounded-lg border border-slate-200 p-3 text-sm ${i % 2 === 0 ? 'bg-slate-50' : 'bg-blue-50/40'}`}>
+                        <p className="text-xs font-semibold text-slate-500 mb-2">Assignment {i + 2}</p>
+                        <div className="space-y-1.5">
+                          {a.job_number && (
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                              <span>Job #{a.job_number}</span>
+                            </div>
+                          )}
+                          {a.start_time && (
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                              <span>{a.start_time}</span>
+                            </div>
+                          )}
+                          {a.start_location && (
+                            <div className="flex items-start gap-2 text-slate-600">
+                              <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                              <span className="whitespace-pre-wrap">{a.start_location}</span>
+                            </div>
+                          )}
+                          {a.instructions && (
+                            <p className="text-xs text-slate-500 whitespace-pre-wrap mt-1 pl-1">{a.instructions}</p>
+                          )}
                         </div>
-                        {a.instructions && <p className="text-xs text-slate-500 whitespace-pre-wrap mt-1">{a.instructions}</p>}
                       </div>
                     ))}
                   </div>
