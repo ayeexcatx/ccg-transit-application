@@ -47,10 +47,12 @@ export default function NotificationBell({ session }) {
   });
 
   const handleNotificationClick = (n) => {
-    if (!n.read_flag) markAsReadMutation.mutate(n.id);
     if (n.related_dispatch_id) {
       const targetPage = session.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
-      navigate(createPageUrl(`${targetPage}?dispatchId=${n.related_dispatch_id}`));
+      const notifParam = !n.read_flag ? `&notificationId=${n.id}` : '';
+      navigate(createPageUrl(`${targetPage}?dispatchId=${n.related_dispatch_id}${notifParam}`));
+    } else {
+      if (!n.read_flag) markAsReadMutation.mutate(n.id);
     }
   };
 
