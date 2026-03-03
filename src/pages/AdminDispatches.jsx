@@ -12,7 +12,7 @@ import {
   Plus, Pencil, Trash2, Copy, FileText, Clock, MapPin,
   Sun, Moon, Truck, Filter, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, History, Archive, ArchiveX
 } from 'lucide-react';
-import { format, startOfDay } from 'date-fns';
+import { format, parseISO, startOfDay } from 'date-fns';
 import { getDispatchBucket } from '../components/portal/dispatchBuckets';
 import DispatchForm from '../components/admin/DispatchForm';
 import DispatchDetailDrawer from '../components/portal/DispatchDetailDrawer';
@@ -167,7 +167,6 @@ export default function AdminDispatches() {
 
   const openDrawer = async (d) => {
     setPreviewDispatch(d);
-    // Fetch dispatch-specific confirmations and time entries
     const [confs, times] = await Promise.all([
       base44.entities.Confirmation.filter({ dispatch_id: d.id }, '-confirmed_at', 100),
       base44.entities.TimeEntry.filter({ dispatch_id: d.id }, '-created_date', 100),
@@ -222,7 +221,7 @@ export default function AdminDispatches() {
   const upcomingDispatches = useMemo(() => filtered
     .filter(d => getDispatchBucket(d) === 'upcoming')
     .sort((a, b) => {
-      const dd = new Date(a.date) - new Date(b.date);
+      const dd = a.date.localeCompare(b.date);
       if (dd !== 0) return dd;
       return (a.start_time || 'zzz').localeCompare(b.start_time || 'zzz');
     }), [filtered]);
@@ -234,7 +233,7 @@ export default function AdminDispatches() {
 
   const historyDispatches = useMemo(() => filtered
     .filter(d => getDispatchBucket(d) === 'history')
-    .sort((a, b) => new Date(b.date) - new Date(a.date)),
+    .sort((a, b) => b.date.localeCompare(a.date)),
   [filtered]);
 
   const currentList = tab === 'upcoming' ? upcomingDispatches : tab === 'today' ? todayDispatches : historyDispatches;
@@ -271,7 +270,6 @@ export default function AdminDispatches() {
   };
 
   const handleDeleteConfirm = () => {
-    // Find the current session's AccessCode record to compare the actual code value
     const sessionCode = accessCodes.find(ac => ac.id === session?.id);
     if (!sessionCode || sessionCode.code !== deleteCode || sessionCode.code_type !== 'Admin') {
       setDeleteError('Invalid admin code. Please try again.');
@@ -289,7 +287,6 @@ export default function AdminDispatches() {
     const target = dispatches.find(d => d.id === targetDispatchId);
     if (!target) { didAutoScroll.current = true; return; }
 
-    // Switch to correct tab
     const inUpcoming = upcomingDispatches.some(d => d.id === targetDispatchId);
     const inToday = todayDispatches.some(d => d.id === targetDispatchId);
     const correctTab = inUpcoming ? 'upcoming' : inToday ? 'today' : 'history';
@@ -313,7 +310,6 @@ export default function AdminDispatches() {
     if (editing && !editing._isCopy) {
       saveMutation.mutate(formData);
     } else {
-      // Creating new (or copy)
       setEditing(null);
       saveMutation.mutate(formData);
     }
@@ -403,7 +399,7 @@ export default function AdminDispatches() {
                         {d.shift_time}
                       </span>
                       <span className="text-xs text-slate-500">
-                        {d.date && format(new Date(d.date), 'MMM d, yyyy')}
+                        {d.date && format(parseISO(d.date), 'MMM d, yyyy')}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 text-sm text-slate-700 flex-wrap">
@@ -525,8 +521,6 @@ export default function AdminDispatches() {
         onTimeEntry={() => {}}
         companyName={previewDispatch ? companyMap[previewDispatch.company_id] : ''}
       />
-
-
     </div>
   );
 }
