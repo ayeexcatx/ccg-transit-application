@@ -519,12 +519,7 @@ export default function AdminDispatches() {
         companyName={previewDispatch ? companyMap[previewDispatch.company_id] : ''}
       />
 
-      {/* Confirmations panel as secondary dialog triggered from drawer — kept inline for now */}
-      {previewDispatch && (
-        <Dialog open={false}>
-          <DialogContent />
-        </Dialog>
-      )}
+
     </div>
   );
 }
