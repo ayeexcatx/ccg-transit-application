@@ -282,15 +282,15 @@ export default function AdminDispatches() {
     const target = dispatches.find(d => d.id === targetDispatchId);
     if (!target) { didAutoScroll.current = true; return; }
 
-    // Clear status filter if it would hide the dispatch
-    if (filters.status !== 'all' && filters.status !== target.status) {
-      setFilters(f => ({ ...f, status: 'all' }));
-    }
+    // Switch to correct tab
+    const inUpcoming = upcomingDispatches.some(d => d.id === targetDispatchId);
+    const inToday = todayDispatches.some(d => d.id === targetDispatchId);
+    const correctTab = inUpcoming ? 'upcoming' : inToday ? 'today' : 'history';
+    setTab(correctTab);
 
     didAutoScroll.current = true;
     setPreviewDispatch(target);
 
-    // Mark notification as read after opening
     if (targetNotificationId) {
       base44.entities.Notification.update(targetNotificationId, { read_flag: true })
         .then(() => queryClient.invalidateQueries({ queryKey: ['notifications'] }));
