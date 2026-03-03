@@ -23,14 +23,18 @@ const tollColors = {
 
 const DispatchCard = React.forwardRef(function DispatchCard({
   dispatch, session, confirmations, timeEntries, templateNotes,
-  onConfirm, onTimeEntry, companyName, forceExpanded
+  onConfirm, onTimeEntry, companyName, forceOpen, onDrawerClose
 }, ref) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [expanded, setExpanded] = useState(false);
 
   React.useEffect(() => {
-    if (forceExpanded) setDrawerOpen(true);
-  }, [forceExpanded]);
+    if (forceOpen) setDrawerOpen(true);
+  }, [forceOpen]);
+
+  const handleClose = () => {
+    setDrawerOpen(false);
+    if (onDrawerClose) onDrawerClose();
+  };
 
   const myTrucks = (session.allowed_trucks || []).filter(t =>
     (dispatch.trucks_assigned || []).includes(t)
