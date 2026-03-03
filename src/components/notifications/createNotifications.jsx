@@ -30,8 +30,7 @@ export async function notifyDispatchChange(dispatch, oldStatus, newStatus, compa
       Canceled: 'Canceled',
     };
     const statusText = statusLabels[newStatus] || newStatus;
-    const isNew = !oldStatus;
-    const titlePrefix = isNew ? 'New Dispatch' : `Dispatch ${statusText}`;
+    const titlePrefix = `Dispatch ${statusText}`;
 
     for (const ac of affectedOwnerCodes) {
       const dedupKey = `${dispatch.id}:${newStatus}`;
@@ -51,12 +50,23 @@ export async function notifyDispatchChange(dispatch, oldStatus, newStatus, compa
         (ac.allowed_trucks || []).includes(t)
       );
 
+      // Build truck summary: show list if ≤3, otherwise count
+      const truckSummary = relevantTrucks.length <= 3
+        ? `Trucks: ${relevantTrucks.join(', ')}`
+        : `${relevantTrucks.length} trucks assigned`;
+
+      const message = [
+        `${dispatch.date} · ${dispatch.shift_time} shift · ${statusText}`,
+        dispatch.client_name ? dispatch.client_name : null,
+        truckSummary,
+      ].filter(Boolean).join(' | ');
+
       await base44.entities.Notification.create({
         recipient_type: 'AccessCode',
         recipient_access_code_id: ac.id,
         recipient_company_id: company.id,
         title: titlePrefix,
-        message: `Dispatch for ${dispatch.date} (${dispatch.shift_time} shift) — ${statusText}${dispatch.client_name ? ` | ${dispatch.client_name}` : ''}`,
+        message,
         related_dispatch_id: dispatch.id,
         read_flag: false,
         dispatch_status_key: dedupKey,
@@ -111,8 +121,8 @@ export async function notifyTruckConfirmation(dispatch, truckNumber, companyName
   try {
     await base44.entities.Notification.create({
       recipient_type: 'Admin',
-      title: 'Truck Confirmed Receipt',
-      message: `Truck ${truckNumber} confirmed dispatch for ${dispatch.date} (${dispatch.shift_time} shift)${dispatch.job_number ? ` - Job #${dispatch.job_number}` : ''}${companyName ? ` (${companyName})` : ''}`,
+      title: `Truck ${truckNumber} Confirmed`,
+      message: `${dispatch.date} · ${dispatch.shift_time} shift · ${dispatch.status}${companyName ? ` | ${companyName}` : ''}${dispatch.client_name ? ` | ${dispatch.client_name}` : ''}`,
       related_dispatch_id: dispatch.id,
       read_flag: false
     });
