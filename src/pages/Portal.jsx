@@ -200,33 +200,34 @@ export default function Portal() {
 
   useEffect(() => {
     if (!targetDispatchId || dispatches.length === 0) return;
-    if (lastOpenedIdRef.current === targetDispatchId) return;
 
     const target = dispatches.find(d => d.id === targetDispatchId);
-    if (!target) { lastOpenedIdRef.current = targetDispatchId; return; }
+    if (!target) return;
 
     const filteredTarget = filteredDispatches.find(d => d.id === targetDispatchId);
-    if (!filteredTarget) { lastOpenedIdRef.current = targetDispatchId; return; }
+    if (!filteredTarget) return;
 
     const inUpcoming = upcomingDispatches.some(d => d.id === targetDispatchId);
     const inToday = todayDispatches.some(d => d.id === targetDispatchId);
     const inHistory = historyDispatches.some(d => d.id === targetDispatchId);
 
     const correctTab = inUpcoming ? 'upcoming' : inToday ? 'today' : inHistory ? 'history' : null;
-    if (!correctTab) { lastOpenedIdRef.current = targetDispatchId; return; }
+    if (!correctTab) return;
 
     if (tab !== correctTab) {
       setTab(correctTab);
       return;
     }
 
-    lastOpenedIdRef.current = targetDispatchId;
-    setDrawerDispatchId(targetDispatchId);
-
+    // Close then re-open to force remount even if same id was already open
+    setDrawerDispatchId(null);
     setTimeout(() => {
-      const el = dispatchRefs.current[targetDispatchId];
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
+      setDrawerDispatchId(targetDispatchId);
+      setTimeout(() => {
+        const el = dispatchRefs.current[targetDispatchId];
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }, 0);
   }, [targetDispatchId, filteredDispatches, tab, upcomingDispatches, todayDispatches, historyDispatches]);
 
   return (
