@@ -174,8 +174,6 @@ export default function Home() {
                 <p className="text-sm text-slate-400 text-center py-4">No actions needed</p>
               ) : (
                 actionItems.map(({ notification: n, dispatch: d }) => {
-                  const trucks = d ? (d.trucks_assigned || []).filter(t => allowedTrucks.includes(t)) : [];
-                  const truckLabel = trucks.length <= 2 ? trucks.join(', ') : `${trucks.length} trucks`;
                   return (
                     <div
                       key={n.id}
@@ -184,29 +182,8 @@ export default function Home() {
                     >
                       <Bell className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                          {d && (
-                            <Badge className={`${statusColors[d.status]} border text-xs`}>{d.status}</Badge>
-                          )}
-                          {d?.date && (
-                            <span className="text-xs text-slate-500">
-                              {format(parseISO(dateOnly(d.date)), 'MMM d')}
-                              {d.shift_time === 'Day'
-                                ? <Sun className="h-3 w-3 text-amber-400 inline ml-1" />
-                                : <Moon className="h-3 w-3 text-slate-400 inline ml-1" />}
-                            </span>
-                          )}
-                        </div>
-                        {d?.client_name && (
-                          <p className="text-sm font-medium text-slate-800 truncate">{d.client_name}</p>
-                        )}
-                        {trucks.length > 0 && (
-                          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                            <Truck className="h-3 w-3" />
-                            {truckLabel}
-                          </p>
-                        )}
-                        <p className="text-xs font-medium text-blue-600 mt-1">Confirm receipt →</p>
+                        <p className="text-sm font-semibold text-slate-800 truncate">{n.title}</p>
+                        <p className="text-xs text-slate-600 mt-0.5 line-clamp-2">{n.message}</p>
                       </div>
                       <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
                     </div>
