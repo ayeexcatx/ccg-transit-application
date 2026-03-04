@@ -86,6 +86,19 @@ function LayoutInner({ children, currentPageName }) {
                 </Link>
               </nav>
             )}
+            {isOwner && (
+              <nav className="hidden md:flex items-center gap-1 mr-4">
+                <Link to={createPageUrl('Home')}>
+                  <Button variant={isActive('Home') ? 'secondary' : 'ghost'} size="sm" className="text-xs">Home</Button>
+                </Link>
+                <Link to={createPageUrl('Portal')}>
+                  <Button variant={isActive('Portal') ? 'secondary' : 'ghost'} size="sm" className="text-xs">Dispatches</Button>
+                </Link>
+                <Link to={createPageUrl('Notifications')}>
+                  <Button variant={isActive('Notifications') ? 'secondary' : 'ghost'} size="sm" className="text-xs">Notifications</Button>
+                </Link>
+              </nav>
+            )}
             {(isAdmin || session.code_type === 'CompanyOwner') && (
               <NotificationBell session={session} />
             )}
