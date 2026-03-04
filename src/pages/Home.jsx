@@ -111,15 +111,19 @@ export default function Home() {
     const dispatchMap = {};
     dispatches.forEach(d => { dispatchMap[d.id] = d; });
 
-    const unread = notifications.filter(n => !n.read_flag && n.related_dispatch_id);
+    const unread = notifications.filter(n => !n.read_flag);
     return unread.slice(0, 8).map(n => ({
       notification: n,
-      dispatch: dispatchMap[n.related_dispatch_id] || null,
+      dispatch: n.related_dispatch_id ? (dispatchMap[n.related_dispatch_id] || null) : null,
     }));
   }, [notifications, dispatches]);
 
   const handleActionClick = (n) => {
-    navigate(createPageUrl(`Portal?dispatchId=${n.related_dispatch_id}`));
+    if (n.related_dispatch_id) {
+      navigate(createPageUrl(`Portal?dispatchId=${n.related_dispatch_id}`));
+    } else {
+      navigate(createPageUrl('Notifications'));
+    }
   };
 
   const priorityBg = { 1: 'bg-red-50 border-red-200', 2: 'bg-orange-50 border-orange-200', 3: 'bg-yellow-50 border-yellow-200', 4: 'bg-blue-50 border-blue-200', 5: 'bg-slate-50 border-slate-200' };
@@ -156,8 +160,8 @@ export default function Home() {
             <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-red-500" />
               Action Needed
-              {actionItems.length > 0 && (
-                <Badge className="bg-red-500 text-white text-xs px-1.5 py-0">{actionItems.length}</Badge>
+              {unreadCount > 0 && (
+                <Badge className="bg-red-500 text-white text-xs px-1.5 py-0">{unreadCount}</Badge>
               )}
             </h3>
             <Link to={createPageUrl('Notifications')} className="text-xs text-slate-400 hover:text-slate-600">
