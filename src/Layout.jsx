@@ -117,6 +117,21 @@ function LayoutInner({ children, currentPageName }) {
           </div>
         </div>
 
+        {/* Mobile nav for company owner */}
+        {isOwner && (
+          <div className="md:hidden border-t border-slate-100 px-4 py-2 flex gap-1 overflow-x-auto">
+            <Link to={createPageUrl('Home')}>
+              <Button variant={isActive('Home') ? 'secondary' : 'ghost'} size="sm" className="text-xs whitespace-nowrap">Home</Button>
+            </Link>
+            <Link to={createPageUrl('Portal')}>
+              <Button variant={isActive('Portal') ? 'secondary' : 'ghost'} size="sm" className="text-xs whitespace-nowrap">Dispatches</Button>
+            </Link>
+            <Link to={createPageUrl('Notifications')}>
+              <Button variant={isActive('Notifications') ? 'secondary' : 'ghost'} size="sm" className="text-xs whitespace-nowrap">Notifications</Button>
+            </Link>
+          </div>
+        )}
+
         {/* Mobile nav for admin */}
         {isAdmin && (
           <div className="md:hidden border-t border-slate-100 px-4 py-2 flex gap-1 overflow-x-auto">
