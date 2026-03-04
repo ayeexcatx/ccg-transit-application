@@ -25,7 +25,6 @@ export default function Portal() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const targetDispatchId = urlParams.get('dispatchId');
-  const targetNotificationId = urlParams.get('notificationId');
 
   const { data: dispatches = [] } = useQuery({
     queryKey: ['portal-dispatches', session?.company_id],
