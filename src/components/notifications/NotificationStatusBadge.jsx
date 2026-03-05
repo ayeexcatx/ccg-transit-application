@@ -13,7 +13,8 @@ export default function NotificationStatusBadge({ notification, confirmations = 
   // Parse the status from dedup key: "{dispatch_id}:{status}"
   const dispatchId = notification.related_dispatch_id;
   const dedupKey = notification.dispatch_status_key || '';
-  const status = dedupKey.split(':').slice(1).join(':'); // everything after first ":"
+  const parts = dedupKey.split(':');
+  const status = parts.length >= 2 ? parts[1] : '';
 
   if (!dispatchId || !status) return null;
 
