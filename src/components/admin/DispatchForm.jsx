@@ -170,10 +170,6 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
               <Label>Client Name</Label>
               <Input value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
             </div>
-            <div>
-              <Label>Job Number</Label>
-              <Input value={form.job_number} onChange={(e) => setForm({ ...form, job_number: e.target.value })} />
-            </div>
           </>
         }
       </div>
@@ -183,7 +179,11 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
           {/* Assignment 1 — primary */}
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Assignment 1 (Primary)</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs">Job Number</Label>
+                <Input placeholder="Job #" value={form.job_number || ''} onChange={(e) => setForm({ ...form, job_number: e.target.value })} />
+              </div>
               <div>
                 <Label>Start Time {isFullDispatch && '(recommended)'}</Label>
                 <Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
