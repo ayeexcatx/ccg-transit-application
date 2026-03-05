@@ -43,13 +43,13 @@ export async function notifyDispatchChange(dispatch, oldStatus, newStatus, compa
     if (!affectedOwnerCodes || affectedOwnerCodes.length === 0) return;
 
     const statusLabels = {
-      Confirmed: 'Confirmed (details to follow)',
-      Dispatched: 'Dispatched',
-      Amended: 'Amended',
-      Canceled: 'Canceled',
+      Schedule: 'Schedule (details to follow)',
+      Dispatch: 'Dispatch',
+      Amend: 'Amend',
+      Cancel: 'Cancel',
     };
     const statusText = statusLabels[newStatus] || newStatus;
-    const titlePrefix = `Dispatch ${statusText}`;
+    const titlePrefix = `Status: ${statusText}`;
 
     for (const ac of affectedOwnerCodes) {
       const dedupKey = `${dispatch.id}:${newStatus}:${ac.id}`;

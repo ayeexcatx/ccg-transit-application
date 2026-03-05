@@ -160,9 +160,9 @@ export default function DispatchDetailDrawer({
         <div className="px-5 py-5 space-y-6">
 
           {/* Main info */}
-          {dispatch.status === 'Confirmed' ? (
+          {dispatch.status === 'Schedule' ? (
             <div>
-              <h2 className="font-semibold text-slate-900 text-lg">Confirmed Dispatch</h2>
+              <h2 className="font-semibold text-slate-900 text-lg">Scheduled Dispatch</h2>
               <p className="text-sm text-blue-600 mt-1 italic">Confirmation only — details to follow</p>
             </div>
           ) : (
@@ -195,7 +195,7 @@ export default function DispatchDetailDrawer({
             </div>
           )}
 
-          {dispatch.status !== 'Confirmed' && (
+          {dispatch.status !== 'Schedule' && (
             <>
               {(dispatch.instructions || dispatch.notes || dispatch.toll_status || dispatch.start_time || dispatch.start_location) && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
@@ -370,7 +370,7 @@ export default function DispatchDetailDrawer({
               )}
 
               {/* Time Log — CompanyOwner (editable) — only for non-canceled */}
-              {isOwner && myTrucks.length > 0 && dispatch.status !== 'Canceled' && (
+              {isOwner && myTrucks.length > 0 && dispatch.status !== 'Cancel' && (
                 <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Time Log</p>
                   <div className="space-y-2">

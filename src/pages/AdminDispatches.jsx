@@ -13,7 +13,7 @@ import {
   Plus, Pencil, Trash2, Copy, FileText, Clock, MapPin,
   Sun, Moon, Truck, Filter, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, History, Archive, ArchiveX
 } from 'lucide-react';
-import { format, parseISO, startOfDay } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { getDispatchBucket } from '../components/portal/dispatchBuckets';
 import DispatchForm from '../components/admin/DispatchForm';
 import DispatchDetailDrawer from '../components/portal/DispatchDetailDrawer';
@@ -21,7 +21,7 @@ import { useSession } from '../components/session/SessionContext';
 import { Label } from '@/components/ui/label';
 import { statusBadgeColors, statusBorderAccent } from '../components/portal/statusConfig';
 
-const STATUS_ORDER = ['Confirmed', 'Dispatched', 'Amended', 'Canceled'];
+const STATUS_ORDER = ['Schedule', 'Dispatch', 'Amend', 'Cancel'];
 
 function AdminConfirmationsPanel({ dispatch, confirmations }) {
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -278,7 +278,7 @@ export default function AdminDispatches() {
       ...rest,
       company_id: '',
       trucks_assigned: [],
-      status: 'Confirmed',
+      status: 'Schedule',
       amendment_history: [],
       canceled_reason: '',
       _isCopy: true
@@ -376,7 +376,7 @@ export default function AdminDispatches() {
                 <SelectTrigger className="text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  {['Confirmed', 'Dispatched', 'Amended', 'Canceled'].map(s => (
+                  {['Schedule', 'Dispatch', 'Amend', 'Cancel'].map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                 </SelectContent>

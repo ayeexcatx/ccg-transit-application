@@ -5,7 +5,7 @@ import { useSession } from '../components/session/SessionContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bell, Clock, MapPin, Sun, Moon, ArrowRight, AlertCircle, Megaphone, Truck } from 'lucide-react';
+import { Bell, Clock, MapPin, Sun, Moon, ArrowRight, AlertCircle, Megaphone } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { getDispatchBucket } from '../components/portal/dispatchBuckets';
 import { createPageUrl } from '@/utils';
@@ -16,10 +16,10 @@ import NotificationStatusBadge from '../components/notifications/NotificationSta
 const dateOnly = (v) => (typeof v === 'string' ? v.slice(0, 10) : v);
 
 const statusColors = {
-  Confirmed: 'bg-blue-50 text-blue-700 border-blue-200',
-  Dispatched: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  Amended: 'bg-amber-50 text-amber-700 border-amber-200',
-  Canceled: 'bg-red-50 text-red-700 border-red-200',
+  Schedule: 'bg-blue-50 text-blue-700 border-blue-200',
+  Dispatch: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Amend: 'bg-amber-50 text-amber-700 border-amber-200',
+  Cancel: 'bg-red-50 text-red-700 border-red-200',
 };
 
 function MiniDispatchCard({ dispatch }) {

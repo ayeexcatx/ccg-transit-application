@@ -63,9 +63,9 @@ const DispatchCard = React.forwardRef(function DispatchCard({
             </div>
 
             <div className="space-y-2">
-              {dispatch.status === 'Confirmed' ? (
+              {dispatch.status === 'Schedule' ? (
                 <>
-                  <h3 className="font-semibold text-slate-900">Confirmed Dispatch</h3>
+                  <h3 className="font-semibold text-slate-900">Scheduled Dispatch</h3>
                   <p className="text-xs text-blue-600 italic mt-0.5">Confirmation only — details to follow</p>
                 </>
               ) : (

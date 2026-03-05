@@ -5,8 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import {
-  Building2, Key, FileText, StickyNote, Truck,
-  ArrowRight, CheckCircle2, Clock, AlertTriangle
+  Building2, Key, FileText, StickyNote,
+  ArrowRight, Clock
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -25,7 +25,7 @@ export default function AdminDashboard() {
     queryFn: () => base44.entities.Dispatch.list('-date', 200),
   });
 
-  const activeDispatches = dispatches.filter(d => d.status !== 'Completed' && d.status !== 'Canceled');
+  const activeDispatches = dispatches.filter(d => d.status !== 'Completed' && d.status !== 'Cancel');
   const todayStr = new Date().toISOString().split('T')[0];
   const todayDispatches = dispatches.filter(d => d.date === todayStr);
 
@@ -83,7 +83,7 @@ export default function AdminDashboard() {
         <CardContent className="p-5">
           <h3 className="font-semibold text-slate-900 mb-4">Dispatch Status Breakdown</h3>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            {['Confirmed', 'Dispatched', 'Amended', 'Canceled', 'Completed'].map(status => (
+            {['Schedule', 'Dispatch', 'Amend', 'Cancel', 'Completed'].map(status => (
               <div key={status} className="text-center p-3 rounded-lg bg-slate-50">
                 <p className="text-xl font-bold text-slate-900">{statusCounts[status] || 0}</p>
                 <p className="text-xs text-slate-500 mt-0.5">{status}</p>

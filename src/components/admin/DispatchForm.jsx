@@ -4,8 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { notifyDispatchChange } from '@/components/notifications/createNotifications';
 
 export default function DispatchForm({ dispatch, companies, accessCodes, onSave, onCancel, saving }) {
@@ -13,7 +12,7 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
     company_id: '', date: '', shift_time: 'Day', client_name: '', job_number: '',
     start_time: '', start_location: '', instructions: 'Deliver material to / from',
     notes: '', toll_status: '', trucks_assigned: [],
-    status: 'Confirmed', additional_assignments: [],
+    status: 'Schedule', additional_assignments: [],
     amendment_history: [], canceled_reason: ''
   });
 
@@ -31,7 +30,7 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
         notes: dispatch.notes || '',
         toll_status: dispatch.toll_status || '',
         trucks_assigned: dispatch.trucks_assigned || [],
-        status: dispatch.status || 'Confirmed',
+        status: dispatch.status || 'Schedule',
         additional_assignments: dispatch.additional_assignments || [],
         amendment_history: dispatch.amendment_history || [],
         canceled_reason: dispatch.canceled_reason || ''
@@ -42,9 +41,9 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
   const selectedCompany = companies.find((c) => c.id === form.company_id);
   const availableTrucks = selectedCompany?.trucks || [];
 
-  const isConfirmed = form.status === 'Confirmed';
-  const isFullDispatch = form.status === 'Dispatched' || form.status === 'Amended';
-  const isCanceled = form.status === 'Canceled';
+  const isConfirmed = form.status === 'Schedule';
+  const isFullDispatch = form.status === 'Dispatch' || form.status === 'Amend';
+  const isCanceled = form.status === 'Cancel';
 
   const toggleTruck = (t) => {
     setForm((prev) => ({
@@ -81,12 +80,12 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
 
     // Status-specific validation
     if (isFullDispatch && !form.start_location) {
-      alert('Start Location is required for Dispatched/Amended status');
+      alert('Start Location is required for Dispatch/Amend status');
       return;
     }
 
     if (isCanceled && !form.canceled_reason) {
-      alert('Cancellation reason is required for Canceled status');
+      alert('Cancellation reason is required for Cancel status');
       return;
     }
 
@@ -98,7 +97,7 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
 
     // Track amendments
     let finalForm = { ...form };
-    if (dispatch && form.status === 'Amended' && dispatch.status !== 'Amended') {
+    if (dispatch && form.status === 'Amend' && dispatch.status !== 'Amend') {
       const changes = [];
       if (dispatch.start_location !== form.start_location) changes.push('location');
       if (dispatch.start_time !== form.start_time) changes.push('time');
@@ -142,10 +141,10 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
           <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="Confirmed">Confirmed (pending dispatch)</SelectItem>
-              <SelectItem value="Dispatched">Dispatched (full details)</SelectItem>
-              <SelectItem value="Amended">Amended</SelectItem>
-              <SelectItem value="Canceled">Canceled</SelectItem>
+              <SelectItem value="Schedule">Schedule (pending dispatch)</SelectItem>
+              <SelectItem value="Dispatch">Dispatch (full details)</SelectItem>
+              <SelectItem value="Amend">Amend</SelectItem>
+              <SelectItem value="Cancel">Cancel</SelectItem>
             </SelectContent>
           </Select>
         </div>
