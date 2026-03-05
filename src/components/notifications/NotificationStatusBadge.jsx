@@ -28,9 +28,9 @@ export default function NotificationStatusBadge({ notification, confirmations = 
 
   const total = required.length;
   const done = confirmed.length;
-  const resolved = notification.read_flag;
+  const isResolved = (total > 0 && done === total);
 
-  if (resolved || done === total) {
+  if (isResolved) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
         <CheckCircle2 className="h-3 w-3" />All confirmed
