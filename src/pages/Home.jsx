@@ -113,7 +113,7 @@ export default function Home() {
   const allowedTrucks = session?.allowed_trucks || [];
 
   // Shared notifications hook — same query key as bell + notifications page
-  const { notifications, unreadCount, markRead } = useOwnerNotifications(session);
+  const { notifications, unreadCount, markReadAsync } = useOwnerNotifications(session);
 
   const { data: confirmations = [] } = useQuery({
     queryKey: ['confirmations-home'],
@@ -179,12 +179,23 @@ export default function Home() {
     }));
   }, [notifications, dispatches]);
 
-  const handleActionClick = (n) => {
+  const isInformationalUpdateNotification = (notification) =>
+    notification?.notification_category === 'dispatch_update_info' || notification?.notification_type === 'informational';
+
+  const navigateFromAction = (n) => {
     if (n.related_dispatch_id) {
       navigate(createPageUrl(`Portal?dispatchId=${n.related_dispatch_id}`));
     } else {
       navigate(createPageUrl('Notifications'));
     }
+  };
+
+  const handleActionClick = async (n) => {
+    if (isInformationalUpdateNotification(n) && !n.read_flag) {
+      await markReadAsync(n.id);
+    }
+
+    navigateFromAction(n);
   };
 
   const priorityBg = { 1: 'bg-red-50 border-red-200', 2: 'bg-orange-50 border-orange-200', 3: 'bg-yellow-50 border-yellow-200', 4: 'bg-blue-50 border-blue-200', 5: 'bg-slate-50 border-slate-200' };
@@ -239,7 +250,13 @@ export default function Home() {
                     <div
                       key={n.id}
                       className="flex items-start gap-3 px-4 py-3 hover:bg-blue-50/40 cursor-pointer bg-blue-50/20"
-                      onClick={() => handleActionClick(n)}
+                      onClick={() => {
+                        if (isInformationalUpdateNotification(n)) {
+                          handleActionClick(n);
+                          return;
+                        }
+                        navigateFromAction(n);
+                      }}
                     >
                       <Bell className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">

@@ -16,7 +16,7 @@ import { formatNotificationDetailsMessage } from '@/components/notifications/for
 export default function Notifications() {
   const { session } = useSession();
   const navigate = useNavigate();
-  const { notifications, unreadCount, isLoading, markRead, markAllRead, markAllReadPending } = useOwnerNotifications(session);
+  const { notifications, unreadCount, isLoading, markReadAsync, markAllRead, markAllReadPending } = useOwnerNotifications(session);
 
   const { data: confirmations = [] } = useQuery({
     queryKey: ['confirmations-notif-page'],
@@ -35,14 +35,22 @@ export default function Notifications() {
   const dispatchMap = Object.fromEntries(dispatches.map(d => [d.id, d]));
   const allowedTrucks = session?.allowed_trucks || [];
 
-  const handleNotificationClick = (n) => {
+  const isInformationalUpdateNotification = (notification) =>
+    notification?.notification_category === 'dispatch_update_info' || notification?.notification_type === 'informational';
+
+  const navigateFromNotification = (n) => {
     if (n.related_dispatch_id) {
       const targetPage = session?.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
-      if (!n.read_flag) markRead(n.id);
       navigate(createPageUrl(`${targetPage}?dispatchId=${n.related_dispatch_id}`));
-    } else {
-      if (!n.read_flag) markRead(n.id);
     }
+  };
+
+  const handleNotificationClick = async (n) => {
+    if (n.related_dispatch_id && isInformationalUpdateNotification(n) && !n.read_flag) {
+      await markReadAsync(n.id);
+    }
+
+    navigateFromNotification(n);
   };
 
   return (
@@ -84,7 +92,13 @@ export default function Notifications() {
             <Card
               key={n.id}
               className={`hover:shadow-sm transition-shadow cursor-pointer ${!n.read_flag ? 'border-blue-200 bg-blue-50/30' : ''}`}
-              onClick={() => handleNotificationClick(n)}
+              onClick={() => {
+                if (isInformationalUpdateNotification(n)) {
+                  handleNotificationClick(n);
+                  return;
+                }
+                navigateFromNotification(n);
+              }}
             >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-3">

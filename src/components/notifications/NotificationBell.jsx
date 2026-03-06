@@ -15,7 +15,7 @@ import { formatNotificationDetailsMessage } from './formatNotificationDetailsMes
 export default function NotificationBell({ session }) {
   const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
-  const { notifications, unreadCount, markRead } = useOwnerNotifications(session);
+  const { notifications, unreadCount, markReadAsync } = useOwnerNotifications(session);
 
   const { data: confirmations = [] } = useQuery({
     queryKey: ['confirmations-bell'],
@@ -24,16 +24,27 @@ export default function NotificationBell({ session }) {
     refetchInterval: 30000,
   });
 
-  const handleNotificationClick = (n) => {
-    if (!session) return;
+  const isInformationalUpdateNotification = (notification) =>
+    notification?.notification_category === 'dispatch_update_info' || notification?.notification_type === 'informational';
+
+  const navigateFromNotification = (n) => {
     if (n.related_dispatch_id) {
       const targetPage = session.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
       setOpen(false);
       setTimeout(() => navigate(createPageUrl(`${targetPage}?dispatchId=${n.related_dispatch_id}`)), 0);
     } else {
-      if (!n.read_flag) markRead(n.id);
       navigate(createPageUrl('Notifications'));
     }
+  };
+
+  const handleNotificationClick = async (n) => {
+    if (!session) return;
+
+    if (n.related_dispatch_id && isInformationalUpdateNotification(n) && !n.read_flag) {
+      await markReadAsync(n.id);
+    }
+
+    navigateFromNotification(n);
   };
 
   return (
@@ -65,7 +76,13 @@ export default function NotificationBell({ session }) {
               <div
                 key={n.id}
                 className={`p-3 border-b hover:bg-slate-50 cursor-pointer ${!n.read_flag ? 'bg-blue-50/30' : ''}`}
-                onClick={() => handleNotificationClick(n)}
+                onClick={() => {
+                  if (isInformationalUpdateNotification(n)) {
+                    handleNotificationClick(n);
+                    return;
+                  }
+                  navigateFromNotification(n);
+                }}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
