@@ -57,14 +57,7 @@ export default function Portal() {
 
   const confirmMutation = useMutation({
     mutationFn: (data) => base44.entities.Confirmation.create(data),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        predicate: (q) => typeof q.queryKey?.[0] === 'string' && q.queryKey[0].startsWith('confirmations')
-      });
-      await queryClient.invalidateQueries({
-        predicate: (q) => typeof q.queryKey?.[0] === 'string' && q.queryKey[0].includes('notifications')
-      });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['confirmations'] }),
   });
 
   const today = startOfDay(new Date());
@@ -148,7 +141,7 @@ export default function Portal() {
   const companyMap = {};
   companies.forEach(c => { companyMap[c.id] = c.name; });
 
-  const handleConfirm = async (dispatch, truck, confType) => {
+  const handleConfirm = (dispatch, truck, confType) => {
     const alreadyConfirmed = confirmations.some(c =>
       c.dispatch_id === dispatch.id &&
       c.truck_number === truck &&
@@ -156,7 +149,7 @@ export default function Portal() {
     );
     if (alreadyConfirmed) return;
 
-    await confirmMutation.mutateAsync({
+    confirmMutation.mutate({
       dispatch_id: dispatch.id,
       access_code_id: session.id,
       truck_number: truck,
@@ -173,10 +166,7 @@ export default function Portal() {
     ];
 
     if (session?.code_type === 'CompanyOwner') {
-      await resolveOwnerNotificationIfComplete(dispatch, updatedConfirmations, session.id);
-      await queryClient.invalidateQueries({
-        predicate: (q) => typeof q.queryKey?.[0] === 'string' && q.queryKey[0].includes('notifications')
-      });
+      resolveOwnerNotificationIfComplete(dispatch, updatedConfirmations, session.id);
     }
 
     // Auto-archive Cancelled dispatch once all trucks have confirmed cancellation
