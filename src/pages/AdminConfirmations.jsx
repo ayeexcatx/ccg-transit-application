@@ -87,6 +87,8 @@ export default function AdminConfirmations() {
         companyName: companyById.get(dispatch.company_id)?.name || 'Unknown Company',
         dispatchDate: dispatch.date,
         truckNumber: confirmation.truck_number,
+        clientName: dispatch.client_name || '',
+        jobNumber: dispatch.job_number || '',
         confirmationType: confirmation.confirmation_type,
         confirmedAt: confirmation.confirmed_at,
         confirmedBy: confirmer?.label || confirmer?.code || '—',
@@ -186,6 +188,7 @@ export default function AdminConfirmations() {
                     <th className="text-left font-medium px-3 py-2">Company</th>
                     <th className="text-left font-medium px-3 py-2">Dispatch Date</th>
                     <th className="text-left font-medium px-3 py-2">Truck</th>
+                    <th className="text-left font-medium px-3 py-2">Client / Job</th>
                     <th className="text-left font-medium px-3 py-2">Type</th>
                     <th className="text-left font-medium px-3 py-2">Confirmed At</th>
                     <th className="text-left font-medium px-3 py-2">Confirmed By</th>
@@ -201,6 +204,7 @@ export default function AdminConfirmations() {
                       <td className="px-3 py-2">{row.companyName}</td>
                       <td className="px-3 py-2">{row.dispatchDate || '—'}</td>
                       <td className="px-3 py-2 font-mono">{row.truckNumber || '—'}</td>
+                      <td className="px-3 py-2">{[row.clientName, row.jobNumber].filter(Boolean).join(' / ') || '—'}</td>
                       <td className="px-3 py-2"><Badge variant="outline">{row.confirmationType || '—'}</Badge></td>
                       <td className="px-3 py-2">{formatDateTime(row.confirmedAt)}</td>
                       <td className="px-3 py-2">{row.confirmedBy}</td>
