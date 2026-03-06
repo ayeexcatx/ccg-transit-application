@@ -249,7 +249,7 @@ export default function Home() {
                     <div
                       key={n.id}
                       className="flex items-start gap-3 px-4 py-3 hover:bg-blue-50/40 cursor-pointer bg-blue-50/20"
-                      onClick={() => handleActionClick(n)}
+                      onClick={() => handleNotificationClick(n)}
                     >
                       <Bell className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
