@@ -180,9 +180,16 @@ export default function Home() {
   }, [notifications, dispatches]);
 
   const isInformationalUpdateNotification = (notification) =>
-    notification?.notification_category === 'dispatch_update_info' || notification?.notification_type === 'informational';
+    notification?.notification_category === 'dispatch_update_info' ||
+    notification?.notification_type === 'informational';
 
-  const navigateFromAction = (n) => {
+  const handleNotificationClick = async (n) => {
+    if (!session) return;
+
+    if (n.related_dispatch_id && isInformationalUpdateNotification(n) && !n.read_flag) {
+      await markReadAsync(n.id);
+    }
+
     if (n.related_dispatch_id) {
       navigate(createPageUrl(`Portal?dispatchId=${n.related_dispatch_id}`));
     } else {
@@ -250,13 +257,7 @@ export default function Home() {
                     <div
                       key={n.id}
                       className="flex items-start gap-3 px-4 py-3 hover:bg-blue-50/40 cursor-pointer bg-blue-50/20"
-                      onClick={() => {
-                        if (isInformationalUpdateNotification(n)) {
-                          handleActionClick(n);
-                          return;
-                        }
-                        navigateFromAction(n);
-                      }}
+                      onClick={() => handleNotificationClick(n)}
                     >
                       <Bell className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">

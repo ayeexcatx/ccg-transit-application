@@ -34,11 +34,18 @@ export default function Notifications() {
 
   const dispatchMap = Object.fromEntries(dispatches.map(d => [d.id, d]));
   const allowedTrucks = session?.allowed_trucks || [];
-
+  
   const isInformationalUpdateNotification = (notification) =>
-    notification?.notification_category === 'dispatch_update_info' || notification?.notification_type === 'informational';
+    notification?.notification_category === 'dispatch_update_info' ||
+    notification?.notification_type === 'informational';
 
-  const navigateFromNotification = (n) => {
+  const handleNotificationClick = async (n) => {
+    if (!session) return;
+
+    if (n.related_dispatch_id && isInformationalUpdateNotification(n) && !n.read_flag) {
+      await markReadAsync(n.id);
+    }
+
     if (n.related_dispatch_id) {
       const targetPage = session?.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
       navigate(createPageUrl(`${targetPage}?dispatchId=${n.related_dispatch_id}`));
