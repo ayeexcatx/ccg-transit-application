@@ -119,7 +119,9 @@ export default function DispatchForm({ dispatch, companies, accessCodes, onSave,
     const newStatus = finalForm.status;
 
     const savedDispatch = await onSave(finalForm);
-    notifyDispatchChange(savedDispatch || finalForm, oldStatus, newStatus, companies, accessCodes);
+    const dispatchForNotifications = savedDispatch || finalForm;
+
+    await notifyDispatchChange(dispatchForNotifications, oldStatus, newStatus, companies, accessCodes);
   };
 
   return (

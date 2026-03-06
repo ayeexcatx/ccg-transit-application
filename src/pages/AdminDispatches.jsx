@@ -20,6 +20,7 @@ import DispatchDetailDrawer from '../components/portal/DispatchDetailDrawer';
 import { useSession } from '../components/session/SessionContext';
 import { Label } from '@/components/ui/label';
 import { statusBadgeColors, statusBorderAccent } from '../components/portal/statusConfig';
+import { reconcileOwnerNotificationsForDispatch } from '@/components/notifications/createNotifications';
 
 const STATUS_ORDER = ['Scheduled', 'Dispatch', 'Amended', 'Cancelled'];
 
@@ -223,13 +224,22 @@ export default function AdminDispatches() {
     mutationFn: async (data) => {
       if (editing && !editing._isCopy) {
         await base44.entities.Dispatch.update(editing.id, data);
-        return base44.entities.Dispatch.filter({ id: editing.id }, '-created_date', 1).then(r => r[0]);
+        const savedDispatch = await base44.entities.Dispatch.filter({ id: editing.id }, '-created_date', 1).then(r => r[0]);
+
+        if (savedDispatch) {
+          await reconcileOwnerNotificationsForDispatch(savedDispatch, accessCodes);
+        }
+
+        return savedDispatch;
       } else {
         return base44.entities.Dispatch.create(data);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['portal-dispatches'] });
+      queryClient.invalidateQueries({ predicate: (query) => String(query.queryKey?.[0] || '').startsWith('confirmations') });
       setOpen(false);
       setEditing(null);
     },
