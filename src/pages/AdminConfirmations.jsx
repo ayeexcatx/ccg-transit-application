@@ -73,15 +73,29 @@ export default function AdminConfirmations() {
     [accessCodes]
   );
 
+  const validDispatchIds = useMemo(
+    () => new Set(dispatches.map((dispatch) => dispatch.id)),
+    [dispatches]
+  );
+
+  const filteredNotifications = useMemo(() => notifications.filter((notification) => {
+    if (!notification.related_dispatch_id) return true;
+    return validDispatchIds.has(notification.related_dispatch_id);
+  }), [notifications, validDispatchIds]);
+
+  const filteredConfirmations = useMemo(() => confirmations.filter((confirmation) =>
+    validDispatchIds.has(confirmation.dispatch_id)
+  ), [confirmations, validDispatchIds]);
+
   const openRows = useMemo(() => buildOpenConfirmationRows({
-    notifications,
-    confirmations,
+    notifications: filteredNotifications,
+    confirmations: filteredConfirmations,
     dispatches,
     companies,
     accessCodes,
-  }), [notifications, confirmations, dispatches, companies, accessCodes]);
+  }), [filteredNotifications, filteredConfirmations, dispatches, companies, accessCodes]);
 
-  const historyRows = useMemo(() => confirmations
+  const historyRows = useMemo(() => filteredConfirmations
     .map((confirmation) => {
       const dispatch = dispatchById.get(confirmation.dispatch_id);
       if (!dispatch) return null;
@@ -104,7 +118,7 @@ export default function AdminConfirmations() {
     })
     .filter(Boolean)
     .sort((a, b) => new Date(b.confirmedAt || 0).getTime() - new Date(a.confirmedAt || 0).getTime()),
-  [confirmations, dispatchById, companyById, accessCodeById]);
+  [filteredConfirmations, dispatchById, companyById, accessCodeById]);
 
   const isLoading = notificationsLoading || confirmationsLoading || dispatchesLoading;
 

@@ -23,13 +23,26 @@ export function useOwnerNotifications(session) {
     refetchInterval: 30000,
   });
 
+
+  const { data: dispatches = [] } = useQuery({
+    queryKey: ['portal-dispatches', session?.company_id],
+    queryFn: () => base44.entities.Dispatch.filter({ company_id: session.company_id }, '-date', 200),
+    enabled: !!session?.company_id && session?.code_type !== 'Admin',
+  });
+
+  const validDispatchIds = new Set(dispatches.map((dispatch) => dispatch.id));
+
   // Unread first, then newest first
-  const notifications = [...rawNotifications].sort((a, b) => {
+  const notifications = rawNotifications.filter((notification) => {
+    if (!notification.related_dispatch_id) return true;
+    if (session?.code_type === 'Admin') return true;
+    return validDispatchIds.has(notification.related_dispatch_id);
+  }).sort((a, b) => {
     if (a.read_flag !== b.read_flag) return a.read_flag ? 1 : -1;
     return new Date(b.created_date) - new Date(a.created_date);
   });
 
-  const unreadCount = rawNotifications.filter(n => !n.read_flag).length;
+  const unreadCount = notifications.filter(n => !n.read_flag).length;
 
   const markReadMutation = useMutation({
     mutationFn: (id) => {
@@ -42,13 +55,16 @@ export function useOwnerNotifications(session) {
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      const unread = rawNotifications.filter(n => !n.read_flag);
+      const unread = notifications.filter(n => !n.read_flag);
       await Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { read_flag: true })));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey });
+  const refresh = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey }),
+    queryClient.invalidateQueries({ queryKey: ['portal-dispatches', session?.company_id] }),
+  ]);
 
   const markRead = (id) => markReadMutation.mutate(id);
   const markReadAsync = (id) => markReadMutation.mutateAsync(id);

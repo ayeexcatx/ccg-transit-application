@@ -170,13 +170,19 @@ export default function Home() {
   // Build action items: unread dispatch-change notifications enriched with dispatch data
   const actionItems = useMemo(() => {
     const dispatchMap = {};
-    dispatches.forEach(d => { dispatchMap[d.id] = d; });
+    dispatches.forEach((dispatch) => {dispatchMap[dispatch.id] = dispatch;});
 
-    const unread = notifications.filter(n => !n.read_flag);
-    return unread.slice(0, 8).map(n => ({
-      notification: n,
-      dispatch: n.related_dispatch_id ? (dispatchMap[n.related_dispatch_id] || null) : null,
-    }));
+    return notifications
+      .filter((notification) => {
+        if (notification.read_flag) return false;
+        if (!notification.related_dispatch_id) return true;
+        return Boolean(dispatchMap[notification.related_dispatch_id]);
+      })
+      .slice(0, 8)
+      .map((notification) => ({
+        notification,
+        dispatch: notification.related_dispatch_id ? dispatchMap[notification.related_dispatch_id] : null,
+      }));
   }, [notifications, dispatches]);
 
   const isInformationalUpdateNotification = (notification) =>

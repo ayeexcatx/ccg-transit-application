@@ -17,6 +17,20 @@ export default function NotificationBell({ session }) {
   const [open, setOpen] = React.useState(false);
   const { notifications, unreadCount, markReadAsync } = useOwnerNotifications(session);
 
+
+  const { data: dispatches = [] } = useQuery({
+    queryKey: ['portal-dispatches', session?.company_id],
+    queryFn: () => base44.entities.Dispatch.filter({ company_id: session.company_id }, '-date', 200),
+    enabled: !!session?.company_id && session?.code_type !== 'Admin',
+  });
+
+  const dispatchIds = new Set(dispatches.map((dispatch) => dispatch.id));
+  const filteredNotifications = notifications.filter((notification) => {
+    if (!notification.related_dispatch_id) return true;
+    if (session?.code_type === 'Admin') return true;
+    return dispatchIds.has(notification.related_dispatch_id);
+  });
+
   const { data: confirmations = [] } = useQuery({
     queryKey: ['confirmations-bell'],
     queryFn: () => base44.entities.Confirmation.list('-confirmed_at', 500),
@@ -69,10 +83,10 @@ export default function NotificationBell({ session }) {
           </div>
         </div>
         <div className="max-h-96 overflow-y-auto">
-          {notifications.length === 0 ? (
+          {filteredNotifications.length === 0 ? (
             <div className="p-4 text-center text-sm text-slate-500">No notifications</div>
           ) : (
-            notifications.slice(0, 5).map(n => (
+            filteredNotifications.slice(0, 5).map(n => (
               <div
                 key={n.id}
                 className={`p-3 border-b hover:bg-slate-50 cursor-pointer ${!n.read_flag ? 'bg-blue-50/30' : ''}`}

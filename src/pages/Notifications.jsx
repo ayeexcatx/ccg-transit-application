@@ -32,7 +32,12 @@ export default function Notifications() {
     enabled: !!session?.company_id,
   });
 
-  const dispatchMap = Object.fromEntries(dispatches.map(d => [d.id, d]));
+  const dispatchMap = Object.fromEntries(dispatches.map((dispatch) => [dispatch.id, dispatch]));
+  const filteredNotifications = notifications.filter((notification) => {
+    if (!notification.related_dispatch_id) return true;
+    if (session?.code_type === 'Admin') return true;
+    return Boolean(dispatchMap[notification.related_dispatch_id]);
+  });
   const allowedTrucks = session?.allowed_trucks || [];
   
   const isInformationalUpdateNotification = (notification) =>
@@ -81,7 +86,7 @@ export default function Notifications() {
         <div className="flex justify-center py-12">
           <div className="animate-spin h-6 w-6 border-2 border-slate-300 border-t-slate-700 rounded-full" />
         </div>
-      ) : notifications.length === 0 ? (
+      ) : filteredNotifications.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
             <Bell className="h-12 w-12 text-slate-300 mx-auto mb-3" />
@@ -90,7 +95,7 @@ export default function Notifications() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {notifications.map(n => (
+          {filteredNotifications.map(n => (
             <Card
               key={n.id}
               className={`hover:shadow-sm transition-shadow cursor-pointer ${!n.read_flag ? 'border-blue-200 bg-blue-50/30' : ''}`}

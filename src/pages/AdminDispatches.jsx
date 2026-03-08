@@ -248,8 +248,27 @@ export default function AdminDispatches() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Dispatch.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] })
+    mutationFn: async (id) => {
+      await base44.entities.Dispatch.delete(id);
+
+      const [notifications, confirmations] = await Promise.all([
+      base44.entities.Notification.filter({ related_dispatch_id: id }, '-created_date', 1000),
+      base44.entities.Confirmation.filter({ dispatch_id: id }, '-confirmed_at', 1000)]);
+
+      await Promise.all([
+      ...notifications.map((notification) => base44.entities.Notification.delete(notification.id)),
+      ...confirmations.map((confirmation) => base44.entities.Confirmation.delete(confirmation.id))]
+      );
+    },
+    onSuccess: async () => {
+      await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] }),
+      queryClient.invalidateQueries({ queryKey: ['portal-dispatches'] }),
+      queryClient.invalidateQueries({ queryKey: ['dispatches-admin-confirmations'] }),
+      queryClient.invalidateQueries({ predicate: (query) => String(query.queryKey?.[0] || '').startsWith('notifications') }),
+      queryClient.invalidateQueries({ predicate: (query) => String(query.queryKey?.[0] || '').startsWith('confirmations') })]
+      );
+    }
   });
 
   const archiveMutation = useMutation({
