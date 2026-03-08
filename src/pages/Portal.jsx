@@ -11,7 +11,6 @@ import { startOfDay, parseISO } from 'date-fns';
 import { getDispatchBucket } from '../components/portal/dispatchBuckets';
 import { sortTemplateNotesForDispatch } from '@/lib/templateNotes';
 import { notifyTruckConfirmation, resolveOwnerNotificationIfComplete } from '../components/notifications/createNotifications';
-import { getOwnerNotificationsQueryKey } from '@/components/notifications/useOwnerNotifications';
 
 function myTrucksForHistory(dispatch, timeEntries, session) {
   const trucks = (session?.allowed_trucks || []).filter(t => (dispatch.trucks_assigned || []).includes(t));
@@ -144,7 +143,7 @@ export default function Portal() {
   const companyMap = {};
   companies.forEach(c => { companyMap[c.id] = c.name; });
 
-  const handleConfirm = async (dispatch, truck, confType) => {
+  const handleConfirm = (dispatch, truck, confType) => {
     const alreadyConfirmed = confirmations.some(c =>
       c.dispatch_id === dispatch.id &&
       c.truck_number === truck &&
@@ -169,26 +168,7 @@ export default function Portal() {
     ];
 
     if (session?.code_type === 'CompanyOwner') {
-      const ownerQueryKey = getOwnerNotificationsQueryKey(session);
-      const dedupKey = `${dispatch.id}:${dispatch.status}:${session.id}`;
-      const confirmedTrucksForStatus = updatedConfirmations
-        .filter((c) => c.dispatch_id === dispatch.id && c.confirmation_type === dispatch.status)
-        .map((c) => c.truck_number);
-
-      queryClient.setQueryData(ownerQueryKey, (current = []) => current.map((notification) => {
-        const isOwnerStatusNotification = notification.related_dispatch_id === dispatch.id &&
-          notification.dispatch_status_key === dedupKey;
-        if (!isOwnerStatusNotification || notification.read_flag) return notification;
-
-        const required = notification.required_trucks || [];
-        if (required.length === 0) return notification;
-
-        const allConfirmed = required.every((requiredTruck) => confirmedTrucksForStatus.includes(requiredTruck));
-        return allConfirmed ? { ...notification, read_flag: true } : notification;
-      }));
-
-      await resolveOwnerNotificationIfComplete(dispatch, updatedConfirmations, session.id);
-      queryClient.invalidateQueries({ queryKey: ownerQueryKey, exact: true, refetchType: 'active' });
+      resolveOwnerNotificationIfComplete(dispatch, updatedConfirmations, session.id);
     }
 
     // Auto-archive Cancelled dispatch once all trucks have confirmed cancellation
