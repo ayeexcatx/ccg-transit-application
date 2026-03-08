@@ -208,11 +208,7 @@ export default function Home() {
   };
 
   const handleActionClick = async (n) => {
-    if (isInformationalUpdateNotification(n) && !n.read_flag) {
-      await markReadAsync(n.id);
-    }
-
-    navigateFromAction(n);
+    await handleNotificationClick(n);
   };
 
   const priorityText = { 1: 'text-red-800', 2: 'text-orange-800', 3: 'text-yellow-800', 4: 'text-blue-800', 5: 'text-slate-700' };
