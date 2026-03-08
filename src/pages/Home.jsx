@@ -225,9 +225,9 @@ export default function Home() {
         <section>
           <Card className="rounded-lg border bg-white shadow-sm">
             <div className="border-b border-slate-100 bg-blue-700 px-4 py-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1">
-                <Megaphone className="h-4 w-4 text-blue-700" />
-                <h3 className="text-sm font-semibold text-blue-700">Announcement Center</h3>
+              <div className="flex items-center gap-2">
+                <Megaphone className="h-4 w-4 text-white" />
+                <h3 className="text-sm font-semibold text-white">Announcement Center</h3>
               </div>
             </div>
             <CardContent className="p-0">
@@ -244,19 +244,19 @@ export default function Home() {
       {/* Action Needed — always visible for CompanyOwner */}
       {session?.code_type === 'CompanyOwner' && (
         <section>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-500" />
-              Action Needed
-              {unreadCount > 0 && (
-                <Badge className="bg-red-500 text-white text-xs px-1.5 py-0">{unreadCount}</Badge>
-              )}
-            </h3>
-            <Link to={createPageUrl('Notifications')} className="text-xs text-slate-400 hover:text-slate-600">
-              View all notifications
-            </Link>
-          </div>
-          <Card className="border-red-100">
+          <Card className="border-2 border-red-600">
+            <div className="border-b border-red-800 bg-red-700 px-4 py-3 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertCircle className="h-4 w-4 text-white shrink-0" />
+                <h3 className="text-sm font-semibold text-white truncate">Action Needed</h3>
+                {unreadCount > 0 && (
+                  <Badge className="bg-white text-red-700 text-xs px-1.5 py-0">{unreadCount}</Badge>
+                )}
+              </div>
+              <Link to={createPageUrl('Notifications')} className="text-xs text-red-100 hover:text-white shrink-0">
+                View all notifications
+              </Link>
+            </div>
             <CardContent className="p-0 divide-y divide-slate-100">
               {actionItems.length === 0 ? (
                 <p className="text-sm text-slate-400 text-center py-4">No actions needed</p>
@@ -305,14 +305,16 @@ export default function Home() {
 
       {/* Today's Dispatches */}
       <section>
-        <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-          <Sun className="h-4 w-4 text-amber-400" />
-          Today's Dispatches
-          {todayDispatches.length > 0 && (
-            <Badge variant="outline" className="text-xs">{todayDispatches.length}</Badge>
-          )}
-        </h3>
         <Card>
+          <div className="border-b border-green-800 bg-green-700 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Sun className="h-4 w-4 text-white" />
+              <h3 className="text-sm font-semibold text-white">Today's Dispatches</h3>
+              {todayDispatches.length > 0 && (
+                <Badge className="bg-white text-green-700 text-xs px-1.5 py-0">{todayDispatches.length}</Badge>
+              )}
+            </div>
+          </div>
           <CardContent className="p-1 space-y-2">
             {todayDispatches.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">No dispatches today</p>
@@ -325,14 +327,16 @@ export default function Home() {
 
       {/* Upcoming Dispatches */}
       <section>
-        <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-          <Clock className="h-4 w-4 text-slate-400" />
-          Upcoming Dispatches
-          {upcomingDispatches.length > 0 && (
-            <Badge variant="outline" className="text-xs">{upcomingDispatches.length}</Badge>
-          )}
-        </h3>
         <Card>
+          <div className="border-b border-slate-900 bg-black px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-white" />
+              <h3 className="text-sm font-semibold text-white">Upcoming Dispatches</h3>
+              {upcomingDispatches.length > 0 && (
+                <Badge className="bg-white text-black text-xs px-1.5 py-0">{upcomingDispatches.length}</Badge>
+              )}
+            </div>
+          </div>
           <CardContent className="p-1 space-y-2">
             {upcomingDispatches.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">No upcoming dispatches</p>
