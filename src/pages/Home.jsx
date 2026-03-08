@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import AnnouncementCard from '@/components/announcements/AnnouncementCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bell, Clock, Sun, Moon, ArrowRight, AlertCircle, Truck } from 'lucide-react';
+import { Bell, Clock, Sun, Moon, ArrowRight, AlertCircle, Truck, Megaphone } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { getDispatchBucket } from '../components/portal/dispatchBuckets';
 import { createPageUrl } from '@/utils';
