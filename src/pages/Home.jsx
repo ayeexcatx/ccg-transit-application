@@ -215,6 +215,8 @@ export default function Home() {
     navigateFromAction(n);
   };
 
+  const priorityText = { 1: 'text-red-800', 2: 'text-orange-800', 3: 'text-yellow-800', 4: 'text-blue-800', 5: 'text-slate-700' };
+
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <div>
@@ -225,13 +227,28 @@ export default function Home() {
       </div>
 
       {/* Announcements */}
-      {announcements.length > 0 && (
-        <section className="space-y-3">
-          {announcements.map(a => (
-            <AnnouncementCard key={a.id} announcement={a} />
-          ))}
-        </section>
-      )}
+      <section>
+        <Card className="rounded-lg border bg-white shadow-sm">
+          <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
+            <Megaphone className="h-4 w-4 text-slate-600" />
+            <h3 className="text-sm font-semibold text-slate-800">Announcement Center</h3>
+          </div>
+          <CardContent className="p-0">
+            {announcements.length === 0 ? (
+              <p className="px-4 py-5 text-sm text-slate-500">No announcements at this time.</p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {announcements.map(a => (
+                  <div key={a.id} className="px-4 py-3">
+                    <p className={`text-sm font-semibold leading-tight ${priorityText[a.priority] || priorityText[3]}`}>{a.title}</p>
+                    <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">{a.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
 
       {/* Action Needed — always visible for CompanyOwner */}
       {session?.code_type === 'CompanyOwner' && (
