@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus, Pencil, Trash2, Copy, FileText,
-  Sun, Moon, Truck, Filter, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, History, Archive, ArchiveX } from
+  Sun, Moon, Truck, Filter, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, History, Archive, ArchiveX, Lock } from
 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { getDispatchBucket } from '../components/portal/dispatchBuckets';
@@ -21,6 +21,7 @@ import { useSession } from '../components/session/SessionContext';
 import { Label } from '@/components/ui/label';
 import { statusBadgeColors, statusBorderAccent } from '../components/portal/statusConfig';
 import { reconcileOwnerNotificationsForDispatch } from '@/components/notifications/createNotifications';
+import { toast } from 'sonner';
 
 const STATUS_ORDER = ['Scheduled', 'Dispatch', 'Amended', 'Cancelled'];
 
@@ -160,6 +161,7 @@ export default function AdminDispatches() {
   const [tab, setTab] = useState('today');
   const dispatchRefs = useRef({});
   const pendingOpenIdRef = useRef(null);
+  const activeEditLockDispatchIdRef = useRef(null);
 
   const urlParams = new URLSearchParams(location.search);
   const targetDispatchId = urlParams.get('dispatchId');
@@ -222,10 +224,98 @@ export default function AdminDispatches() {
     queryFn: () => base44.entities.DispatchTemplateNotes.filter({ active_flag: true }, 'priority', 50)
   });
 
+  const getSessionLockName = () => {
+    if (!session) return 'Admin session';
+    return session.label || session.code || session.name || `Admin ${session.id || 'session'}`;
+  };
+
+  const releaseEditLock = async (dispatchId) => {
+    if (!dispatchId || !session?.id) return;
+
+    try {
+      const latest = await base44.entities.Dispatch.filter({ id: dispatchId }, '-created_date', 1).then((r) => r[0]);
+      if (!latest || !latest.edit_locked) return;
+      if (latest.edit_locked_by_session_id !== session.id) return;
+
+      await base44.entities.Dispatch.update(dispatchId, {
+        edit_locked: false,
+        edit_locked_by_session_id: null,
+        edit_locked_by_name: null,
+        edit_locked_at: null
+      });
+
+      activeEditLockDispatchIdRef.current = null;
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] }),
+        queryClient.invalidateQueries({ queryKey: ['portal-dispatches'] })
+      ]);
+      return true;
+    } catch {
+      toast.error('Failed to release edit lock. Please retry or refresh.');
+      return false;
+    }
+  };
+
+  const acquireEditLock = async (dispatchId) => {
+    if (!session?.id) {
+      toast.error('Unable to start editing without an active admin session.');
+      return null;
+    }
+
+    try {
+      const latest = await base44.entities.Dispatch.filter({ id: dispatchId }, '-created_date', 1).then((r) => r[0]);
+      if (!latest) {
+        toast.error('Dispatch not found. Please refresh and try again.');
+        return null;
+      }
+
+      const lockedByAnotherSession = latest.edit_locked && latest.edit_locked_by_session_id && latest.edit_locked_by_session_id !== session.id;
+      if (lockedByAnotherSession) {
+        const byName = latest.edit_locked_by_name ? ` (${latest.edit_locked_by_name})` : '';
+        toast.error(`This dispatch is currently being edited by another admin${byName}.`);
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] }),
+          queryClient.invalidateQueries({ queryKey: ['portal-dispatches'] })
+        ]);
+        return null;
+      }
+
+      await base44.entities.Dispatch.update(dispatchId, {
+        edit_locked: true,
+        edit_locked_by_session_id: session.id,
+        edit_locked_by_name: getSessionLockName(),
+        edit_locked_at: new Date().toISOString()
+      });
+
+      activeEditLockDispatchIdRef.current = dispatchId;
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] }),
+        queryClient.invalidateQueries({ queryKey: ['portal-dispatches'] })
+      ]);
+
+      return {
+        ...latest,
+        edit_locked: true,
+        edit_locked_by_session_id: session.id,
+        edit_locked_by_name: getSessionLockName(),
+        edit_locked_at: new Date().toISOString()
+      };
+    } catch {
+      toast.error('Failed to acquire edit lock. Please refresh and try again.');
+      return null;
+    }
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       if (editing && !editing._isCopy) {
-        await base44.entities.Dispatch.update(editing.id, data);
+        await base44.entities.Dispatch.update(editing.id, {
+          ...data,
+          edit_locked: false,
+          edit_locked_by_session_id: null,
+          edit_locked_by_name: null,
+          edit_locked_at: null
+        });
         const savedDispatch = await base44.entities.Dispatch.filter({ id: editing.id }, '-created_date', 1).then((r) => r[0]);
 
         if (savedDispatch) {
@@ -234,14 +324,24 @@ export default function AdminDispatches() {
 
         return savedDispatch;
       } else {
-        return base44.entities.Dispatch.create(data);
+        return base44.entities.Dispatch.create({
+          ...data,
+          edit_locked: false,
+          edit_locked_by_session_id: null,
+          edit_locked_by_name: null,
+          edit_locked_at: null
+        });
       }
     },
     onSuccess: () => {
+      activeEditLockDispatchIdRef.current = null;
       queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['portal-dispatches'] });
       queryClient.invalidateQueries({ predicate: (query) => String(query.queryKey?.[0] || '').startsWith('confirmations') });
+      if (editing && !editing._isCopy) {
+        toast.success('Dispatch saved. Edit lock released.');
+      }
       setOpen(false);
       setEditing(null);
     }
@@ -318,8 +418,15 @@ export default function AdminDispatches() {
     setOpen(true);
   };
 
-  const openEdit = (d) => {
-    setEditing(d);
+  const openEdit = async (d) => {
+    if (open && editing && editing.id === d.id) {
+      toast.message('This dispatch is already open for editing in your session.');
+      return;
+    }
+
+    const dispatchForEdit = await acquireEditLock(d.id);
+    if (!dispatchForEdit) return;
+    setEditing(dispatchForEdit);
     setOpen(true);
   };
 
@@ -419,6 +526,22 @@ export default function AdminDispatches() {
     setEditing(null);
     setOpen(true);
   }, [openNewDispatch]);
+
+  useEffect(() => {
+    return () => {
+      if (activeEditLockDispatchIdRef.current) {
+        releaseEditLock(activeEditLockDispatchIdRef.current);
+      }
+    };
+  }, [session?.id]);
+
+  useEffect(() => {
+    if (!previewDispatch?.id) return;
+    const freshPreview = dispatches.find((d) => d.id === previewDispatch.id);
+    if (freshPreview) {
+      setPreviewDispatch(freshPreview);
+    }
+  }, [dispatches, previewDispatch?.id]);
 
   return (
     <div className="space-y-6">
@@ -535,7 +658,14 @@ export default function AdminDispatches() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex flex-col items-end gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {d.edit_locked && d.edit_locked_by_session_id && d.edit_locked_by_session_id !== session?.id &&
+                    <div className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                        <Lock className="h-3 w-3" />
+                        <span>{d.edit_locked_by_name ? `Locked by ${d.edit_locked_by_name}` : 'Editing in progress'}</span>
+                      </div>
+                    }
+                    <div className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => openDrawer(d)} className="h-8 w-8" title="Preview">
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
@@ -556,6 +686,7 @@ export default function AdminDispatches() {
                     <Button variant="ghost" size="icon" onClick={() => openDelete(d)} className="h-8 w-8 text-red-500 hover:text-red-600">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -566,7 +697,13 @@ export default function AdminDispatches() {
         </div>
       }
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(nextOpen) => {
+        if (!nextOpen && activeEditLockDispatchIdRef.current) {
+          releaseEditLock(activeEditLockDispatchIdRef.current);
+        }
+        setOpen(nextOpen);
+        if (!nextOpen) setEditing(null);
+      }}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing && !editing._isCopy ? 'Edit Dispatch' : 'New Dispatch'}</DialogTitle>
@@ -577,7 +714,13 @@ export default function AdminDispatches() {
             companies={companies}
             accessCodes={accessCodes}
             onSave={handleSave}
-            onCancel={() => {setOpen(false);setEditing(null);}}
+            onCancel={() => {
+              if (activeEditLockDispatchIdRef.current) {
+                releaseEditLock(activeEditLockDispatchIdRef.current);
+              }
+              setOpen(false);
+              setEditing(null);
+            }}
             saving={saveMutation.isPending} />
 
         </DialogContent>
