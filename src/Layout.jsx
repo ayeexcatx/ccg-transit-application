@@ -3,6 +3,7 @@ import { SessionProvider, useSession } from './components/session/SessionContext
 import { createPageUrl } from './utils';
 import { Link, useLocation } from 'react-router-dom';
 import { LogOut, Truck, Shield, Building2, Megaphone, TriangleAlert } from 'lucide-react';
+import { LogOut, Truck, Shield, Building2, Megaphone, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
@@ -18,8 +19,14 @@ function LayoutInner({ children, currentPageName }) {
       return;
     }
     // Admin guard
-    const adminPages = ['AdminDashboard', 'AdminCompanies', 'AdminConfirmations', 'AdminAccessCodes', 'AdminDispatches', 'AdminTemplateNotes', 'AdminAnnouncements'];
+    const adminPages = ['AdminDashboard', 'AdminCompanies', 'AdminConfirmations', 'AdminAccessCodes', 'AdminDispatches', 'AdminTemplateNotes', 'AdminAnnouncements', 'AdminAvailability'];
     if (adminPages.includes(currentPageName) && session.code_type !== 'Admin') {
+      window.location.href = createPageUrl('Home');
+      return;
+    }
+
+    const ownerPages = ['Availability'];
+    if (ownerPages.includes(currentPageName) && session.code_type !== 'CompanyOwner') {
       window.location.href = createPageUrl('Home');
     }
   }, [session, loading, currentPageName]);
@@ -94,6 +101,9 @@ function LayoutInner({ children, currentPageName }) {
                 <Link to={createPageUrl('Incidents')}>
                   <Button variant={isActive('Incidents') ? 'secondary' : 'ghost'} size="sm" className="text-xs flex items-center gap-1">
                     <TriangleAlert className="h-3 w-3" />Incidents
+                <Link to={createPageUrl('AdminAvailability')}>
+                  <Button variant={isActive('AdminAvailability') ? 'secondary' : 'ghost'} size="sm" className="text-xs flex items-center gap-1">
+                    <CalendarDays className="h-3 w-3" />Availability
                   </Button>
                 </Link>
               </nav>
@@ -106,6 +116,9 @@ function LayoutInner({ children, currentPageName }) {
                 <Link to={createPageUrl('Portal')}>
                   <Button variant={isActive('Portal') ? 'secondary' : 'ghost'} size="sm" className="text-xs">Dispatches</Button>
                 </Link>
+                {isOwner && <Link to={createPageUrl('Availability')}>
+                  <Button variant={isActive('Availability') ? 'secondary' : 'ghost'} size="sm" className="text-xs flex items-center gap-1"><CalendarDays className="h-3 w-3" />Availability</Button>
+                </Link>}
                 {isOwner && <Link to={createPageUrl('Notifications')}>
                   <Button variant={isActive('Notifications') ? 'secondary' : 'ghost'} size="sm" className="text-xs">Notifications</Button>
                 </Link>}
@@ -141,6 +154,9 @@ function LayoutInner({ children, currentPageName }) {
             <Link to={createPageUrl('Portal')}>
               <Button variant={isActive('Portal') ? 'secondary' : 'ghost'} size="sm" className="text-xs whitespace-nowrap">Dispatches</Button>
             </Link>
+            {isOwner && <Link to={createPageUrl('Availability')}>
+              <Button variant={isActive('Availability') ? 'secondary' : 'ghost'} size="sm" className="text-xs whitespace-nowrap">Availability</Button>
+            </Link>}
             {isOwner && <Link to={createPageUrl('Notifications')}>
               <Button variant={isActive('Notifications') ? 'secondary' : 'ghost'} size="sm" className="text-xs whitespace-nowrap">Notifications</Button>
             </Link>}
@@ -176,6 +192,8 @@ function LayoutInner({ children, currentPageName }) {
             </Link>
             <Link to={createPageUrl('Incidents')}>
               <Button variant={isActive('Incidents') ? 'secondary' : 'ghost'} size="sm" className="text-xs whitespace-nowrap">Incidents</Button>
+            <Link to={createPageUrl('AdminAvailability')}>
+              <Button variant={isActive('AdminAvailability') ? 'secondary' : 'ghost'} size="sm" className="text-xs whitespace-nowrap">Availability</Button>
             </Link>
           </div>
         }

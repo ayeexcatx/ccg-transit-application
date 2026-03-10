@@ -50,7 +50,9 @@ import Incidents from './pages/Incidents';
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import AccessCodeLogin from './pages/AccessCodeLogin';
+import Availability from './pages/Availability';
 import AdminAccessCodes from './pages/AdminAccessCodes';
+import AdminAvailability from './pages/AdminAvailability';
 import AdminAnnouncements from './pages/AdminAnnouncements';
 import AdminCompanies from './pages/AdminCompanies';
 import AdminConfirmations from './pages/AdminConfirmations';
@@ -66,7 +68,9 @@ import __Layout from './Layout.jsx';
 
 export const PAGES = {
     "AccessCodeLogin": AccessCodeLogin,
+    "Availability": Availability,
     "AdminAccessCodes": AdminAccessCodes,
+    "AdminAvailability": AdminAvailability,
     "AdminAnnouncements": AdminAnnouncements,
     "AdminCompanies": AdminCompanies,
     "AdminConfirmations": AdminConfirmations,
