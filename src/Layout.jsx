@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { SessionProvider, useSession } from './components/session/SessionContext';
 import { createPageUrl } from './utils';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, Truck, Shield, Building2, Megaphone } from 'lucide-react';
+import { LogOut, Truck, Shield, Building2, Megaphone, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
@@ -91,6 +91,11 @@ function LayoutInner({ children, currentPageName }) {
                     <Megaphone className="h-3 w-3" />Announcements
                   </Button>
                 </Link>
+                <Link to={createPageUrl('Incidents')}>
+                  <Button variant={isActive('Incidents') ? 'secondary' : 'ghost'} size="sm" className="text-xs flex items-center gap-1">
+                    <TriangleAlert className="h-3 w-3" />Incidents
+                  </Button>
+                </Link>
               </nav>
             }
             {canUsePortalTabs &&
@@ -104,6 +109,9 @@ function LayoutInner({ children, currentPageName }) {
                 {isOwner && <Link to={createPageUrl('Notifications')}>
                   <Button variant={isActive('Notifications') ? 'secondary' : 'ghost'} size="sm" className="text-xs">Notifications</Button>
                 </Link>}
+                <Link to={createPageUrl('Incidents')}>
+                  <Button variant={isActive('Incidents') ? 'secondary' : 'ghost'} size="sm" className="text-xs">Incidents</Button>
+                </Link>
               </nav>
             }
             {(isAdmin || session.code_type === 'CompanyOwner') &&
@@ -136,6 +144,9 @@ function LayoutInner({ children, currentPageName }) {
             {isOwner && <Link to={createPageUrl('Notifications')}>
               <Button variant={isActive('Notifications') ? 'secondary' : 'ghost'} size="sm" className="text-xs whitespace-nowrap">Notifications</Button>
             </Link>}
+            <Link to={createPageUrl('Incidents')}>
+              <Button variant={isActive('Incidents') ? 'secondary' : 'ghost'} size="sm" className="text-xs whitespace-nowrap">Incidents</Button>
+            </Link>
           </div>
         }
 
@@ -162,6 +173,9 @@ function LayoutInner({ children, currentPageName }) {
             </Link>
             <Link to={createPageUrl('AdminAnnouncements')}>
               <Button variant="ghost" size="sm" className="text-xs whitespace-nowrap">Announcements</Button>
+            </Link>
+            <Link to={createPageUrl('Incidents')}>
+              <Button variant={isActive('Incidents') ? 'secondary' : 'ghost'} size="sm" className="text-xs whitespace-nowrap">Incidents</Button>
             </Link>
           </div>
         }
