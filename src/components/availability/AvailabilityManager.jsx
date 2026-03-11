@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Moon, Sun } from 'lucide-react';
 import {
   VIEW_MODES,
   STATUS_AVAILABLE,
@@ -26,9 +27,11 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState('week');
   const [activeDate, setActiveDate] = useState(new Date());
-  const [editing, setEditing] = useState(null);
-  const [editStatus, setEditStatus] = useState(STATUS_AVAILABLE);
-  const [editCount, setEditCount] = useState('');
+  const [defaultEditing, setDefaultEditing] = useState(null);
+  const [defaultEditStatus, setDefaultEditStatus] = useState(STATUS_AVAILABLE);
+  const [defaultEditCount, setDefaultEditCount] = useState('');
+  const [overrideEditingDate, setOverrideEditingDate] = useState(null);
+  const [dateOverrideForm, setDateOverrideForm] = useState(null);
   const [formError, setFormError] = useState('');
   const [companySearch, setCompanySearch] = useState('');
   const [adminCompanyId, setAdminCompanyId] = useState('');
@@ -107,39 +110,126 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
     return { status: STATUS_AVAILABLE, available_truck_count: null };
   };
 
-  const openEditor = (mode, date, shift) => {
-    const initial = mode === 'override'
-      ? resolveAvailability(date, shift)
-      : defaultMap.get(`${date.getDay()}-${shift}`) || { status: STATUS_AVAILABLE, available_truck_count: null };
+  const openDefaultEditor = (date, shift) => {
+    const initial = defaultMap.get(`${date.getDay()}-${shift}`) || { status: STATUS_AVAILABLE, available_truck_count: null };
 
-    setEditing({ mode, date, shift });
-    setEditStatus(initial.status || STATUS_AVAILABLE);
-    setEditCount(initial.available_truck_count ? String(initial.available_truck_count) : '');
+    setDefaultEditing({ date, shift });
+    setDefaultEditStatus(initial.status || STATUS_AVAILABLE);
+    setDefaultEditCount(initial.available_truck_count ? String(initial.available_truck_count) : '');
     setFormError('');
   };
 
-  const saveEdit = async () => {
-    if (!editing || !selectedCompanyId) return;
+  const getDateEditInitialState = (date) => {
+    const operationalShifts = getOperationalShifts(date.getDay());
+    const createShiftState = (shift) => {
+      const availability = resolveAvailability(date, shift);
+      return {
+        status: availability.status || STATUS_AVAILABLE,
+        count: availability.available_truck_count ? String(availability.available_truck_count) : '',
+        operational: operationalShifts.includes(shift),
+      };
+    };
 
-    const count = editStatus === STATUS_AVAILABLE ? normalizeCount(editCount) : null;
-    if (editStatus === STATUS_AVAILABLE && editCount !== '' && count === null) {
+    return {
+      Day: createShiftState('Day'),
+      Night: createShiftState('Night'),
+    };
+  };
+
+  const openOverrideEditorForDate = (date) => {
+    setOverrideEditingDate(date);
+    setDateOverrideForm(getDateEditInitialState(date));
+    setFormError('');
+  };
+
+  const saveDefaultEdit = async () => {
+    if (!defaultEditing || !selectedCompanyId) return;
+
+    const count = defaultEditStatus === STATUS_AVAILABLE ? normalizeCount(defaultEditCount) : null;
+    if (defaultEditStatus === STATUS_AVAILABLE && defaultEditCount !== '' && count === null) {
       setFormError('Available truck count must be a whole number greater than 0.');
       return;
     }
 
     const payload = {
       company_id: selectedCompanyId,
-      status: editStatus,
-      available_truck_count: editStatus === STATUS_UNAVAILABLE ? null : count,
+      status: defaultEditStatus,
+      available_truck_count: defaultEditStatus === STATUS_UNAVAILABLE ? null : count,
+      weekday: defaultEditing.date.getDay(),
+      shift: defaultEditing.shift,
     };
 
-    if (editing.mode === 'default') {
-      await upsertDefaultMutation.mutateAsync({ ...payload, weekday: editing.date.getDay(), shift: editing.shift });
-    } else {
-      await upsertOverrideMutation.mutateAsync({ ...payload, date: toDateKey(editing.date), shift: editing.shift });
+    await upsertDefaultMutation.mutateAsync(payload);
+    setDefaultEditing(null);
+  };
+
+  const saveDateOverride = async () => {
+    if (!overrideEditingDate || !selectedCompanyId || !dateOverrideForm) return;
+
+    for (const shift of ['Day', 'Night']) {
+      const shiftState = dateOverrideForm[shift];
+      if (!shiftState?.operational) continue;
+
+      const count = shiftState.status === STATUS_AVAILABLE ? normalizeCount(shiftState.count) : null;
+      if (shiftState.status === STATUS_AVAILABLE && shiftState.count !== '' && count === null) {
+        setFormError(`${shift} shift available truck count must be a whole number greater than 0.`);
+        return;
+      }
     }
 
-    setEditing(null);
+    const savePromises = ['Day', 'Night'].map(async (shift) => {
+      const shiftState = dateOverrideForm[shift];
+      if (!shiftState?.operational) return;
+
+      const count = shiftState.status === STATUS_AVAILABLE ? normalizeCount(shiftState.count) : null;
+      await upsertOverrideMutation.mutateAsync({
+        company_id: selectedCompanyId,
+        status: shiftState.status,
+        available_truck_count: shiftState.status === STATUS_UNAVAILABLE ? null : count,
+        date: toDateKey(overrideEditingDate),
+        shift,
+      });
+    });
+
+    await Promise.all(savePromises);
+    setOverrideEditingDate(null);
+    setDateOverrideForm(null);
+  };
+
+  const clearDateOverrides = async (date) => {
+    await Promise.all(
+      ['Day', 'Night'].map((shift) => clearOverrideMutation.mutateAsync({ date: toDateKey(date), shift }))
+    );
+    setOverrideEditingDate(null);
+    setDateOverrideForm(null);
+  };
+
+  const updateOverrideShiftField = (shift, field, value) => {
+    setDateOverrideForm((prev) => ({
+      ...prev,
+      [shift]: {
+        ...prev[shift],
+        [field]: value,
+        ...(field === 'status' && value === STATUS_UNAVAILABLE ? { count: '' } : {}),
+      },
+    }));
+  };
+
+  const getCompactShiftDisplay = (date, shift) => {
+    if (!getOperationalShifts(date.getDay()).includes(shift)) {
+      return { label: 'N/A', className: 'text-slate-400' };
+    }
+
+    const availability = resolveAvailability(date, shift);
+    if (availability.status === STATUS_UNAVAILABLE) {
+      return { label: 'Unavail', className: getStatusClass(availability.status) };
+    }
+
+    if (availability.available_truck_count) {
+      return { label: String(availability.available_truck_count), className: getStatusClass(availability.status) };
+    }
+
+    return { label: 'Avail', className: getStatusClass(availability.status) };
   };
 
   const shiftActiveDate = (direction) => {
@@ -176,58 +266,37 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
     return eachDayOfInterval({ start: gridStart, end: gridEnd });
   }, [activeDate, viewMode]);
 
-  const getShiftDisplayValue = (availability) => {
-    if (availability.status === STATUS_UNAVAILABLE) return 'Unavailable';
-    if (availability.available_truck_count) return String(availability.available_truck_count);
-    return 'Available';
-  };
-
-  const getPrimaryEditableShift = (date) => {
-    const shifts = getOperationalShifts(date.getDay());
-    if (!shifts.length) return null;
-    return shifts.includes('Day') ? 'Day' : shifts[0];
-  };
-
   const renderCompactCalendarDayCell = (date, weekIndex) => {
     const key = `${toDateKey(date)}-${weekIndex}`;
-    const shifts = getOperationalShifts(date.getDay());
     const isOutsideActiveMonth = viewMode === 'month' && !isSameMonth(date, activeDate);
-    const dayAvailability = shifts.includes('Day') ? resolveAvailability(date, 'Day') : null;
-    const nightAvailability = shifts.includes('Night') ? resolveAvailability(date, 'Night') : null;
-    const primaryShift = getPrimaryEditableShift(date);
+    const dayDisplay = getCompactShiftDisplay(date, 'Day');
+    const nightDisplay = getCompactShiftDisplay(date, 'Night');
 
     return (
       <button
         key={key}
         type="button"
-        disabled={!primaryShift}
-        onClick={() => primaryShift && openEditor('override', date, primaryShift)}
+        onClick={() => openOverrideEditorForDate(date)}
         className={`min-w-0 rounded border p-1 text-left transition-colors ${
           isOutsideActiveMonth ? 'bg-slate-50/70 border-slate-200' : 'bg-white border-slate-300'
-        } ${
-          primaryShift ? 'hover:bg-slate-50' : 'cursor-default'
-        }`}
+        } hover:bg-slate-50`}
       >
         <p className={`text-[10px] font-semibold leading-tight ${isOutsideActiveMonth ? 'text-slate-400' : 'text-slate-700'}`}>
           {format(date, 'd')}
         </p>
         <div className="mt-1 space-y-0.5 text-[10px] leading-tight">
-          <p className={dayAvailability ? getStatusClass(dayAvailability.status) : 'text-slate-400'}>
-            {dayAvailability ? getShiftDisplayValue(dayAvailability) : '—'}
-          </p>
-          <p className={nightAvailability ? getStatusClass(nightAvailability.status) : 'text-slate-400'}>
-            {nightAvailability ? getShiftDisplayValue(nightAvailability) : '—'}
-          </p>
+          <p className={dayDisplay.className}>{dayDisplay.label}</p>
+          <p className={nightDisplay.className}>{nightDisplay.label}</p>
         </div>
       </button>
     );
   };
 
   const renderCalendarWeekRow = (weekDates, weekIndex) => (
-    <div key={`week-${weekIndex}`} className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))] gap-1">
-      <div className="flex flex-col justify-center text-[10px] leading-tight text-slate-500">
-        <span>Day Shift</span>
-        <span className="mt-2">Night Shift</span>
+    <div key={`week-${weekIndex}`} className="grid grid-cols-[24px_repeat(7,minmax(0,1fr))] gap-1">
+      <div className="flex flex-col items-center justify-center text-slate-500">
+        <Sun className="h-3 w-3 text-amber-500" />
+        <Moon className="mt-2 h-3 w-3 text-slate-500" />
       </div>
       {weekDates.map((date) => renderCompactCalendarDayCell(date, weekIndex))}
     </div>
@@ -257,7 +326,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
               <button
                 key={shift}
                 type="button"
-                onClick={() => openEditor('override', date, shift)}
+                onClick={() => openOverrideEditorForDate(date)}
                 className="w-full rounded border border-slate-200 px-3 py-2 text-left hover:bg-slate-50"
               >
                 <div className="flex items-center justify-between gap-2">
@@ -335,7 +404,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
               <div className="overflow-x-auto">
                 {(viewMode === 'week' || viewMode === 'month') && (
                   <div className="space-y-1 min-w-0">
-                    <div className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))] gap-1">
+                    <div className="grid grid-cols-[24px_repeat(7,minmax(0,1fr))] gap-1">
                       <div />
                       {WEEKDAY_SHORT_LABELS.map((weekday, index) => (
                         <p key={`${weekday}-${index}`} className="text-[10px] text-center font-semibold text-slate-500">{weekday}</p>
@@ -378,7 +447,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
                       <button
                         key={`${weekday}-${shift}`}
                         type="button"
-                        onClick={() => openEditor('default', date, shift)}
+                        onClick={() => openDefaultEditor(date, shift)}
                         className="rounded border border-slate-200 p-2 text-left hover:bg-slate-50"
                       >
                         <p className="text-xs text-slate-500">{WEEKDAY_LABELS[weekday]} · {shift}</p>
@@ -393,22 +462,31 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
         </>
       )}
 
-      <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
+      <Dialog
+        open={!!defaultEditing || !!overrideEditingDate}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDefaultEditing(null);
+            setOverrideEditingDate(null);
+            setDateOverrideForm(null);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing?.mode === 'default' ? 'Edit weekly default' : 'Edit date override'}</DialogTitle>
+            <DialogTitle>{defaultEditing ? 'Edit weekly default' : 'Edit day override'}</DialogTitle>
           </DialogHeader>
 
-          {editing && (
+          {defaultEditing && (
             <div className="space-y-4">
-              <p className="text-sm text-slate-600">{format(editing.date, 'EEE, MMM d, yyyy')} · {editing.shift} Shift</p>
+              <p className="text-sm text-slate-600">{format(defaultEditing.date, 'EEE, MMM d, yyyy')} · {defaultEditing.shift} Shift</p>
               <div>
                 <p className="text-xs text-slate-500 mb-1">Status</p>
                 <Select
-                  value={editStatus}
+                  value={defaultEditStatus}
                   onValueChange={(value) => {
-                    setEditStatus(value);
-                    if (value === STATUS_UNAVAILABLE) setEditCount('');
+                    setDefaultEditStatus(value);
+                    if (value === STATUS_UNAVAILABLE) setDefaultEditCount('');
                   }}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -419,14 +497,14 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
                 </Select>
               </div>
 
-              {editStatus === STATUS_AVAILABLE && (
+              {defaultEditStatus === STATUS_AVAILABLE && (
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Available Trucks (optional)</p>
                   <Input
                     type="number"
                     min="1"
-                    value={editCount}
-                    onChange={(e) => setEditCount(e.target.value)}
+                    value={defaultEditCount}
+                    onChange={(e) => setDefaultEditCount(e.target.value)}
                     placeholder="Leave blank for general availability"
                   />
                 </div>
@@ -435,19 +513,63 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
               {formError && <p className="text-xs text-red-600">{formError}</p>}
 
               <div className="flex flex-wrap justify-end gap-2">
-                {editing.mode === 'override' && (
-                  <Button
-                    variant="outline"
-                    onClick={async () => {
-                      await clearOverrideMutation.mutateAsync({ date: toDateKey(editing.date), shift: editing.shift });
-                      setEditing(null);
-                    }}
-                  >
-                    Use Weekly Default
-                  </Button>
-                )}
-                <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-                <Button onClick={saveEdit}>Save</Button>
+                <Button variant="outline" onClick={() => { setDefaultEditing(null); setFormError(''); }}>Cancel</Button>
+                <Button onClick={saveDefaultEdit}>Save</Button>
+              </div>
+            </div>
+          )}
+
+          {!defaultEditing && overrideEditingDate && dateOverrideForm && (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600">{format(overrideEditingDate, 'EEE, MMM d, yyyy')}</p>
+
+              {['Day', 'Night'].map((shift) => {
+                const shiftState = dateOverrideForm[shift];
+                return (
+                  <div key={shift} className="space-y-2 rounded border border-slate-200 p-3">
+                    <p className="text-sm font-medium text-slate-700">{shift} Shift</p>
+                    {!shiftState.operational ? (
+                      <p className="text-xs text-slate-400">N/A (non-operational for this date)</p>
+                    ) : (
+                      <>
+                        <div>
+                          <p className="text-xs text-slate-500 mb-1">Status</p>
+                          <Select
+                            value={shiftState.status}
+                            onValueChange={(value) => updateOverrideShiftField(shift, 'status', value)}
+                          >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={STATUS_AVAILABLE}>Available</SelectItem>
+                              <SelectItem value={STATUS_UNAVAILABLE}>Unavailable</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {shiftState.status === STATUS_AVAILABLE && (
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">Available Trucks (optional)</p>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={shiftState.count}
+                              onChange={(e) => updateOverrideShiftField(shift, 'count', e.target.value)}
+                              placeholder="Leave blank for general availability"
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+
+              {formError && <p className="text-xs text-red-600">{formError}</p>}
+
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button variant="outline" onClick={() => clearDateOverrides(overrideEditingDate)}>Use Weekly Default</Button>
+                <Button variant="outline" onClick={() => { setOverrideEditingDate(null); setDateOverrideForm(null); setFormError(''); }}>Cancel</Button>
+                <Button onClick={saveDateOverride}>Save</Button>
               </div>
             </div>
           )}
