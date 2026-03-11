@@ -265,6 +265,7 @@ export default function DispatchDetailDrawer({
     .filter(Boolean);
 
   const visibleTrucks = isDriverUser ? [...new Set(driverAssignedTrucks)] : myTrucks;
+
   const primaryReferenceTag = String(dispatch.reference_tag || '').trim();
   const currentConfType = dispatch.status;
   const hasAdditional = Array.isArray(dispatch.additional_assignments) && dispatch.additional_assignments.length > 0;
