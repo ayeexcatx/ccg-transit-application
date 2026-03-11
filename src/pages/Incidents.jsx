@@ -37,7 +37,6 @@ const INITIAL_FORM = {
   location: '',
   summary: '',
   details: '',
-  photos: '',
 };
 
 const formatDateTime = (value) => {
@@ -71,6 +70,7 @@ export default function Incidents() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [filters, setFilters] = useState({ status: 'all', truck: '', type: 'all' });
   const [draftUpdates, setDraftUpdates] = useState({});
+  const [selectedIncident, setSelectedIncident] = useState(null);
 
   const isAdmin = session?.code_type === 'Admin';
   const isOwner = session?.code_type === 'CompanyOwner';
@@ -224,14 +224,14 @@ export default function Incidents() {
     },
   });
 
-  const reopenMutation = useMutation({
-    mutationFn: (incidentId) => base44.entities.IncidentReport.update(incidentId, { status: 'Open' }),
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ incidentId, status }) => base44.entities.IncidentReport.update(incidentId, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
-      toast.success('Incident reopened.');
+      toast.success('Incident status updated.');
     },
     onError: (error) => {
-      toast.error(error?.message || 'Failed to reopen incident.');
+      toast.error(error?.message || 'Failed to update incident status.');
     },
   });
 
@@ -306,9 +306,6 @@ export default function Incidents() {
       location: form.location || null,
       summary: form.summary,
       details: form.details || null,
-      photos: form.photos
-        ? form.photos.split('\n').map((item) => item.trim()).filter(Boolean)
-        : [],
       created_from_dispatch: Boolean(form.dispatch_id),
     });
   };
@@ -380,7 +377,19 @@ export default function Incidents() {
             : null;
 
           return (
-            <Card key={incident.id} className="border-slate-200">
+            <Card
+              key={incident.id}
+              className="border-slate-200 cursor-pointer hover:border-slate-300 transition-colors"
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedIncident(incident.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedIncident(incident.id);
+                }
+              }}
+            >
               <CardContent className="pt-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -404,7 +413,11 @@ export default function Incidents() {
                       <div className="text-xs text-slate-600 mt-2 space-y-0.5">
                         <p>
                           Dispatch:{' '}
-                          <Link to={dispatchHref} className="text-blue-700 hover:underline">
+                          <Link
+                            to={dispatchHref}
+                            className="text-blue-700 hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             {dispatch.job_number || dispatch.reference_tag || dispatch.id}
                           </Link>
                         </p>
@@ -413,49 +426,6 @@ export default function Incidents() {
                           {dispatch.start_time ? ` • ${dispatch.start_time}` : ''}
                           {dispatch.status ? ` • ${dispatch.status}` : ''}
                         </p>
-                      </div>
-                    )}
-
-                    <div className="mt-4 space-y-2">
-                      <Label className="text-xs text-slate-600">Add update / note</Label>
-                      <Textarea
-                        rows={2}
-                        placeholder="Add a note to this incident..."
-                        value={draftUpdates[incident.id] || ''}
-                        onChange={(e) => setDraftUpdates((prev) => ({ ...prev, [incident.id]: e.target.value }))}
-                      />
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => addUpdateMutation.mutate({ incident, note: draftUpdates[incident.id] || '' })}
-                          disabled={addUpdateMutation.isPending || !(draftUpdates[incident.id] || '').trim()}
-                        >
-                          Add Update
-                        </Button>
-                        {incident.status === 'Completed' && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => reopenMutation.mutate(incident.id)}
-                            disabled={reopenMutation.isPending}
-                          >
-                            Reopen Incident
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {Array.isArray(incident.updates) && incident.updates.length > 0 && (
-                      <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
-                        <p className="text-xs font-medium text-slate-700">Incident Updates</p>
-                        {incident.updates.map((update, idx) => (
-                          <div key={`${incident.id}-update-${idx}`} className="text-xs text-slate-700">
-                            <p>{update?.note || '—'}</p>
-                            <p className="text-slate-500 mt-0.5">{formatDateTime(update?.created_at)}</p>
-                          </div>
-                        ))}
                       </div>
                     )}
                   </div>
@@ -555,14 +525,8 @@ export default function Incidents() {
             </div>
 
             <div>
-              <Label>Photos / Documents Link</Label>
+              <Label>Photos / Documents</Label>
               <p className="text-xs text-slate-500 mb-1">Please submit any photos or documents (.jpg, .png, .pdf) to alex@ccgnj.com and reference the incident.</p>
-              <Textarea
-                rows={3}
-                placeholder="https://..."
-                value={form.photos}
-                onChange={(e) => setForm((p) => ({ ...p, photos: e.target.value }))}
-              />
             </div>
 
             <div className="flex justify-end">
@@ -571,6 +535,130 @@ export default function Incidents() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedIncident} onOpenChange={(open) => !open && setSelectedIncident(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          {selectedIncident && (() => {
+            const incident = incidents.find((item) => item.id === selectedIncident);
+            if (!incident) return null;
+
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Incident Detail</DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge>{incident.incident_type || 'Incident'}</Badge>
+                    <Badge variant="outline" className="font-mono">
+                      <Truck className="h-3 w-3 mr-1" />
+                      {incident.truck_number || 'N/A'}
+                    </Badge>
+                    <Badge
+                      className={incident.status === 'Completed'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-amber-100 text-amber-800 border border-amber-200'}
+                    >
+                      {incident.status || 'Open'}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-slate-500">Summary</p>
+                      <p className="text-slate-900 font-medium">{incident.summary || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Created</p>
+                      <p className="text-slate-900">{formatDateTime(incident.created_date || incident.incident_datetime)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Time Stopped From</p>
+                      <p className="text-slate-900">{formatDateTime(incident.time_stopped_from)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Time Stopped To</p>
+                      <p className="text-slate-900">{formatDateTime(incident.time_stopped_to)}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-slate-500">Details</p>
+                      <p className="text-slate-900 whitespace-pre-wrap">{incident.details || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Reported By</p>
+                      <p className="text-slate-900">{incident.reported_by_access_code_id || incident.reported_by_code_type || '—'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {incident.status === 'Completed' ? (
+                      <Button
+                        type="button"
+                        onClick={() => updateStatusMutation.mutate({ incidentId: incident.id, status: 'Open' })}
+                        disabled={updateStatusMutation.isPending}
+                      >
+                        Reopen Incident
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={() => updateStatusMutation.mutate({ incidentId: incident.id, status: 'Completed' })}
+                        disabled={updateStatusMutation.isPending}
+                      >
+                        Mark Completed
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm text-slate-700">Add Update / Note</Label>
+                    <Textarea
+                      className="w-full min-h-[120px]"
+                      placeholder="Write an update or note..."
+                      value={draftUpdates[incident.id] || ''}
+                      onChange={(e) => setDraftUpdates((prev) => ({ ...prev, [incident.id]: e.target.value }))}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => addUpdateMutation.mutate({ incident, note: draftUpdates[incident.id] || '' })}
+                      disabled={addUpdateMutation.isPending || !(draftUpdates[incident.id] || '').trim()}
+                    >
+                      Add Update
+                    </Button>
+                  </div>
+
+                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-3">
+                    <p className="text-sm font-medium text-slate-700">Incident Timeline</p>
+                    <div className="text-sm text-slate-700">
+                      <p className="font-medium">Original Incident Report</p>
+                      <p className="whitespace-pre-wrap">{incident.details || incident.summary || '—'}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {formatDateTime(incident.created_date || incident.incident_datetime)}
+                        {incident.reported_by_access_code_id ? ` • ${incident.reported_by_access_code_id}` : ''}
+                      </p>
+                    </div>
+                    {Array.isArray(incident.updates) && incident.updates.length > 0 ? (
+                      incident.updates.map((update, idx) => (
+                        <div key={`${incident.id}-update-${idx}`} className="text-sm text-slate-700 border-t border-slate-200 pt-2">
+                          <p className="whitespace-pre-wrap">{update?.note || '—'}</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {formatDateTime(update?.created_at)}
+                            {update?.created_by_access_code_id ? ` • ${update.created_by_access_code_id}` : ''}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-500">No updates yet.</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
