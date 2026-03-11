@@ -2,6 +2,7 @@ import React from 'react';
 import { useSession } from '@/components/session/SessionContext';
 import { Card, CardContent } from '@/components/ui/card';
 import AvailabilityManager from '@/components/availability/AvailabilityManager';
+import AvailabilitySummaryBoxes from '@/components/availability/AvailabilitySummaryBoxes';
 
 export default function Availability() {
   const { session } = useSession();
@@ -17,5 +18,10 @@ export default function Availability() {
     );
   }
 
-  return <AvailabilityManager companyId={session.company_id} />;
+  return (
+    <div className="space-y-4">
+      <AvailabilitySummaryBoxes companyId={session.company_id} />
+      <AvailabilityManager companyId={session.company_id} />
+    </div>
+  );
 }
