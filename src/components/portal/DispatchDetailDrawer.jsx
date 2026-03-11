@@ -180,9 +180,6 @@ export default function DispatchDetailDrawer({
   const isOwner = session.code_type === 'CompanyOwner';
   const isAdmin = session.code_type === 'Admin';
   const isTruckUser = session.code_type === 'Truck';
-  const primaryReferenceTag = String(dispatch.reference_tag || '').trim();
-  const currentConfType = dispatch.status;
-  const hasAdditional = Array.isArray(dispatch.additional_assignments) && dispatch.additional_assignments.length > 0;
 
   const { data: companyDrivers = [] } = useQuery({
     queryKey: ['drivers', dispatch?.company_id],
@@ -251,6 +248,9 @@ export default function DispatchDetailDrawer({
 
   if (!dispatch) return null;
 
+  const primaryReferenceTag = String(dispatch.reference_tag || '').trim();
+  const currentConfType = dispatch.status;
+  const hasAdditional = Array.isArray(dispatch.additional_assignments) && dispatch.additional_assignments.length > 0;
 
   const normalizedTemplateNotes = (templateNotes || []).map(normalizeTemplateNote);
   const boxNotes = normalizedTemplateNotes.filter(n => n.note_type === NOTE_TYPES.BOX);
