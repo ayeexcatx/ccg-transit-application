@@ -17,6 +17,7 @@ import {
   getOperationalShifts,
   getStatusClass,
   normalizeCount,
+  resolveAvailabilityForCompanyShift,
   toDateKey,
 } from './availabilityRules';
 
@@ -88,24 +89,25 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
 
   const defaultMap = useMemo(() => {
     const map = new Map();
-    defaults.forEach((d) => map.set(`${d.weekday}-${d.shift}`, d));
+    defaults.forEach((d) => map.set(`${selectedCompanyId}-${d.weekday}-${d.shift}`, d));
     return map;
-  }, [defaults]);
+  }, [defaults, selectedCompanyId]);
 
   const overrideMap = useMemo(() => {
     const map = new Map();
-    overrides.forEach((o) => map.set(`${o.date}-${o.shift}`, o));
+    overrides.forEach((o) => map.set(`${selectedCompanyId}-${o.date}-${o.shift}`, o));
     return map;
-  }, [overrides]);
+  }, [overrides, selectedCompanyId]);
 
   const resolveAvailability = (date, shift) => {
-    const override = overrideMap.get(`${toDateKey(date)}-${shift}`);
-    if (override) return override;
-
-    const recurring = defaultMap.get(`${date.getDay()}-${shift}`);
-    if (recurring) return recurring;
-
-    return { status: STATUS_AVAILABLE, available_truck_count: null };
+    if (!selectedCompanyId) return { status: STATUS_AVAILABLE, available_truck_count: null };
+    return resolveAvailabilityForCompanyShift({
+      companyId: selectedCompanyId,
+      date,
+      shift,
+      defaultMap,
+      overrideMap,
+    });
   };
 
   const getDateEditInitialState = (date) => {
@@ -138,11 +140,11 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
       form[weekday] = {
         Day: {
           operational: operationalShifts.includes('Day'),
-          checked: (defaultMap.get(`${weekday}-Day`)?.status || STATUS_AVAILABLE) === STATUS_AVAILABLE,
+          checked: (defaultMap.get(`${selectedCompanyId}-${weekday}-Day`)?.status || STATUS_AVAILABLE) === STATUS_AVAILABLE,
         },
         Night: {
           operational: operationalShifts.includes('Night'),
-          checked: (defaultMap.get(`${weekday}-Night`)?.status || STATUS_AVAILABLE) === STATUS_AVAILABLE,
+          checked: (defaultMap.get(`${selectedCompanyId}-${weekday}-Night`)?.status || STATUS_AVAILABLE) === STATUS_AVAILABLE,
         },
       };
     }
@@ -160,7 +162,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
         const shiftState = defaultsEditorForm[weekday]?.[shift];
         if (!shiftState?.operational) continue;
 
-        const existing = defaultMap.get(`${weekday}-${shift}`);
+        const existing = defaultMap.get(`${selectedCompanyId}-${weekday}-${shift}`);
         jobs.push(
           upsertDefaultMutation.mutateAsync({
             company_id: selectedCompanyId,
@@ -249,7 +251,9 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
 
   const getDefaultMatrixDisplay = (weekday, shift) => {
     if (!getOperationalShifts(weekday).includes(shift)) return { label: 'N/A', className: 'text-slate-400' };
-    const availability = defaultMap.get(`${weekday}-${shift}`) || { status: STATUS_AVAILABLE, available_truck_count: null };
+    const availability = selectedCompanyId
+      ? defaultMap.get(`${selectedCompanyId}-${weekday}-${shift}`) || { status: STATUS_AVAILABLE, available_truck_count: null }
+      : { status: STATUS_AVAILABLE, available_truck_count: null };
     if (availability.status === STATUS_UNAVAILABLE) return { label: 'No', className: 'text-red-700' };
     if (availability.available_truck_count) return { label: String(availability.available_truck_count), className: 'text-green-700' };
     return { label: 'Yes', className: 'text-green-700' };
