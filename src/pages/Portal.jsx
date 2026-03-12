@@ -510,19 +510,17 @@ Would you like to swap ${outgoingTruck} with ${incomingTruck}?`;
     !dispatches.find(d => d.id === targetDispatchId);
 
 
-  const openDrawer = useCallback(async (dispatch) => {
+  const openDrawer = useCallback((dispatch) => {
     if (!dispatch?.id) return;
 
     setPreviewDispatch(dispatch);
 
-    const [confs, times] = await Promise.all([
-      base44.entities.Confirmation.filter({ dispatch_id: dispatch.id }, '-confirmed_at', 100),
-      base44.entities.TimeEntry.filter({ dispatch_id: dispatch.id }, '-created_date', 100),
-    ]);
+    const dispatchConfs = confirmations.filter(c => c.dispatch_id === dispatch.id);
+    const dispatchTimes = timeEntries.filter(te => te.dispatch_id === dispatch.id);
 
-    setDrawerConfirmations(confs);
-    setDrawerTimeEntries(times);
-  }, []);
+    setDrawerConfirmations(dispatchConfs);
+    setDrawerTimeEntries(dispatchTimes);
+  }, [confirmations, timeEntries]);
 
   const handleDrawerClose = () => {
     setPreviewDispatch(null);
