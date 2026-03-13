@@ -16,7 +16,7 @@ import {
   Building2, Key, FileText, StickyNote,
   ArrowRight, Clock, CheckCircle2, Megaphone, AlertTriangle
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { addDays, format, isFriday } from 'date-fns';
 
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
@@ -76,9 +76,26 @@ export default function AdminDashboard() {
     },
   });
 
-  const activeDispatches = dispatches.filter(d => d.status !== 'Completed' && d.status !== 'Cancelled');
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
   const todayDispatches = dispatches.filter(d => d.date === todayStr);
+
+  const tomorrowCardConfig = (() => {
+    if (isFriday(today)) {
+      const sundayStr = format(addDays(today, 2), 'yyyy-MM-dd');
+      const mondayStr = format(addDays(today, 3), 'yyyy-MM-dd');
+      return {
+        label: 'Sun + Mon Dispatches',
+        count: dispatches.filter((dispatch) => dispatch.date === sundayStr || dispatch.date === mondayStr).length,
+      };
+    }
+
+    const tomorrowStr = format(addDays(today, 1), 'yyyy-MM-dd');
+    return {
+      label: "Tomorrow's Dispatches",
+      count: dispatches.filter((dispatch) => dispatch.date === tomorrowStr).length,
+    };
+  })();
 
   const openConfirmationCount = useMemo(() => buildOpenConfirmationRows({
     notifications,
@@ -98,11 +115,11 @@ export default function AdminDashboard() {
       color: 'bg-emerald-500', link: 'AdminDispatches', state: { openNewDispatch: true }, isAction: true
     },
     {
-      label: 'Active Dispatches', value: activeDispatches.length, icon: FileText,
+      label: "Today's Dispatches", value: todayDispatches.length, icon: Clock,
       color: 'bg-amber-500', link: 'AdminDispatches'
     },
     {
-      label: "Today's Dispatches", value: todayDispatches.length, icon: Clock,
+      label: tomorrowCardConfig.label, value: tomorrowCardConfig.count, icon: Clock,
       color: 'bg-purple-500', link: 'AdminDispatches'
     },
   ];
