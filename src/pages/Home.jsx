@@ -332,7 +332,7 @@ export default function Home() {
                 <p className="text-sm text-slate-400 text-center py-4">No actions needed</p>
               ) : (
                 actionItems.map(({ notification: n, dispatch: d }) => {
-                  const display = getNotificationDisplay(n, dispatchMap[n.related_dispatch_id] || null);
+                  const display = getNotificationDisplay(n, d);
 
                   return (
                     <div
