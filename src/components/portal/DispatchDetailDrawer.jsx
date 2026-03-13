@@ -56,6 +56,31 @@ function formatTimeToAmPm(value) {
   return `${hh}:${mm} ${suffix}`;
 }
 
+function getEntryActorLabel(entry) {
+  if (!entry) return '';
+  const preferred = [
+    entry.confirmed_by_name,
+    entry.entered_by_name,
+    entry.driver_name,
+    entry.user_label,
+    entry.access_code_label,
+    entry.access_code_name,
+    entry.label,
+    entry.name,
+  ];
+  const explicit = preferred.find((value) => String(value || '').trim());
+  if (explicit) return String(explicit).trim();
+
+  if (String(entry.truck_number || '').trim()) return `Truck ${String(entry.truck_number).trim()}`;
+  return '';
+}
+
+function formatLogTimestampWithActor(prefix, timestamp, actorLabel) {
+  if (!timestamp) return '';
+  const base = `${prefix} ${format(new Date(timestamp), 'MMM d, h:mm a')}`;
+  return actorLabel ? `${base} by ${actorLabel}` : base;
+}
+
 function TruckTimeRow({
   truck,
   dispatch,
@@ -65,6 +90,7 @@ function TruckTimeRow({
   onChangeDraft,
   onCopyToAll,
   isFirstRow,
+  showActor = false,
 }) {
   const existing = timeEntries.find((te) =>
     te.dispatch_id === dispatch.id && te.truck_number === truck
@@ -86,6 +112,11 @@ function TruckTimeRow({
               {formatTime24h(existing.start_time) || '—'} → {formatTime24h(existing.end_time) || '—'}
               {workedHours != null && (
                 <span className="block text-[11px] text-slate-400">Total: {formatWorkedHours(workedHours)} hrs</span>
+              )}
+              {showActor && (
+                <span className="block text-[11px] text-slate-400">
+                  {formatLogTimestampWithActor('Entered', existing.updated_date || existing.created_date, getEntryActorLabel(existing) || 'Unknown')}
+                </span>
               )}
             </span>
           ) : (
@@ -278,7 +309,6 @@ export default function DispatchDetailDrawer({
       return map;
     }, {});
 
-  const primaryReferenceTag = String(dispatch.reference_tag || '').trim();
   const currentConfType = dispatch.status;
   const hasAdditional = Array.isArray(dispatch.additional_assignments) && dispatch.additional_assignments.length > 0;
 
@@ -644,9 +674,6 @@ export default function DispatchDetailDrawer({
                         <FileText className="h-4 w-4 text-slate-400 shrink-0" />
                         <span>Job #{dispatch.job_number}</span>
                       </div>
-                      {primaryReferenceTag && (
-                        <p className="text-xs text-slate-400 pl-6">Reference Tag: {primaryReferenceTag}</p>
-                      )}
                     </div>
                   )}
                 </div>
@@ -774,9 +801,6 @@ export default function DispatchDetailDrawer({
                         <FileText className="h-4 w-4 text-slate-400 shrink-0" />
                         <span>Job Number{dispatch.job_number ? `: ${dispatch.job_number}` : ''}</span>
                       </div>
-                      {primaryReferenceTag && (
-                        <p className="text-xs text-slate-400 pl-6">Reference Tag: {primaryReferenceTag}</p>
-                      )}
                     </div>
                   )}
                   {dispatch.start_time && (
@@ -825,9 +849,6 @@ export default function DispatchDetailDrawer({
                                 <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                                 <span>Job Number: {a.job_number}</span>
                               </div>
-                              {String(a.reference_tag || '').trim() && (
-                                <p className="text-xs text-slate-400 pl-[1.375rem]">Reference Tag: {String(a.reference_tag || '').trim()}</p>
-                              )}
                             </div>
                           )}
                           {a.start_time && (
@@ -975,7 +996,7 @@ export default function DispatchDetailDrawer({
                                   <CheckCircle2 className="h-3 w-3 text-slate-400" />
                                   <span className="font-medium">{c.confirmation_type}</span>
                                   {c.confirmed_at && (
-                                    <span className="text-slate-400">{format(new Date(c.confirmed_at), 'MMM d, h:mm a')}</span>
+                                    <span className="text-slate-400 text-right">{formatLogTimestampWithActor('Confirmed', c.confirmed_at, getEntryActorLabel(c) || 'Unknown')}</span>
                                   )}
                                 </div>
                               ))}
@@ -1067,7 +1088,7 @@ export default function DispatchDetailDrawer({
                                     <Badge className={`${statusBadgeColors[c.confirmation_type]} border text-xs py-0`}>{c.confirmation_type}</Badge>
                                   </div>
                                   {c.confirmed_at && (
-                                    <span className="text-slate-400">{format(new Date(c.confirmed_at), 'MMM d, h:mm a')}</span>
+                                    <span className="text-slate-400 text-right">{formatLogTimestampWithActor('Confirmed', c.confirmed_at, getEntryActorLabel(c) || 'Unknown')}</span>
                                   )}
                                 </div>
                               ))}
@@ -1092,6 +1113,7 @@ export default function DispatchDetailDrawer({
                         dispatch={dispatch}
                         timeEntries={timeEntries}
                         readOnly={true}
+                        showActor={true}
                       />
                     ))}
                   </div>

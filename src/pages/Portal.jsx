@@ -32,6 +32,14 @@ function getOwnerDisplayName(session) {
   return session.label || session.name || session.code || 'Company owner';
 }
 
+function getSessionActorMetadata(session) {
+  const actorName = session?.label || session?.name || session?.driver_name || session?.code || '';
+  return {
+    actorName,
+    actorType: session?.code_type || '',
+  };
+}
+
 const normalizeId = (value) => String(value ?? '');
 
 function myTrucksForHistory(dispatch, timeEntries, session) {
@@ -55,6 +63,7 @@ export default function Portal() {
 
   const urlParams = new URLSearchParams(location.search);
   const targetDispatchId = normalizeId(urlParams.get('dispatchId'));
+  const actorMetadata = getSessionActorMetadata(session);
 
   const { data: dispatches = [] } = useQuery({
     queryKey: ['portal-dispatches', session?.company_id],
@@ -105,6 +114,8 @@ export default function Portal() {
           const updated = await base44.entities.TimeEntry.update(existing.id, {
             start_time: start !== undefined ? start : existing.start_time,
             end_time: end !== undefined ? end : existing.end_time,
+            entered_by_name: existing.entered_by_name || actorMetadata.actorName || undefined,
+            entered_by_type: existing.entered_by_type || actorMetadata.actorType || undefined,
           });
           savedEntries.push(updated);
           continue;
@@ -116,6 +127,8 @@ export default function Portal() {
           truck_number: truck,
           start_time: start,
           end_time: end,
+          entered_by_name: actorMetadata.actorName || undefined,
+          entered_by_type: actorMetadata.actorType || undefined,
         });
         savedEntries.push(created);
       }
@@ -288,6 +301,8 @@ Would you like to swap ${outgoingTruck} with ${incomingTruck}?`;
             truck_number: truck,
             confirmation_type: currentStatus,
             confirmed_at: new Date().toISOString(),
+            confirmed_by_name: actorMetadata.actorName || undefined,
+            confirmed_by_type: actorMetadata.actorType || undefined,
           })
         ));
 
@@ -312,6 +327,8 @@ Would you like to swap ${outgoingTruck} with ${incomingTruck}?`;
             truck_number: outgoingTruck,
             confirmation_type: conflictingStatus,
             confirmed_at: new Date().toISOString(),
+            confirmed_by_name: actorMetadata.actorName || undefined,
+            confirmed_by_type: actorMetadata.actorType || undefined,
           });
         }
 
@@ -369,6 +386,8 @@ Would you like to swap ${outgoingTruck} with ${incomingTruck}?`;
           truck_number: truck,
           confirmation_type: currentStatus,
           confirmed_at: new Date().toISOString(),
+          confirmed_by_name: actorMetadata.actorName || undefined,
+          confirmed_by_type: actorMetadata.actorType || undefined,
         })
       ));
 
@@ -466,6 +485,8 @@ Would you like to swap ${outgoingTruck} with ${incomingTruck}?`;
       truck_number: truck,
       confirmation_type: confType,
       confirmed_at: new Date().toISOString(),
+      confirmed_by_name: actorMetadata.actorName || undefined,
+      confirmed_by_type: actorMetadata.actorType || undefined,
     });
 
     const companyName = companyMap[dispatch.company_id];
