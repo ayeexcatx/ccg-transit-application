@@ -16,7 +16,7 @@ import {
   Building2, Key, FileText, StickyNote,
   ArrowRight, Clock, CheckCircle2, Megaphone, AlertTriangle
 } from 'lucide-react';
-import { addDays, format, isFriday } from 'date-fns';
+import { addDays, format } from 'date-fns';
 
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
@@ -76,30 +76,33 @@ export default function AdminDashboard() {
     },
   });
 
+  const countDispatchShiftsByDate = (dateStr) => dispatches.reduce((totals, dispatch) => {
+    if (dispatch.date !== dateStr) return totals;
+    if (dispatch.shift_time === 'Night Shift') return { ...totals, night: totals.night + 1 };
+    if (dispatch.shift_time === 'Day Shift') return { ...totals, day: totals.day + 1 };
+    return totals;
+  }, { day: 0, night: 0 });
+
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const todayDispatches = dispatches.filter(d => d.date === todayStr);
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const todayShiftCounts = countDispatchShiftsByDate(todayStr);
 
-  const tomorrowCardConfig = (() => {
-    if (isFriday(today)) {
-      const sundayStr = format(addDays(today, 2), 'yyyy-MM-dd');
-      const mondayStr = format(addDays(today, 3), 'yyyy-MM-dd');
-      const sundayCount = dispatches.filter((dispatch) => dispatch.date === sundayStr).length;
-      const mondayCount = dispatches.filter((dispatch) => dispatch.date === mondayStr).length;
+  const upcomingCardConfig = (() => {
+    const weekday = today.getDay();
+    const shouldShowMonday = weekday === 5 || weekday === 6 || weekday === 0;
+    const upcomingDate = shouldShowMonday
+      ? addDays(today, weekday === 0 ? 1 : 8 - weekday)
+      : addDays(today, 1);
+    const upcomingDateStr = format(upcomingDate, 'yyyy-MM-dd');
+    const sundayDateStr = format(addDays(upcomingDate, -1), 'yyyy-MM-dd');
+    const sundayNightCount = dispatches.filter(
+      (dispatch) => dispatch.date === sundayDateStr && dispatch.shift_time === 'Night Shift'
+    ).length;
 
-      return {
-        label: 'Upcoming Dispatches',
-        isFridayView: true,
-        sundayCount,
-        mondayCount,
-      };
-    }
-
-    const tomorrowStr = format(addDays(today, 1), 'yyyy-MM-dd');
     return {
-      label: "Tomorrow's Dispatches",
-      count: dispatches.filter((dispatch) => dispatch.date === tomorrowStr).length,
-      isFridayView: false,
+      label: 'Upcoming Dispatches',
+      shiftCounts: countDispatchShiftsByDate(upcomingDateStr),
+      showSundayNightIndicator: shouldShowMonday && sundayNightCount > 0,
     };
   })();
 
@@ -113,7 +116,7 @@ export default function AdminDashboard() {
 
   const stats = [
     {
-      label: 'Confirmations', value: openConfirmationCount, icon: CheckCircle2,
+      label: 'Confirmations', value: `${openConfirmationCount} Pending`, icon: CheckCircle2,
       headerLabel: 'Confirmations',
       color: 'bg-blue-500', link: 'AdminConfirmations'
     },
@@ -122,17 +125,15 @@ export default function AdminDashboard() {
       color: 'bg-emerald-500', link: 'AdminDispatches', state: { openNewDispatch: true }, isAction: true
     },
     {
-      label: "Today's Dispatches", value: todayDispatches.length, icon: Clock,
+      label: "Today's Dispatches", shiftCounts: todayShiftCounts, icon: Clock,
       headerLabel: "Today's Dispatches",
       color: 'bg-amber-500', link: 'AdminDispatches'
     },
     {
-      label: tomorrowCardConfig.label,
-      headerLabel: tomorrowCardConfig.label,
-      value: tomorrowCardConfig.isFridayView ? null : tomorrowCardConfig.count,
-      isFridayView: tomorrowCardConfig.isFridayView,
-      sundayCount: tomorrowCardConfig.sundayCount,
-      mondayCount: tomorrowCardConfig.mondayCount,
+      label: upcomingCardConfig.label,
+      headerLabel: upcomingCardConfig.label,
+      shiftCounts: upcomingCardConfig.shiftCounts,
+      showSundayNightIndicator: upcomingCardConfig.showSundayNightIndicator,
       icon: Clock,
       color: 'bg-purple-500', link: 'AdminDispatches'
     },
@@ -241,18 +242,21 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="flex-1 flex items-center">
-                  {s.isFridayView ? (
-                    <div className={`grid w-full gap-2 ${s.sundayCount > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                      {s.sundayCount > 0 ? (
+                  {s.shiftCounts ? (
+                    <div className="w-full space-y-1.5">
+                      <div className="grid grid-cols-2 gap-2">
                         <div className="rounded-md bg-slate-50 px-2 py-1.5">
-                          <p className="text-[11px] text-slate-500">Sunday</p>
-                          <p className="text-xl font-semibold text-slate-900 leading-tight">{s.sundayCount}</p>
+                          <p className="text-[11px] text-slate-500">Day Shift</p>
+                          <p className="text-base font-semibold text-slate-900 leading-tight">{s.shiftCounts.day}</p>
                         </div>
-                      ) : null}
-                      <div className="rounded-md bg-slate-50 px-2 py-1.5">
-                        <p className="text-[11px] text-slate-500">Monday</p>
-                        <p className="text-xl font-semibold text-slate-900 leading-tight">{s.mondayCount}</p>
+                        <div className="rounded-md bg-slate-50 px-2 py-1.5">
+                          <p className="text-[11px] text-slate-500">Night Shift</p>
+                          <p className="text-base font-semibold text-slate-900 leading-tight">{s.shiftCounts.night}</p>
+                        </div>
                       </div>
+                      {s.showSundayNightIndicator ? (
+                        <p className="text-[10px] text-slate-400 leading-tight">Sun Night Scheduled</p>
+                      ) : null}
                     </div>
                   ) : (
                     <p className="text-2xl font-semibold text-slate-900 leading-tight">{s.value}</p>
