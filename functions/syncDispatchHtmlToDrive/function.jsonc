@@ -1,5 +1,5 @@
 {
   "name": "syncDispatchHtmlToDrive",
-  "entrypoint": "index.ts",
+  "entry": "entry.ts",
   "permissions": ["service_role"]
 }
