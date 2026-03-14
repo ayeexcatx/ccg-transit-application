@@ -167,9 +167,9 @@ export default function Drivers() {
           <section className="space-y-2">
             <h3 className="text-lg font-semibold text-slate-900">Driver Portal</h3>
             <p className="text-sm leading-6 text-slate-700">
-              A driver portal only has the ability to view driver-specific announcements, dispatches that they are
-              assigned to, and have the ability to report incidents. They do not have the ability to view or see
-              anything else, including the confirmation logs or other trucks assigned to the same dispatch.
+              A driver portal <span className="font-medium">ONLY</span> has the ability to view driver-specific announcements, dispatches that they are
+              assigned to (normal dispatch details only), and have the ability to report incidents. They do not have the ability to view or see
+              ANYTHING else, including the confirmation logs, other drivers, or even other trucks assigned to the same dispatch.
             </p>
           </section>
 
