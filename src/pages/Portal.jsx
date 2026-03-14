@@ -508,21 +508,6 @@ Would you like to swap ${outgoingTruck} with ${incomingTruck}?`;
       resolveOwnerNotificationIfComplete(dispatch, updatedConfirmations, session.id);
     }
 
-    // Auto-archive Cancelled dispatch once all trucks have confirmed cancellation
-    if (confType === 'Cancelled') {
-      const allTrucks = dispatch.trucks_assigned || [];
-      const confirmedCanceledTrucks = updatedConfirmations
-        .filter(c => c.dispatch_id === dispatch.id && c.confirmation_type === 'Cancelled')
-        .map(c => c.truck_number);
-      const allConfirmed = allTrucks.every(t => confirmedCanceledTrucks.includes(t));
-      if (allConfirmed && !dispatch.archived_flag) {
-        base44.entities.Dispatch.update(dispatch.id, {
-          archived_flag: true,
-          archived_at: new Date().toISOString(),
-          archived_reason: 'Cancellation confirmed',
-        }).then(() => queryClient.invalidateQueries({ queryKey: ['portal-dispatches', session?.company_id] }));
-      }
-    }
   };
 
   const handleTimeEntry = async (dispatch, entries) => timeEntryMutation.mutateAsync({ dispatch, entries });
