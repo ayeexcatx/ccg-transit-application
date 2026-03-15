@@ -56,6 +56,9 @@ const getNodeDescriptor = (node) => {
   return `${tag}${idPart}${classPart}`;
 };
 
+
+const isViewportScrollNode = (node) => node === document.documentElement || node === document.body;
+
 const getScrollableAncestors = (element) => {
   const candidates = [];
   let current = element?.parentElement;
@@ -114,11 +117,22 @@ const resolveScrollContainer = (element, rect) => {
 };
 
 const resolveExplicitScrollContainer = (selector) => {
-  if (!selector) return null;
+  if (!selector) {
+    logTutorialScroll('main explicit scroll container not provided; using auto/viewport resolution');
+    return null;
+  }
 
   const container = document.querySelector(selector);
   if (!container) {
     logTutorialScroll('explicit scroll container not found', { selector });
+    return null;
+  }
+
+  if (isViewportScrollNode(container)) {
+    logTutorialScroll('explicit scroll container resolved to viewport root node; using window scrolling', {
+      selector,
+      container: getNodeDescriptor(container),
+    });
     return null;
   }
 
@@ -265,6 +279,7 @@ const scrollTargetIntoView = async (element, rect, selector, explicitScrollConta
     explicitScrollContainerSelector,
     resolved: scrollParent ? getNodeDescriptor(scrollParent) : 'window',
     source: explicitScrollParent ? 'explicit' : 'auto',
+    mode: scrollParent ? 'element' : 'window',
   });
 
   if (scrollParent) {

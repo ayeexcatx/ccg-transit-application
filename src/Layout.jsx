@@ -35,19 +35,6 @@ function LayoutInner({ children, currentPageName }) {
   });
 
   useEffect(() => {
-    if (typeof document === 'undefined') return undefined;
-
-    const rootScroller = document.documentElement;
-    rootScroller.setAttribute('data-tutorial-scroll', 'main');
-
-    return () => {
-      if (rootScroller.getAttribute('data-tutorial-scroll') === 'main') {
-        rootScroller.removeAttribute('data-tutorial-scroll');
-      }
-    };
-  }, []);
-
-  useEffect(() => {
     if (loading) return;
     if (currentPageName === 'AccessCodeLogin') return;
     if (!session) {
@@ -313,7 +300,7 @@ function LayoutInner({ children, currentPageName }) {
         }
       </header>
 
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6" data-tutorial-scroll="main">
         {children}
       </main>
     </div>
