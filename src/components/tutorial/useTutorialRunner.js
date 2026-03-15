@@ -20,6 +20,29 @@ const resolveVisibleTarget = (selector) => {
   };
 };
 
+const isScrollableNode = (node) => {
+  if (!node || !(node instanceof Element)) return false;
+  const style = window.getComputedStyle(node);
+  const overflowY = style.overflowY;
+  const overflow = style.overflow;
+  const overflowX = style.overflowX;
+  const supportsScroll = [overflowY, overflow, overflowX].some((value) => value === 'auto' || value === 'scroll');
+  return supportsScroll && node.scrollHeight > node.clientHeight;
+};
+
+const getNearestScrollableAncestor = (element) => {
+  let current = element?.parentElement;
+
+  while (current) {
+    if (isScrollableNode(current)) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+
+  return null;
+};
+
 const getIsNearViewportCenter = (rect) => {
   if (!rect) return false;
 
@@ -32,7 +55,21 @@ const getIsNearViewportCenter = (rect) => {
   return fullyVisible && closeToCenter;
 };
 
-const waitForCenteredTarget = (element, startedAt = performance.now()) => new Promise((resolve) => {
+const getIsNearContainerCenter = (element, container) => {
+  if (!element || !container) return false;
+
+  const elementRect = element.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const targetCenter = elementRect.top + (elementRect.height / 2);
+  const containerCenter = containerRect.top + (containerRect.height / 2);
+  const fullyVisible = elementRect.top >= containerRect.top + EDGE_MARGIN
+    && elementRect.bottom <= containerRect.bottom - EDGE_MARGIN;
+  const closeToCenter = Math.abs(targetCenter - containerCenter) <= CENTER_TOLERANCE;
+
+  return fullyVisible && closeToCenter;
+};
+
+const waitForCenteredTarget = (element, scrollParent, startedAt = performance.now()) => new Promise((resolve) => {
   const checkPosition = () => {
     const rect = element?.getBoundingClientRect();
 
@@ -41,7 +78,11 @@ const waitForCenteredTarget = (element, startedAt = performance.now()) => new Pr
       return;
     }
 
-    if (getIsNearViewportCenter(rect)) {
+    const isCentered = scrollParent
+      ? getIsNearContainerCenter(element, scrollParent)
+      : getIsNearViewportCenter(rect);
+
+    if (isCentered) {
       resolve(rect);
       return;
     }
@@ -57,18 +98,54 @@ const waitForCenteredTarget = (element, startedAt = performance.now()) => new Pr
   window.requestAnimationFrame(checkPosition);
 });
 
+const centerInContainer = (element, container) => {
+  const containerRect = container.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  const elementCenterInContainer = (elementRect.top - containerRect.top) + container.scrollTop + (elementRect.height / 2);
+  const desiredScrollTop = elementCenterInContainer - (container.clientHeight / 2);
+  const maxScrollTop = Math.max(container.scrollHeight - container.clientHeight, 0);
+  const nextScrollTop = clamp(desiredScrollTop, 0, maxScrollTop);
+
+  container.scrollTo({
+    top: nextScrollTop,
+    behavior: 'smooth',
+  });
+};
+
+const centerInViewport = (rect) => {
+  const currentScrollTop = window.scrollY;
+  const desiredTop = currentScrollTop + rect.top + (rect.height / 2) - (window.innerHeight / 2);
+  const maxScrollTop = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
+  const nextTop = clamp(desiredTop, 0, maxScrollTop);
+
+  window.scrollTo({
+    top: nextTop,
+    behavior: 'smooth',
+  });
+};
+
 const scrollTargetIntoView = async (element, rect) => {
-  if (!element || !rect || getIsNearViewportCenter(rect)) {
+  if (!element || !rect) {
     return rect;
   }
 
-  element.scrollIntoView({
-    behavior: 'smooth',
-    block: 'center',
-    inline: 'nearest',
-  });
+  const scrollParent = getNearestScrollableAncestor(element);
 
-  return waitForCenteredTarget(element);
+  if (scrollParent) {
+    if (getIsNearContainerCenter(element, scrollParent)) {
+      return rect;
+    }
+
+    centerInContainer(element, scrollParent);
+    return waitForCenteredTarget(element, scrollParent);
+  }
+
+  if (getIsNearViewportCenter(rect)) {
+    return rect;
+  }
+
+  centerInViewport(rect);
+  return waitForCenteredTarget(element, null);
 };
 
 // Shared runner for tutorial overlays to keep sequencing/target resolution behavior consistent.
@@ -96,8 +173,13 @@ export default function useTutorialRunner({ steps, active, getCurrentTarget }) {
 
       const resolvedTarget = resolveVisibleTarget(getCurrentTarget(currentStep));
       if (resolvedTarget) {
-        await scrollTargetIntoView(resolvedTarget.element, resolvedTarget.rect);
+        const centeredRect = await scrollTargetIntoView(resolvedTarget.element, resolvedTarget.rect);
         if (cancelled) return;
+
+        if (centeredRect) {
+          setTargetRect(centeredRect);
+          return;
+        }
 
         const measuredTarget = resolveVisibleTarget(getCurrentTarget(currentStep));
         if (measuredTarget) {
