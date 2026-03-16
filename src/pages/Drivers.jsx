@@ -186,10 +186,10 @@ export default function Drivers() {
                 <span className="font-medium text-emerald-600">&ldquo;You have received a new dispatch&rdquo;</span>
               </li>
               <li>
-                Do not select a driver until you are ready to share the dispatch with them.
+                Do not select a driver <span className="font-medium">until</span> you are ready to share the dispatch with them.
                 </li> 
               <li>
-                Any changes made  <span className="font-medium">by the dispatcher</span> after a driver is assigned will also be received by the driver as long
+                Any changes made  <span className="font-medium">by the dispatcher</span> (CCG) after a driver is assigned will also be received by the driver as long
                 as they remain assigned. ( <span className="text-amber-600">Amendments</span>,{' '}
                 <span className="text-red-600">Cancellations</span> )
               </li>
