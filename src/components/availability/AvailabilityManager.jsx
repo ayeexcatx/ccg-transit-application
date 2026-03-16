@@ -356,9 +356,9 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
   <Card data-tour="recurring-weekly-defaults">
       <CardContent className="p-4 space-y-3">
         <h3 className="text-sm font-semibold text-slate-800">Recurring Weekly Defaults</h3>
-        <p className="text-slate-500 text-sm font-medium">Select your default availability that is the same every week.
-(Ex.: All day shifts + Mon/Wed/Fri night shifts)
-If you need off on a day that when you are usually available (default), use the availability chart ABOVE to select Unavailable.</p>
+        <p className="text-slate-500 text-sm font-medium opacity-100">Select your default availability that is the same every week.
+
+      </p>
         <div className="overflow-x-auto">
           <div className="min-w-[320px] divide-y divide-slate-200 rounded border border-slate-200">
             <div className="grid grid-cols-[1.6fr_1fr_1fr] bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
@@ -367,14 +367,14 @@ If you need off on a day that when you are usually available (default), use the 
               <span className="text-center">Night</span>
             </div>
             {[1, 2, 3, 4, 5, 6, 0].map((weekday) => {const dayDisplay = getDefaultMatrixDisplay(weekday, 'Day');const nightDisplay = getDefaultMatrixDisplay(weekday, 'Night');
-              return (
-                <div key={`default-${weekday}`} className="grid grid-cols-[1.6fr_1fr_1fr] px-3 py-2 text-sm">
+            return (
+              <div key={`default-${weekday}`} className="grid grid-cols-[1.6fr_1fr_1fr] px-3 py-2 text-sm">
                   <span className="text-slate-700">{WEEKDAY_LABELS[weekday]}</span>
                   <span className={`text-center font-semibold ${dayDisplay.className}`}>{dayDisplay.label}</span>
                   <span className={`text-center font-semibold ${nightDisplay.className}`}>{nightDisplay.label}</span>
                 </div>);
 
-            })}
+          })}
           </div>
         </div>
         <div className="flex justify-end">
