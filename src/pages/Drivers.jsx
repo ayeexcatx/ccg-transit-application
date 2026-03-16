@@ -225,12 +225,12 @@ export default function Drivers() {
             <p className="pl-5 text-sm text-slate-500 italic leading-6">
               Example: Truck 1 (which has Driver 1 assigned) is switched to Truck 2 which is not dispatched:<br />
               The driver assignment is RESET (driver removed), so Driver 1 will receive a cancellation
-              notification. Reassign them to Truck 2 to send them a new dispatch notification.
+              notification. Reassign them to Truck 2 to send them a new dispatch notification, or choose a new driver to send the new dispatch to them.
             </p>
             <ul className="list-disc pl-5 space-y-2 text-sm leading-6 text-slate-700">
             <li>
                 If you <span className="font-medium">swap trucks</span> that currently have drivers assigned, the
-                driver assignments will <span className="font-medium">RESET</span> and the drivers will receive a <span className="text-red-600">cancellation</span> notification.
+                driver assignments will <span className="font-medium">RESET</span> and the drivers will both receive a <span className="text-red-600">cancellation</span> notification.
                 They will no longer be able to view the dispatches until you reassign them. When you reassign them, they will receive a new dispatch notification.
               </li>
             </ul>
