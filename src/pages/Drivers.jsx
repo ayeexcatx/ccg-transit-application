@@ -168,8 +168,8 @@ export default function Drivers() {
             <h3 className="text-lg font-semibold text-slate-900">Driver Portal</h3>
             <p className="text-sm leading-6 text-slate-700">
               A driver portal <span className="font-medium">ONLY</span> has the ability to view driver-specific announcements, dispatches that they are
-              assigned to (normal dispatch details only), and have the ability to report incidents. They do not have the ability to view or see
-               <span className="font-medium">ANYTHING</span> else, including the confirmation logs, other drivers, or even other trucks assigned to the same dispatch.
+              assigned to (normal dispatch details only), and have the ability to report incidents. <span className="font-medium">They do not</span> have the ability to view or see 
+              ANYTHING else, including the confirmation logs, other drivers, or even other trucks assigned to the same dispatch.
             </p>
           </section>
 
@@ -177,7 +177,7 @@ export default function Drivers() {
             <h3 className="text-lg font-semibold text-slate-900">Assigning Drivers</h3>
             <ul className="list-disc pl-5 space-y-2 text-sm leading-6 text-slate-700">
               <li>
-                A driver can only see a dispatch and receive notifications if and when you assign them to a truck number on a
+                A driver can only see a dispatch and receive notifications <span className="font-medium">IF</span> and <span className="font-medium">WHEN</span> you assign them to a truck number on a
                 dispatch.
               </li>
               <li>
