@@ -223,7 +223,7 @@ export default function Drivers() {
               </li>
               </ul>
             <p className="pl-5 text-sm text-slate-500 italic leading-6">
-              Example: Truck 1 has Driver 1 assigned AND is switched to Truck 2 which is not dispatched:<br />
+              Example: Truck 1 (which has Driver 1 assigned) is switched to Truck 2 which is not dispatched:<br />
               The driver assignment is RESET (driver removed), so Driver 1 will receive a cancellation
               notification. Reassign them to Truck 2 to send them a new dispatch notification.
             </p>
