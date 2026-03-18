@@ -1,0 +1,75 @@
+{
+  "name": "AccessCode",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "Unique access code (8-10 characters)"
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable label"
+    },
+    "active_flag": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this code is active"
+    },
+    "code_type": {
+      "type": "string",
+      "enum": [
+        "Truck",
+        "CompanyOwner",
+        "Admin",
+        "Driver"
+      ],
+      "description": "Type of access code"
+    },
+    "company_id": {
+      "type": "string",
+      "description": "Associated company ID"
+    },
+    "allowed_trucks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Truck numbers this code can access"
+    },
+    "driver_id": {
+      "type": "string",
+      "description": "Associated driver ID for Driver access codes"
+    },
+    "sms_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this user should receive SMS notifications"
+    },
+    "sms_phone": {
+      "type": "string",
+      "description": "SMS-only phone number for notifications"
+    },
+    "available_views": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Admin",
+          "CompanyOwner"
+        ]
+      },
+      "description": "Workspace views available to this user"
+    },
+    "linked_company_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Company IDs this user can access in company-owner view"
+    }
+  },
+  "required": [
+    "code",
+    "code_type"
+  ]
+}
