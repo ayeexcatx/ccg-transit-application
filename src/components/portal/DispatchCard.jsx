@@ -39,17 +39,24 @@ const formatDispatchTime = (startTime) => {
 
 const DispatchCard = React.forwardRef(function DispatchCard({
   dispatch, session, confirmations, timeEntries, templateNotes,
-  onConfirm, onTimeEntry, onOwnerTruckUpdate, companyName, forceOpen, onDrawerClose, visibleTrucksOverride
+  onConfirm, onTimeEntry, onOwnerTruckUpdate, companyName, forceOpen, onDrawerClose, onOpenDispatch, visibleTrucksOverride
 }, ref) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   React.useEffect(() => {
-    if (forceOpen) setDrawerOpen(true);
-  }, [forceOpen]);
+    if (!forceOpen) return;
+    setDrawerOpen(true);
+    onOpenDispatch?.(dispatch);
+  }, [dispatch, forceOpen, onOpenDispatch]);
 
   const handleClose = () => {
     setDrawerOpen(false);
     if (onDrawerClose) onDrawerClose();
+  };
+
+  const handleOpen = () => {
+    setDrawerOpen(true);
+    onOpenDispatch?.(dispatch);
   };
 
   const myTrucks = (session.allowed_trucks || []).filter(t =>
@@ -65,7 +72,7 @@ const DispatchCard = React.forwardRef(function DispatchCard({
     <div ref={ref}>
       <Card
         className={`overflow-hidden border-slate-200 hover:border-slate-400 hover:shadow-md transition-all cursor-pointer ${statusBorderAccent[dispatch.status] || ''}`}
-        onClick={() => setDrawerOpen(true)}
+        onClick={handleOpen}
       >
         <CardContent className="p-0">
           <div className="p-4 sm:p-5">
@@ -133,7 +140,7 @@ const DispatchCard = React.forwardRef(function DispatchCard({
             </div>
 
             <button
-              onClick={(e) => { e.stopPropagation(); setDrawerOpen(true); }}
+              onClick={(e) => { e.stopPropagation(); handleOpen(); }}
               className="mt-3 flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
             >
               <ChevronDown className="h-3.5 w-3.5" />

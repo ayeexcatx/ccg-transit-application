@@ -20,6 +20,7 @@ import {
   notifyDriverAssignmentChanges,
 } from '../components/notifications/createNotifications';
 import { useConfirmationsQuery, confirmationsQueryKey } from '../components/notifications/useConfirmationsQuery';
+import { useOwnerNotifications } from '../components/notifications/useOwnerNotifications';
 
 
 function formatConflictDispatchSummary(dispatch) {
@@ -149,6 +150,7 @@ export default function Portal() {
     queryKey: ['template-notes'],
     queryFn: () => base44.entities.DispatchTemplateNotes.filter({ active_flag: true }),
   });
+  const { markDispatchRelatedReadAsync } = useOwnerNotifications(session);
 
   const confirmMutation = useMutation({
     mutationFn: (data) => base44.entities.Confirmation.create(data),
@@ -626,6 +628,11 @@ Would you like to swap ${outgoingTruck} with ${incomingTruck}?`;
     return true;
   };
 
+  const handleDispatchOpen = (dispatch) => {
+    if (session?.code_type !== 'Driver' || !dispatch?.id) return;
+    markDispatchRelatedReadAsync(dispatch.id).catch(() => {});
+  };
+
   useEffect(() => {
     if (!targetDispatchId) {
       pendingOpenIdRef.current = '';
@@ -745,6 +752,7 @@ Would you like to swap ${outgoingTruck} with ${incomingTruck}?`;
                   companyName={companyMap[d.company_id]}
                   forceOpen={isForcedOpenCard}
                   onDrawerClose={handleDrawerClose}
+                  onOpenDispatch={handleDispatchOpen}
                   visibleTrucksOverride={isDriverUser ? (driverAssignedTrucksByDispatch.get(d.id) || []) : undefined}
                 />
               </div>
