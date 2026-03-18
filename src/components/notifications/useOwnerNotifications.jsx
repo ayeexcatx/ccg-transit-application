@@ -123,6 +123,32 @@ export function useOwnerNotifications(session) {
   const markRead = (id) => markReadMutation.mutate(id);
   const markReadAsync = (id) => markReadMutation.mutateAsync(id);
   const markAllRead = () => markAllReadMutation.mutate();
+  const markDispatchRelatedReadAsync = async (dispatchId) => {
+    if (session?.code_type !== 'Driver' || !dispatchId) return [];
+
+    const normalizedDispatchId = String(dispatchId);
+    const matchingNotifications = notifications.filter((notification) =>
+      !notification.read_flag &&
+      notification.notification_category === 'driver_dispatch_update' &&
+      String(notification.related_dispatch_id ?? '') === normalizedDispatchId &&
+      (notification.recipient_access_code_id === session.id || notification.recipient_id === session.id)
+    );
+
+    if (!matchingNotifications.length) return [];
+
+    await Promise.all(
+      matchingNotifications.map((notification) =>
+        base44.entities.Notification.update(notification.id, { read_flag: true })
+      )
+    );
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey }),
+      queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+    ]);
+
+    return matchingNotifications.map((notification) => notification.id);
+  };
 
   return {
     notifications: notificationsWithStatus,
@@ -131,6 +157,7 @@ export function useOwnerNotifications(session) {
     refresh,
     markRead,
     markReadAsync,
+    markDispatchRelatedReadAsync,
     markAllRead,
     markAllReadPending: markAllReadMutation.isPending,
   };
