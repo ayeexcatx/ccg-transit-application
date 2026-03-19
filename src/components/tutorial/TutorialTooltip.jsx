@@ -19,7 +19,7 @@ export default function TutorialTooltip({
 
   return (
     <div
-      className="fixed z-[230] w-[min(92vw,380px)] rounded-xl border-4 border-slate-300 bg-slate-50 p-4 shadow-[0_20px_60px_-24px_rgba(15,23,42,0.6)] ring-1 ring-slate-200/80 transition-all duration-200"
+      className="fixed z-[230] w-[min(92vw,380px)] rounded-xl border-2 border-yellow-600 bg-slate-50 p-4 shadow-[0_20px_60px_-24px_rgba(120,53,15,0.3)] ring-1 ring-yellow-700/20 transition-all duration-200"
       style={style}
     >
       <p className="text-xs font-medium text-slate-500">{isCompletion ? 'Completed' : `Step ${stepIndex + 1} of ${totalSteps}`}</p>
