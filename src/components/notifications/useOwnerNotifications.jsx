@@ -2,6 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useConfirmationsQuery } from './useConfirmationsQuery';
 import { getOwnerNotificationActionStatus } from './ownerActionStatus';
+import { notifyOwnerDriverSeen } from './createNotifications';
+
+function getDriverNotificationSeenKind(notification, dispatch = null) {
+  const notificationType = String(notification?.notification_type || '').toLowerCase();
+  if (notificationType === 'driver_removed') return 'removed';
+  if (notificationType === 'driver_amended') return 'amended';
+  if (notificationType === 'driver_cancelled') return 'cancelled';
+
+  const normalizedStatus = String(dispatch?.status || '').toLowerCase();
+  if (normalizedStatus === 'amended') return 'amended';
+  if (normalizedStatus === 'cancelled' || normalizedStatus === 'canceled') return 'cancelled';
+  return 'assigned';
+}
 
 export function useOwnerNotifications(session) {
   const queryClient = useQueryClient();
@@ -15,7 +28,6 @@ export function useOwnerNotifications(session) {
       if (session.code_type === 'Admin') {
         return base44.entities.Notification.filter({ recipient_type: 'Admin' }, '-created_date', 200);
       }
-      // Fetch all AccessCode notifications then client-filter to tolerate either recipient field
       const all = await base44.entities.Notification.filter({ recipient_type: 'AccessCode' }, '-created_date', 200);
       return all.filter(n =>
         n.recipient_access_code_id === session.id || n.recipient_id === session.id
@@ -25,13 +37,11 @@ export function useOwnerNotifications(session) {
     refetchInterval: 30000,
   });
 
-
   const { data: driverAssignments = [] } = useQuery({
     queryKey: ['driver-dispatch-assignments', session?.driver_id],
     queryFn: () => base44.entities.DriverDispatchAssignment.filter({ driver_id: session.driver_id }, '-assigned_datetime', 500),
     enabled: session?.code_type === 'Driver' && !!session?.driver_id,
   });
-
 
   const { data: confirmations = [] } = useConfirmationsQuery(session?.code_type === 'CompanyOwner');
 
@@ -50,7 +60,6 @@ export function useOwnerNotifications(session) {
 
   const validDispatchIds = new Set(dispatches.map((dispatch) => dispatch.id));
 
-  // Unread first, then newest first
   const notifications = rawNotifications.filter((notification) => {
     if (!notification.related_dispatch_id) return true;
     if (session?.code_type === 'Admin') return true;
@@ -78,10 +87,15 @@ export function useOwnerNotifications(session) {
 
   const unreadCount = notificationsWithStatus.filter((notification) => !notification.effectiveReadFlag).length;
 
+  const invalidateNotificationQueries = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey }),
+    queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+    queryClient.invalidateQueries({ queryKey: ['portal-dispatches', session?.company_id] }),
+    queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', session?.driver_id] }),
+  ]);
+
   const markReadMutation = useMutation({
-    mutationFn: (id) => {
-      return base44.entities.Notification.update(id, { read_flag: true });
-    },
+    mutationFn: (id) => base44.entities.Notification.update(id, { read_flag: true }),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey });
 
@@ -99,12 +113,7 @@ export function useOwnerNotifications(session) {
         queryClient.setQueryData(queryKey, context.previousNotifications);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['portal-dispatches', session?.company_id] });
-      queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', session?.driver_id] });
-    },
+    onSettled: invalidateNotificationQueries,
   });
 
   const markAllReadMutation = useMutation({
@@ -123,6 +132,7 @@ export function useOwnerNotifications(session) {
   const markRead = (id) => markReadMutation.mutate(id);
   const markReadAsync = (id) => markReadMutation.mutateAsync(id);
   const markAllRead = () => markAllReadMutation.mutate();
+
   const markDispatchRelatedReadAsync = async (dispatchId) => {
     if (session?.code_type !== 'Driver' || !dispatchId) return [];
 
@@ -150,6 +160,83 @@ export function useOwnerNotifications(session) {
     return matchingNotifications.map((notification) => notification.id);
   };
 
+  const markDriverDispatchSeenAsync = async ({ dispatch, notificationId = null } = {}) => {
+    if (session?.code_type !== 'Driver' || !dispatch?.id || !session?.driver_id) return;
+
+    const matchingAssignments = driverAssignments.filter((assignment) =>
+      assignment?.active_flag !== false &&
+      String(assignment.dispatch_id ?? '') === String(dispatch.id)
+    );
+
+    const unseenAssignments = matchingAssignments.filter((assignment) => !assignment?.receipt_confirmed_at);
+    const matchingNotifications = notifications.filter((notification) =>
+      notification.notification_category === 'driver_dispatch_update' &&
+      String(notification.related_dispatch_id ?? '') === String(dispatch.id) &&
+      (notification.recipient_access_code_id === session.id || notification.recipient_id === session.id) &&
+      (!notificationId || String(notification.id) === String(notificationId))
+    );
+
+    const unreadNotifications = matchingNotifications.filter((notification) => !notification.read_flag);
+    const statusNotification = matchingNotifications[0] || null;
+
+    if (!unseenAssignments.length && !unreadNotifications.length) return;
+
+    const seenAt = new Date().toISOString();
+
+    if (unreadNotifications.length) {
+      await Promise.all(unreadNotifications.map((notification) =>
+        base44.entities.Notification.update(notification.id, { read_flag: true })
+      ));
+    }
+
+    if (unseenAssignments.length) {
+      await Promise.all(unseenAssignments.map((assignment) =>
+        base44.entities.DriverDispatchAssignment.update(assignment.id, {
+          receipt_confirmed_flag: true,
+          receipt_confirmed_at: seenAt,
+          receipt_confirmed_by_driver_id: session.driver_id,
+          receipt_confirmed_by_name: session?.label || session?.driver_name || session?.name || assignment?.driver_name || undefined,
+        })
+      ));
+
+      await notifyOwnerDriverSeen({
+        dispatch,
+        assignments: matchingAssignments,
+        driverName: session?.label || session?.driver_name || session?.name || matchingAssignments[0]?.driver_name,
+        seenKind: getDriverNotificationSeenKind(statusNotification, dispatch),
+      });
+    }
+
+    await invalidateNotificationQueries();
+    await queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', dispatch.id] });
+  };
+
+  const markDriverRemovalNotificationSeenAsync = async ({ notification, dispatch = null } = {}) => {
+    if (session?.code_type !== 'Driver' || !notification?.id) return;
+    if (!notification.read_flag) {
+      await base44.entities.Notification.update(notification.id, { read_flag: true });
+    }
+
+    await notifyOwnerDriverSeen({
+      dispatch: dispatch || {
+        id: notification.related_dispatch_id,
+        company_id: notification.recipient_company_id || session?.company_id,
+        status: 'Dispatch',
+        shift_time: null,
+        reference_tag: null,
+        job_number: null,
+      },
+      assignments: (notification?.required_trucks || ['Removed']).map((truckNumber) => ({
+        active_flag: true,
+        truck_number: truckNumber,
+      })),
+      driverName: session?.label || session?.driver_name || session?.name || 'Driver',
+      seenKind: 'removed',
+    });
+
+    await invalidateNotificationQueries();
+  };
+
   return {
     notifications: notificationsWithStatus,
     unreadCount,
@@ -158,6 +245,8 @@ export function useOwnerNotifications(session) {
     markRead,
     markReadAsync,
     markDispatchRelatedReadAsync,
+    markDriverDispatchSeenAsync,
+    markDriverRemovalNotificationSeenAsync,
     markAllRead,
     markAllReadPending: markAllReadMutation.isPending,
   };

@@ -10,24 +10,28 @@ const statusLabels = {
   Cancelled: 'Cancelled',
 };
 
-const NON_CONFIRMATION_CATEGORIES = new Set(['dispatch_update_info', 'driver_dispatch_confirmed']);
+const NON_CONFIRMATION_CATEGORIES = new Set(['dispatch_update_info', 'driver_dispatch_seen']);
 
 const DRIVER_NOTIFICATION_CATEGORY = 'driver_dispatch_update';
-const DRIVER_CONFIRMED_NOTIFICATION_CATEGORY = 'driver_dispatch_confirmed';
+const DRIVER_SEEN_NOTIFICATION_CATEGORY = 'driver_dispatch_seen';
 
-function getDriverConfirmationTitle(driverName, dispatchStatus) {
+function getDriverSeenTitle(driverName, seenKind) {
   const actorLabel = String(driverName || 'Driver').trim() || 'Driver';
-  const normalizedStatus = String(dispatchStatus || '').toLowerCase();
+  const normalizedKind = String(seenKind || '').toLowerCase();
 
-  if (normalizedStatus === 'amended') {
-    return `${actorLabel} confirmed the amendment`;
+  if (normalizedKind === 'amended') {
+    return `${actorLabel} has seen the amended dispatch`;
   }
 
-  if (normalizedStatus === 'cancelled' || normalizedStatus === 'canceled') {
-    return `${actorLabel} confirmed the cancellation`;
+  if (normalizedKind === 'cancelled' || normalizedKind === 'canceled') {
+    return `${actorLabel} has seen the cancelled dispatch`;
   }
 
-  return `${actorLabel} confirmed the dispatch`;
+  if (normalizedKind === 'removed') {
+    return `${actorLabel} has seen that the dispatch assignment is no longer available`;
+  }
+
+  return `${actorLabel} has seen the dispatch`;
 }
 
 function isDispatchCanceledStatus(status) {
@@ -41,20 +45,23 @@ function getDriverDispatchStatusNotification(status) {
   if (normalized === 'amended') {
     return {
       title: 'Dispatch Amended',
-      message: 'Your dispatch has been amended',
+      message: 'A dispatch assigned to you has been amended',
+      notificationType: 'driver_amended',
     };
   }
 
   if (normalized === 'cancelled' || normalized === 'canceled') {
     return {
-      title: 'Dispatch Canceled',
-      message: 'Your dispatch has been canceled',
+      title: 'Dispatch Cancelled',
+      message: 'A dispatch assigned to you has been cancelled',
+      notificationType: 'driver_cancelled',
     };
   }
 
   return {
-    title: 'Dispatch Updated',
-    message: 'Your dispatch has been updated',
+    title: 'Dispatch Assigned',
+    message: 'You have been assigned to a dispatch',
+    notificationType: 'driver_assigned',
   };
 }
 
@@ -85,6 +92,8 @@ async function createDriverDispatchNotification({
   driverAccessCodeId,
   title,
   message,
+  notificationType,
+  requiredTrucks = [],
 }) {
   if (!dispatch?.id || !driverAccessCodeId || !title || !message) return;
 
@@ -98,6 +107,8 @@ async function createDriverDispatchNotification({
     related_dispatch_id: dispatch.id,
     read_flag: false,
     notification_category: DRIVER_NOTIFICATION_CATEGORY,
+    notification_type: notificationType || 'driver_assigned',
+    required_trucks: requiredTrucks,
   });
 
   console.log('Notification created before SMS delivery (createDriverDispatchNotification)', {
@@ -112,10 +123,11 @@ async function createDriverDispatchNotification({
 }
 
 
-export async function notifyOwnerDriverConfirmed({
+export async function notifyOwnerDriverSeen({
   dispatch,
   assignments = [],
   driverName,
+  seenKind = 'assigned',
 }) {
   try {
     if (!dispatch?.id || !dispatch?.company_id) return;
@@ -134,7 +146,8 @@ export async function notifyOwnerDriverConfirmed({
 
     const jobTag = dispatch.reference_tag || dispatch.job_number || dispatch.id;
     const statusText = statusLabels[dispatch.status] || dispatch.status || 'Dispatch';
-    const title = getDriverConfirmationTitle(driverName, dispatch.status);
+    const title = getDriverSeenTitle(driverName, seenKind);
+    const seenStatusKey = `${dispatch.id}:${String(seenKind || 'assigned').toLowerCase()}:${String(driverName || '').trim().toLowerCase()}`;
 
     await Promise.all((ownerCodes || []).map(async (ownerCode) => {
       const relevantTrucks = confirmedTrucks.filter((truck) => (ownerCode.allowed_trucks || []).includes(truck));
@@ -144,8 +157,16 @@ export async function notifyOwnerDriverConfirmed({
         dispatch.shift_time,
         statusText,
         jobTag,
-        relevantTrucks.length <= 3 ? `Trucks: ${relevantTrucks.join(', ')}` : `${relevantTrucks.length} trucks confirmed`,
+        relevantTrucks.length <= 3 ? `Trucks: ${relevantTrucks.join(', ')}` : `${relevantTrucks.length} trucks seen`,
       ].filter(Boolean).join(' • ');
+
+      const existing = await base44.entities.Notification.filter({
+        recipient_access_code_id: ownerCode.id,
+        notification_category: DRIVER_SEEN_NOTIFICATION_CATEGORY,
+        dispatch_status_key: `${seenStatusKey}:${ownerCode.id}`,
+      }, '-created_date', 1);
+
+      if (existing?.length) return;
 
       await base44.entities.Notification.create({
         recipient_type: 'AccessCode',
@@ -157,11 +178,12 @@ export async function notifyOwnerDriverConfirmed({
 ${lineTwo}`,
         related_dispatch_id: dispatch.id,
         read_flag: false,
-        notification_category: DRIVER_CONFIRMED_NOTIFICATION_CATEGORY,
+        notification_category: DRIVER_SEEN_NOTIFICATION_CATEGORY,
+        dispatch_status_key: `${seenStatusKey}:${ownerCode.id}`,
       });
     }));
   } catch (error) {
-    console.error('Error creating driver confirmed notifications for company owners:', error);
+    console.error('Error creating driver seen notifications for company owners:', error);
   }
 }
 
@@ -183,14 +205,24 @@ export async function notifyDriverAssignmentChanges(dispatch, previousAssignment
       ...removedDriverIds.map((driverId) => createDriverDispatchNotification({
         dispatch,
         driverAccessCodeId: driverAccessCodeMap.get(driverId),
-        title: 'Dispatch Canceled',
-        message: 'Your dispatch has been canceled',
+        title: 'Dispatch Removed',
+        message: 'This dispatch assignment is no longer available',
+        notificationType: 'driver_removed',
+        requiredTrucks: previousAssignments
+          .filter((assignment) => assignment?.active_flag !== false && assignment?.driver_id === driverId)
+          .map((assignment) => assignment?.truck_number)
+          .filter(Boolean),
       })),
       ...addedDriverIds.map((driverId) => createDriverDispatchNotification({
         dispatch,
         driverAccessCodeId: driverAccessCodeMap.get(driverId),
-        title: 'New Dispatch',
-        message: 'You have received a new dispatch',
+        title: 'Dispatch Assigned',
+        message: 'You have been assigned to a dispatch',
+        notificationType: 'driver_assigned',
+        requiredTrucks: nextAssignments
+          .filter((assignment) => assignment?.active_flag !== false && assignment?.driver_id === driverId)
+          .map((assignment) => assignment?.truck_number)
+          .filter(Boolean),
       })),
     ]);
   } catch (error) {
@@ -206,13 +238,18 @@ export async function notifyDriversForDispatchUpdate(dispatch, driverAssignments
     if (!assignedDriverIds.length) return;
 
     const driverAccessCodeMap = await buildDriverAccessCodeMap(assignedDriverIds);
-    const { title, message } = getDriverDispatchStatusNotification(dispatch.status);
+    const { title, message, notificationType } = getDriverDispatchStatusNotification(dispatch.status);
 
     await Promise.all(assignedDriverIds.map((driverId) => createDriverDispatchNotification({
       dispatch,
       driverAccessCodeId: driverAccessCodeMap.get(driverId),
       title,
       message,
+      notificationType,
+      requiredTrucks: driverAssignments
+        .filter((assignment) => assignment?.active_flag !== false && assignment?.driver_id === driverId)
+        .map((assignment) => assignment?.truck_number)
+        .filter(Boolean),
     })));
   } catch (error) {
     console.error('Error creating driver dispatch update notifications:', error);
@@ -239,13 +276,18 @@ export async function notifyDriversForDispatchEdit({
       const normalizedNextStatus = String(nextStatus || '').toLowerCase();
 
       if (normalizedNextStatus === 'amended' || isDispatchCanceledStatus(nextStatus)) {
-        const { title, message } = getDriverDispatchStatusNotification(nextStatus);
+        const { title, message, notificationType } = getDriverDispatchStatusNotification(nextStatus);
 
         await Promise.all(assignedDriverIds.map((driverId) => createDriverDispatchNotification({
           dispatch: nextDispatch,
           driverAccessCodeId: driverAccessCodeMap.get(driverId),
           title,
           message,
+          notificationType,
+          requiredTrucks: driverAssignments
+            .filter((assignment) => assignment?.active_flag !== false && assignment?.driver_id === driverId)
+            .map((assignment) => assignment?.truck_number)
+            .filter(Boolean),
         })));
       }
 
@@ -257,6 +299,11 @@ export async function notifyDriversForDispatchEdit({
       driverAccessCodeId: driverAccessCodeMap.get(driverId),
       title: 'Dispatch Updated',
       message: 'Your dispatch has been updated',
+      notificationType: 'driver_updated',
+      requiredTrucks: driverAssignments
+        .filter((assignment) => assignment?.active_flag !== false && assignment?.driver_id === driverId)
+        .map((assignment) => assignment?.truck_number)
+        .filter(Boolean),
     })));
   } catch (error) {
     console.error('Error creating driver dispatch edit notifications:', error);

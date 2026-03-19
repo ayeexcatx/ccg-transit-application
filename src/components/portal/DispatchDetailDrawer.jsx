@@ -21,7 +21,7 @@ import {
 import { NOTE_DISPLAY_WIDTH, NOTE_TYPES, normalizeTemplateNote, renderSimpleMarkupToHtml } from '@/lib/templateNotes';
 import { calculateWorkedHours, formatTime24h, formatWorkedHours } from '@/lib/timeLogs';
 import { toast } from 'sonner';
-import { notifyDriverAssignmentChanges, notifyOwnerDriverConfirmed } from '@/components/notifications/createNotifications';
+import { notifyDriverAssignmentChanges } from '@/components/notifications/createNotifications';
 import html2canvas from 'html2canvas';
 import DispatchDrawerTutorial from '@/components/tutorial/DispatchDrawerTutorial';
 import DispatchActivityLogSection from './DispatchActivityLogSection';
@@ -382,39 +382,6 @@ export default function DispatchDetailDrawer({
     enabled: open && isDriverUser && !!dispatch?.id && !!session?.driver_id,
   });
 
-  const confirmDispatchReceiptMutation = useMutation({
-    mutationFn: async ({ assignments }) => {
-      const confirmedAt = new Date().toISOString();
-      const updates = assignments
-        .filter((assignment) => assignment?.id)
-        .map((assignment) => base44.entities.DriverDispatchAssignment.update(assignment.id, {
-          receipt_confirmed_flag: true,
-          receipt_confirmed_at: confirmedAt,
-          receipt_confirmed_by_driver_id: session?.driver_id,
-          receipt_confirmed_by_name: session?.label || session?.driver_name || session?.name || assignment?.driver_name || undefined,
-        }));
-
-      await Promise.all(updates);
-      return confirmedAt;
-    },
-    onSuccess: async (_confirmedAt, variables) => {
-      await notifyOwnerDriverConfirmed({
-        dispatch,
-        assignments: variables?.assignments || [],
-        driverName: session?.label || session?.driver_name || session?.name || variables?.assignments?.[0]?.driver_name,
-      });
-      await Promise.all([
-        refetchDriverAssignments(),
-        queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', dispatch?.id, session?.driver_id] }),
-      ]);
-      queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', dispatch?.id] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      toast.success('Receipt confirmed.');
-    },
-    onError: (error) => {
-      toast.error(error?.message || 'Unable to confirm dispatch receipt.');
-    },
-  });
   useEffect(() => {
     if (!isOwner || !dispatch?.id) return;
 
@@ -608,14 +575,8 @@ export default function DispatchDetailDrawer({
       return map;
     }, {});
 
-  const hasTruckReceiptConfirmation = (truckNumber) => Boolean(activeAssignmentsByTruck[truckNumber]?.receipt_confirmed_at);
+  const hasTruckSeenStatus = (truckNumber) => Boolean(activeAssignmentsByTruck[truckNumber]?.receipt_confirmed_at);
 
-  const driverActiveAssignments = currentDriverAssignments.filter((entry) => entry?.active_flag !== false);
-  const canDriverConfirmReceipt = isDriverUser
-    && driverActiveAssignments.length > 0
-    && driverActiveAssignments.some((entry) => !entry?.receipt_confirmed_at);
-
-  const driverConfirmReceiptButtonText = 'Confirm';
   const assignedDriverNameByTruck = driverAssignments
     .filter((entry) => entry?.active_flag !== false)
     .reduce((map, entry) => {
@@ -700,12 +661,6 @@ export default function DispatchDetailDrawer({
       });
       return next;
     });
-  };
-
-  const handleDriverConfirmReceipt = async () => {
-    const pendingAssignments = driverActiveAssignments.filter((entry) => !entry?.receipt_confirmed_at);
-    if (pendingAssignments.length === 0 || confirmDispatchReceiptMutation.isPending) return;
-    await confirmDispatchReceiptMutation.mutateAsync({ assignments: pendingAssignments });
   };
 
   const entriesToSave = myTrucks
@@ -980,21 +935,6 @@ export default function DispatchDetailDrawer({
 
           {isDriverUser && (
             <div className="flex items-center gap-2">
-              {driverActiveAssignments.length > 0 && (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleDriverConfirmReceipt}
-                  disabled={!canDriverConfirmReceipt || confirmDispatchReceiptMutation.isPending}
-                  className="bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-100 disabled:text-emerald-700 text-white"
-                >
-                  {confirmDispatchReceiptMutation.isPending
-                    ? 'Confirming…'
-                    : canDriverConfirmReceipt
-                      ? driverConfirmReceiptButtonText
-                      : 'Received Confirmed'}
-                </Button>
-              )}
               <Button
                 type="button"
                 variant="outline"
@@ -1092,9 +1032,9 @@ export default function DispatchDetailDrawer({
                                 {truckDriverSummaryLabel}
                               </span>
                             )}
-                            {hasTruckReceiptConfirmation(t) && (
+                            {hasTruckSeenStatus(t) && (
                               <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold py-0 px-1.5">
-                                Confirmed
+                                Seen
                               </Badge>
                             )}
                           </div>

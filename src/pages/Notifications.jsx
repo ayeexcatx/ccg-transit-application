@@ -39,12 +39,12 @@ export default function Notifications() {
   
   const isNotificationMarkedReadOnClick = (notification) =>
     notification?.notification_category === 'dispatch_update_info'
-    || notification?.notification_category === 'driver_dispatch_confirmed';
+    || notification?.notification_category === 'driver_dispatch_seen';
 
   const handleNotificationClick = async (n) => {
     if (!session) return;
 
-    if (n.related_dispatch_id && isNotificationMarkedReadOnClick(n) && !n.read_flag) {
+    if (session?.code_type !== 'Driver' && n.related_dispatch_id && isNotificationMarkedReadOnClick(n) && !n.read_flag) {
       try {
         await markReadAsync(n.id);
       } catch {
@@ -54,7 +54,10 @@ export default function Notifications() {
 
     if (n.related_dispatch_id) {
       const targetPage = session?.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
-      navigate(createPageUrl(`${targetPage}?dispatchId=${n.related_dispatch_id}`));
+      const params = new URLSearchParams();
+      params.set('dispatchId', n.related_dispatch_id);
+      params.set('notificationId', n.id);
+      navigate(createPageUrl(`${targetPage}?${params.toString()}`));
     }
   };
 

@@ -46,19 +46,19 @@
     "receipt_confirmed_flag": {
       "type": "boolean",
       "default": false,
-      "description": "Whether the assigned driver has confirmed receipt of this dispatch assignment"
+      "description": "Whether the assigned driver has seen the current dispatch assignment version or removal notice"
     },
     "receipt_confirmed_at": {
       "type": "string",
-      "description": "When the assigned driver confirmed receipt (ISO datetime)"
+      "description": "When the assigned driver saw the current dispatch assignment version or removal notice (ISO datetime)"
     },
     "receipt_confirmed_by_driver_id": {
       "type": "string",
-      "description": "Driver ID that confirmed receipt"
+      "description": "Driver ID that saw the current dispatch assignment version or removal notice"
     },
     "receipt_confirmed_by_name": {
       "type": "string",
-      "description": "Snapshot of driver name at time of receipt confirmation"
+      "description": "Snapshot of driver name at time the current dispatch assignment version or removal notice was seen"
     }
   },
   "required": [

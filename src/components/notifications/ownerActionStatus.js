@@ -1,4 +1,4 @@
-export const NON_CONFIRMATION_NOTIFICATION_CATEGORIES = new Set(['dispatch_update_info', 'driver_dispatch_confirmed']);
+export const NON_CONFIRMATION_NOTIFICATION_CATEGORIES = new Set(['dispatch_update_info', 'driver_dispatch_seen']);
 
 function parseStatusFromDedupKey(notification) {
   const parts = String(notification?.dispatch_status_key || '').split(':');

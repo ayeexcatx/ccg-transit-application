@@ -134,6 +134,7 @@ export default function Portal() {
 
   const urlParams = new URLSearchParams(location.search);
   const targetDispatchId = normalizeId(urlParams.get('dispatchId'));
+  const targetNotificationId = normalizeId(urlParams.get('notificationId'));
   const actorMetadata = getSessionActorMetadata(session);
 
   const { data: dispatches = [] } = useQuery({
@@ -160,6 +161,12 @@ export default function Portal() {
     outgoingTruck: '',
     conflictSummary: '',
   });
+  const [removedAssignmentModalState, setRemovedAssignmentModalState] = useState({
+    open: false,
+    notificationId: '',
+    title: 'Dispatch assignment no longer available',
+    message: '',
+  });
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: ['time-entries'],
@@ -170,7 +177,7 @@ export default function Portal() {
     queryKey: ['template-notes'],
     queryFn: () => base44.entities.DispatchTemplateNotes.filter({ active_flag: true }),
   });
-  const { markDispatchRelatedReadAsync } = useOwnerNotifications(session);
+  const { notifications, markDriverDispatchSeenAsync, markDriverRemovalNotificationSeenAsync } = useOwnerNotifications(session);
 
   const confirmMutation = useMutation({
     mutationFn: (data) => base44.entities.Confirmation.create(data),
@@ -635,6 +642,12 @@ export default function Portal() {
     : currentListBase;
   const sortedNotes = sortTemplateNotesForDispatch(templateNotes);
 
+  const targetNotification = notifications.find((notification) => normalizeId(notification.id) === targetNotificationId) || null;
+  const removalNotification = session?.code_type === 'Driver' && targetNotification?.notification_type === 'driver_removed' ? targetNotification : null;
+  const removalNotificationDispatch = removalNotification?.related_dispatch_id
+    ? dispatches.find((dispatch) => normalizeId(dispatch.id) === normalizeId(removalNotification.related_dispatch_id)) || null
+    : null;
+
   const dispatchNotFound = targetDispatchId && dispatches.length > 0 &&
     !dispatches.find(d => normalizeId(d.id) === targetDispatchId);
 
@@ -649,6 +662,7 @@ export default function Portal() {
 
     const nextParams = new URLSearchParams(location.search);
     nextParams.delete('dispatchId');
+    nextParams.delete('notificationId');
     navigate({ search: nextParams.toString() ? `?${nextParams.toString()}` : '' }, { replace: true });
   };
 
@@ -670,7 +684,7 @@ export default function Portal() {
 
   const handleDispatchOpen = (dispatch) => {
     if (session?.code_type !== 'Driver' || !dispatch?.id) return;
-    markDispatchRelatedReadAsync(dispatch.id).catch(() => {});
+    markDriverDispatchSeenAsync({ dispatch, notificationId: targetNotificationId || null }).catch(() => {});
   };
 
   useEffect(() => {
@@ -688,6 +702,18 @@ export default function Portal() {
   useEffect(() => {
     const idToOpen = normalizeId(targetDispatchId || pendingOpenIdRef.current);
     if (!idToOpen || dispatches.length === 0) return;
+
+    if (removalNotification && normalizeId(removalNotification.related_dispatch_id) === idToOpen) {
+      pendingOpenIdRef.current = '';
+      lastHandledDispatchIdRef.current = idToOpen;
+      setRemovedAssignmentModalState({
+        open: true,
+        notificationId: removalNotification.id,
+        title: 'Dispatch assignment no longer available',
+        message: removalNotification.message || 'This dispatch assignment is no longer available.',
+      });
+      return;
+    }
 
     if (normalizeId(lastHandledDispatchIdRef.current) === idToOpen &&
       normalizeId(drawerDispatchIdRef.current) === idToOpen) {
@@ -722,7 +748,19 @@ export default function Portal() {
     if (openDrawer(idToOpen)) {
       lastHandledDispatchIdRef.current = idToOpen;
     }
-  }, [location.search, filteredDispatches, tab, upcomingDispatches, todayDispatches, historyDispatches]);
+  }, [location.search, filteredDispatches, tab, upcomingDispatches, todayDispatches, historyDispatches, removalNotification, dispatches]);
+
+
+  const handleRemovedAssignmentModalDismiss = async () => {
+    if (removedAssignmentModalState.notificationId) {
+      const notification = notifications.find((entry) => normalizeId(entry.id) === normalizeId(removedAssignmentModalState.notificationId)) || removalNotification;
+      await markDriverRemovalNotificationSeenAsync({ notification, dispatch: removalNotificationDispatch });
+    }
+
+    setRemovedAssignmentModalState((current) => ({ ...current, open: false }));
+    handleDrawerClose();
+  };
+
 
   return (
     <div className="space-y-6">
@@ -800,6 +838,25 @@ export default function Portal() {
           })}
         </div>
       )}
+      <AlertDialog open={removedAssignmentModalState.open}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{removedAssignmentModalState.title}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 whitespace-pre-line text-sm text-slate-600">
+                <p>This dispatch assignment is no longer available.</p>
+                {removedAssignmentModalState.message && (
+                  <p>{removedAssignmentModalState.message}</p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleRemovedAssignmentModalDismiss}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={swapConfirmationState.open}>
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
