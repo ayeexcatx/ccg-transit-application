@@ -15,6 +15,21 @@ const NON_CONFIRMATION_CATEGORIES = new Set(['dispatch_update_info', 'driver_dis
 const DRIVER_NOTIFICATION_CATEGORY = 'driver_dispatch_update';
 const DRIVER_CONFIRMED_NOTIFICATION_CATEGORY = 'driver_dispatch_confirmed';
 
+function getDriverConfirmationTitle(driverName, dispatchStatus) {
+  const actorLabel = String(driverName || 'Driver').trim() || 'Driver';
+  const normalizedStatus = String(dispatchStatus || '').toLowerCase();
+
+  if (normalizedStatus === 'amended') {
+    return `${actorLabel} confirmed the amendment`;
+  }
+
+  if (normalizedStatus === 'cancelled' || normalizedStatus === 'canceled') {
+    return `${actorLabel} confirmed the cancellation`;
+  }
+
+  return `${actorLabel} confirmed the dispatch`;
+}
+
 function isDispatchCanceledStatus(status) {
   const normalized = String(status || '').toLowerCase();
   return normalized === 'cancelled' || normalized === 'canceled';
@@ -96,8 +111,7 @@ export async function notifyOwnerDriverConfirmed({
 
     const jobTag = dispatch.reference_tag || dispatch.job_number || dispatch.id;
     const statusText = statusLabels[dispatch.status] || dispatch.status || 'Dispatch';
-    const actorLabel = String(driverName || 'Driver').trim() || 'Driver';
-    const title = `${actorLabel} confirmed the dispatch`;
+    const title = getDriverConfirmationTitle(driverName, dispatch.status);
 
     await Promise.all((ownerCodes || []).map(async (ownerCode) => {
       const relevantTrucks = confirmedTrucks.filter((truck) => (ownerCode.allowed_trucks || []).includes(truck));

@@ -60,13 +60,14 @@ export default function NotificationBell({ session }) {
 
   const { data: confirmations = [] } = useConfirmationsQuery(session?.code_type === 'CompanyOwner');
 
-  const isInformationalUpdateNotification = (notification) =>
-    notification?.notification_category === 'dispatch_update_info';
+  const isNotificationMarkedReadOnClick = (notification) =>
+    notification?.notification_category === 'dispatch_update_info'
+    || notification?.notification_category === 'driver_dispatch_confirmed';
 
   const shouldMarkReadOnClick = (notification) => {
     if (notification.read_flag) return false;
     if (isDriver) return true;
-    return notification.related_dispatch_id && isInformationalUpdateNotification(notification);
+    return notification.related_dispatch_id && isNotificationMarkedReadOnClick(notification);
   };
 
   const handleNotificationClick = async (n) => {

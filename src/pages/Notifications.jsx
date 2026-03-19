@@ -37,13 +37,14 @@ export default function Notifications() {
   });
   const allowedTrucks = session?.allowed_trucks || [];
   
-  const isInformationalUpdateNotification = (notification) =>
-    notification?.notification_category === 'dispatch_update_info';
+  const isNotificationMarkedReadOnClick = (notification) =>
+    notification?.notification_category === 'dispatch_update_info'
+    || notification?.notification_category === 'driver_dispatch_confirmed';
 
   const handleNotificationClick = async (n) => {
     if (!session) return;
 
-    if (n.related_dispatch_id && isInformationalUpdateNotification(n) && !n.read_flag) {
+    if (n.related_dispatch_id && isNotificationMarkedReadOnClick(n) && !n.read_flag) {
       try {
         await markReadAsync(n.id);
       } catch {
