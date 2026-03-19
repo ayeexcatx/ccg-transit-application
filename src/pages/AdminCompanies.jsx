@@ -491,7 +491,7 @@ export default function AdminCompanies() {
                           ) : c.contact_info && <p className="text-sm text-slate-500 mt-0.5">{c.contact_info}</p>}
                           <div className="flex items-center gap-1.5 mt-2 flex-wrap"><Truck className="h-3.5 w-3.5 text-slate-400" />{(c.trucks || []).length === 0 ? <span className="text-xs text-slate-400">No trucks</span> : (c.trucks || []).map((t) => <Badge key={t} variant="outline" className="text-xs font-mono">{t}</Badge>)}</div>
                           {c.pending_profile_change?.status === 'Pending' && <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">Company owner requested a profile update and it is pending admin approval.</div>}
-                          {(() => { const smsContact = getCompanySmsContact(c); return smsContact.method ? <p className="text-xs text-slate-500 mt-2">SMS target: <span className="font-medium text-slate-700">{smsContact.method.type}: {smsContact.method.value}</span></p> : null; })()}
+                          {(() => { const smsContact = getCompanySmsContact(c); return smsContact.method ? <p className="text-xs text-slate-500 mt-2">SMS: <span className="font-medium text-slate-700">{formatPhoneNumber(smsContact.phone)}</span></p> : null; })()}
                           {(() => {
                             const companyDrivers = (driversByCompany.get(c.id) || []).slice().sort((a, b) => (a.driver_name || '').localeCompare(b.driver_name || ''));
                             if (companyDrivers.length === 0) return null;

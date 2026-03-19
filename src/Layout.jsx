@@ -48,6 +48,7 @@ function LayoutInner({ children, currentPageName }) {
   });
 
   const pendingDriverRequestsCount = allDrivers.filter((driver) => driver.access_code_status === 'Pending').length;
+  const pendingCompanyProfileRequestsCount = companies.filter((company) => company?.pending_profile_change?.status === 'Pending').length;
 
   const activeCompany = companies.find((company) => company.id === activeCompanyId) || null;
   const sessionCompanyName =
@@ -219,7 +220,7 @@ function LayoutInner({ children, currentPageName }) {
                       <Link to={createPageUrl('AdminConfirmations')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminConfirmations'))}><CheckCircle2 className="h-3 w-3" />Confirmations</Button></Link>
                       <Link to={createPageUrl('Incidents')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('Incidents'))}><TriangleAlert className="h-3 w-3" />Incidents</Button></Link>
                       <Link to={createPageUrl('AdminAnnouncements')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminAnnouncements'))}><Megaphone className="h-3 w-3" />Announcements</Button></Link>
-                      <Link to={createPageUrl('AdminCompanies')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminCompanies'))}><Building2 className="h-3 w-3" />Companies</Button></Link>
+                      <Link to={createPageUrl('AdminCompanies')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminCompanies'))}><Building2 className="h-3 w-3" /><span>Companies</span>{pendingCompanyProfileRequestsCount > 0 && (<span className="ml-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">{pendingCompanyProfileRequestsCount}</span>)}</Button></Link>
                       <Link to={createPageUrl('AdminAccessCodes')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminAccessCodes'))}><Shield className="h-3 w-3" /><span>Access Codes</span>{pendingDriverRequestsCount > 0 && (<span className="ml-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">{pendingDriverRequestsCount}</span>)}</Button></Link>
                       <Link to={createPageUrl('AdminTemplateNotes')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminTemplateNotes'))}><FileText className="h-3 w-3" />Notes</Button></Link>
                     </nav>
@@ -268,7 +269,7 @@ function LayoutInner({ children, currentPageName }) {
               <Link to={createPageUrl('AdminConfirmations')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminConfirmations'))}><CheckCircle2 className="h-3 w-3" />Confirmations</Button></Link>
               <Link to={createPageUrl('Incidents')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('Incidents'))}><TriangleAlert className="h-3 w-3" />Incidents</Button></Link>
               <Link to={createPageUrl('AdminAnnouncements')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminAnnouncements'))}><Megaphone className="h-3 w-3" />Announcements</Button></Link>
-              <Link to={createPageUrl('AdminCompanies')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminCompanies'))}><Building2 className="h-3 w-3" />Companies</Button></Link>
+              <Link to={createPageUrl('AdminCompanies')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminCompanies'))}><Building2 className="h-3 w-3" /><span>Companies</span>{pendingCompanyProfileRequestsCount > 0 && (<span className="ml-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">{pendingCompanyProfileRequestsCount}</span>)}</Button></Link>
               <Link to={createPageUrl('AdminAccessCodes')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminAccessCodes'))}><Shield className="h-3 w-3" /><span>Access Codes</span>{pendingDriverRequestsCount > 0 && (<span className="ml-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">{pendingDriverRequestsCount}</span>)}</Button></Link>
               <Link to={createPageUrl('AdminTemplateNotes')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminTemplateNotes'))}><FileText className="h-3 w-3" />Notes</Button></Link>
             </div>

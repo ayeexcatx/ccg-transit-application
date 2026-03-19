@@ -196,8 +196,8 @@ export default function Drivers() {
                       {driver.notes && <p className="text-sm text-slate-500">{driver.notes}</p>}
                       <DriverSmsStatus driver={driver} />
                       {driver.owner_sms_enabled ? (
-                        <p className="text-xs text-red-600 mt-2 flex items-center gap-1.5">
-                          Please have your driver opt in to SMS notifications by clicking the menu button <Menu className="h-3.5 w-3.5 inline" /> then going to Profile and enabling SMS notifications.
+                        <p className="mt-2 pr-6 text-xs leading-5 text-red-600">
+                          Please have your driver opt in to SMS notifications by clicking the menu button <Menu className="mx-0.5 inline h-3.5 w-3.5 align-text-bottom" /> then going to Profile and enabling SMS notifications.
                         </p>
                       ) : (
                         <p className="text-xs text-slate-500 mt-2">This driver will not receive notifications on their phone. They will only see pending notifications when they open the app.</p>
@@ -421,8 +421,8 @@ export default function Drivers() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editing ? 'Edit Driver' : 'Add Driver'}</DialogTitle></DialogHeader>
+        <DialogContent className="sm:max-w-md pr-10">
+          <DialogHeader className="pr-6"><DialogTitle>{editing ? 'Edit Driver' : 'Add Driver'}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>Driver Name *</Label>
@@ -443,7 +443,7 @@ export default function Drivers() {
                 <Switch checked={form.owner_sms_enabled === true} onCheckedChange={(checked) => setForm((prev) => ({ ...prev, owner_sms_enabled: checked }))} />
               </div>
               {form.owner_sms_enabled ? (
-                <p className="text-xs text-red-600 flex items-center gap-1.5">Please have your driver opt in to SMS notifications by clicking the menu button <Menu className="h-3.5 w-3.5 inline" />, going to Profile, and opting in to SMS notifications.</p>
+                <p className="pr-6 text-xs leading-5 text-red-600">Please have your driver opt in to SMS notifications by clicking the menu button <Menu className="mx-0.5 inline h-3.5 w-3.5 align-text-bottom" />, going to Profile, and opting in to SMS notifications.</p>
               ) : (
                 <p className="text-xs text-slate-500">This driver will not receive notifications on their phone. They will only see pending notifications when they open the app.</p>
               )}
