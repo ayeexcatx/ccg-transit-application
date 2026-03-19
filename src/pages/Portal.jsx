@@ -34,8 +34,11 @@ import { useOwnerNotifications } from '../components/notifications/useOwnerNotif
 
 
 function formatConflictDispatchSummary(dispatch) {
-  const parts = [dispatch?.job_number, dispatch?.start_time, dispatch?.reference_tag]
-    .filter((value) => value && String(value).trim());
+  const parts = [
+    dispatch?.job_number ? `JOB #${dispatch.job_number}` : dispatch?.job_number,
+    dispatch?.start_time,
+    dispatch?.reference_tag,
+  ].filter((value) => value && String(value).trim());
   return parts.join(' • ');
 }
 
