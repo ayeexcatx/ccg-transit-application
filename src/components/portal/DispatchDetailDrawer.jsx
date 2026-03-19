@@ -631,7 +631,8 @@ export default function DispatchDetailDrawer({
   }, {});
 
   const companyHasDrivers = companyDrivers.length > 0;
-  const shouldShowUnassignedDriverLabel = !isOwner || companyHasDrivers;
+  const shouldShowDriverAssignmentControls = !isOwner || companyHasDrivers;
+  const shouldShowUnassignedDriverLabel = shouldShowDriverAssignmentControls;
 
   const getTruckDriverSummaryLabel = (truckNumber) => {
     if (!isOwner) return assignedDriverNameByTruck[truckNumber] || 'Unassigned';
@@ -1371,6 +1372,7 @@ export default function DispatchDetailDrawer({
                 conflictingDriverAssignmentsById={conflictingDriverAssignmentsById}
                 driverAssignmentErrors={driverAssignmentErrors}
                 confirmations={confirmations}
+                shouldShowDriverAssignmentControls={shouldShowDriverAssignmentControls}
               />
 
               {!isDriverUser && (
