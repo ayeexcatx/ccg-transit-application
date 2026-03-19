@@ -10,8 +10,9 @@ export default function DispatchDriverAssignmentsSection({
   assignDriverMutation,
   conflictingDriverAssignmentsById,
   driverAssignmentErrors,
+  shouldShowDriverAssignmentControls,
 }) {
-  if (trucksAssigned.length === 0) return null;
+  if (trucksAssigned.length === 0 || !shouldShowDriverAssignmentControls) return null;
 
   return (
     <div data-screenshot-exclude="true" data-tour="dispatch-driver-assignments" className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
