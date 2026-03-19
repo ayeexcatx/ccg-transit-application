@@ -206,7 +206,7 @@ export default function Drivers() {
                     <div className="flex items-center gap-1 shrink-0">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(driver)} className="h-8 w-8"><Pencil className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => setDriverToDelete(driver)} className="h-8 w-8 text-red-500 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></Button>
-                      <Button variant="outline" size="sm" onClick={() => requestCodeMutation.mutate(driver)} disabled={requestCodeMutation.isPending || !canRequestCode} className="text-xs"><KeyRound className="h-3.5 w-3.5 mr-1" />{requestLabel}</Button>
+                      <Button variant="outline" size="sm" onClick={() => requestCodeMutation.mutate(driver)} disabled={requestCodeMutation.isPending || !canRequestCode} className="text-xs bg-red-600 text-white hover:bg-red-700"><KeyRound className="h-3.5 w-3.5 mr-1" />{requestLabel}</Button>
                     </div>
                   </div>
                 </CardContent>
