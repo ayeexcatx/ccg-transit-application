@@ -97,18 +97,55 @@ async function createDriverDispatchNotification({
 }) {
   if (!dispatch?.id || !driverAccessCodeId || !title || !message) return;
 
+  const normalizedRequiredTrucks = [...new Set((requiredTrucks || []).filter(Boolean))];
+  const fullMessage = `${message}\n${formatDispatchDateTimeLine(dispatch)}`;
+  const existingNotifications = await base44.entities.Notification.filter({
+    recipient_type: 'AccessCode',
+    recipient_access_code_id: driverAccessCodeId,
+    related_dispatch_id: dispatch.id,
+    notification_category: DRIVER_NOTIFICATION_CATEGORY,
+  }, '-created_date', 200);
+
+  const unreadNotifications = (existingNotifications || []).filter((notification) => !notification.read_flag);
+  const latestMatchingUnread = unreadNotifications.find((notification) => (
+    String(notification.notification_type || '').toLowerCase() === String(notificationType || 'driver_assigned').toLowerCase()
+    && String(notification.message || '') === fullMessage
+  ));
+
+  const staleUnreadNotifications = unreadNotifications.filter((notification) => notification.id !== latestMatchingUnread?.id);
+  if (staleUnreadNotifications.length) {
+    await Promise.all(staleUnreadNotifications.map((notification) =>
+      base44.entities.Notification.update(notification.id, { read_flag: true })
+    ));
+  }
+
+  if (latestMatchingUnread) {
+    const existingRequiredTrucks = Array.isArray(latestMatchingUnread.required_trucks) ? latestMatchingUnread.required_trucks : [];
+    const hasRequiredTruckChanges = JSON.stringify(existingRequiredTrucks) !== JSON.stringify(normalizedRequiredTrucks);
+
+    if (hasRequiredTruckChanges) {
+      await base44.entities.Notification.update(latestMatchingUnread.id, {
+        required_trucks: normalizedRequiredTrucks,
+        message: fullMessage,
+        title,
+      });
+    }
+
+    return latestMatchingUnread;
+  }
+
   const notification = await base44.entities.Notification.create({
     recipient_type: 'AccessCode',
     recipient_access_code_id: driverAccessCodeId,
     recipient_id: driverAccessCodeId,
     recipient_company_id: dispatch.company_id,
     title,
-    message: `${message}\n${formatDispatchDateTimeLine(dispatch)}`,
+    message: fullMessage,
     related_dispatch_id: dispatch.id,
     read_flag: false,
     notification_category: DRIVER_NOTIFICATION_CATEGORY,
     notification_type: notificationType || 'driver_assigned',
-    required_trucks: requiredTrucks,
+    required_trucks: normalizedRequiredTrucks,
   });
 
   console.log('Notification created before SMS delivery (createDriverDispatchNotification)', {
@@ -120,6 +157,7 @@ async function createDriverDispatchNotification({
   });
 
   await sendNotificationSmsIfEligible(notification);
+  return notification;
 }
 
 

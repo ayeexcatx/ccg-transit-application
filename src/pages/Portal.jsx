@@ -852,6 +852,7 @@ export default function Portal() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleRemovedAssignmentModalDismiss}>Close</AlertDialogCancel>
             <AlertDialogAction onClick={handleRemovedAssignmentModalDismiss}>OK</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

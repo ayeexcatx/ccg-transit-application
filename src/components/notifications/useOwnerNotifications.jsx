@@ -70,10 +70,7 @@ export function useOwnerNotifications(session) {
       return driverDispatchIds.has(notification.related_dispatch_id);
     }
     return validDispatchIds.has(notification.related_dispatch_id);
-  }).sort((a, b) => {
-    if (a.read_flag !== b.read_flag) return a.read_flag ? 1 : -1;
-    return new Date(b.created_date) - new Date(a.created_date);
-  });
+  }).sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
 
   const notificationsWithStatus = notifications.map((notification) => ({
     ...notification,

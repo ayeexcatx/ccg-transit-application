@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import NotificationStatusBadge from './NotificationStatusBadge';
 import { useOwnerNotifications } from './useOwnerNotifications';
 import { getNotificationDisplay } from './formatNotificationDetailsMessage';
@@ -118,11 +118,17 @@ export default function NotificationBell({ session }) {
               <Bell className="h-4 w-4 text-blue-500" />
               <h3 className="text-sm font-semibold tracking-tight text-slate-800">Notifications</h3>
             </div>
-            <Link to={createPageUrl('Notifications')}>
-              <Button variant="ghost" size="sm" className="h-8 px-2 text-sm font-medium text-blue-600 hover:bg-blue-50/70 hover:text-blue-700 focus-visible:ring-blue-300">
-                View all
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-sm font-medium text-blue-600 hover:bg-blue-50/70 hover:text-blue-700 focus-visible:ring-blue-300"
+              onClick={() => {
+                setOpen(false);
+                navigate(createPageUrl('Notifications'));
+              }}
+            >
+              View all
+            </Button>
           </div>
         </div>
         <div className="max-h-[26rem] overflow-y-auto">
