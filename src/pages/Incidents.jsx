@@ -14,6 +14,7 @@ import { AlertTriangle, Plus, Truck } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { buildDispatchOpenPath } from '@/lib/dispatchOpenOrchestration';
 import { toast } from 'sonner';
 import { canUserSeeIncident, normalizeVisibilityId } from '@/lib/dispatchVisibility';
 
@@ -546,7 +547,7 @@ export default function Incidents() {
         {visibleIncidents.map((incident) => {
           const dispatch = incident.dispatch_id ? dispatchMap[incident.dispatch_id] : null;
           const dispatchHref = dispatch
-            ? (isAdmin ? createPageUrl(`AdminDispatches?dispatchId=${dispatch.id}`) : createPageUrl(`Portal?dispatchId=${dispatch.id}`))
+            ? createPageUrl(buildDispatchOpenPath(isAdmin ? 'AdminDispatches' : 'Portal', { dispatchId: dispatch.id }))
             : null;
 
           return (

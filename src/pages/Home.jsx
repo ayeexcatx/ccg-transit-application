@@ -10,6 +10,7 @@ import { Bell, Clock, Sun, Moon, ArrowRight, AlertCircle, Truck, Megaphone } fro
 import { format, parseISO } from 'date-fns';
 import { getDispatchBucket } from '../components/portal/dispatchBuckets';
 import { createPageUrl } from '@/utils';
+import { buildDispatchOpenPath } from '@/lib/dispatchOpenOrchestration';
 import { Link, useNavigate } from 'react-router-dom';
 import { useOwnerNotifications } from '../components/notifications/useOwnerNotifications';
 import NotificationStatusBadge from '../components/notifications/NotificationStatusBadge';
@@ -107,7 +108,7 @@ const getHomeGreeting = (userName) => {
 function MiniDispatchCard({ dispatch, companyName, truckNumbers = [] }) {
 
   return (
-    <Link to={createPageUrl(`Portal?dispatchId=${normalizeId(dispatch.id)}`)}>
+    <Link to={createPageUrl(buildDispatchOpenPath('Portal', { dispatchId: dispatch.id, normalizeId }))}>
       <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer">
         <div className="shrink-0 mt-0.5">
           {dispatch.shift_time === 'Day Shift'
@@ -286,10 +287,12 @@ export default function Home() {
     }
 
     if (n.related_dispatch_id) {
-      const params = new URLSearchParams();
-      params.set('dispatchId', normalizeId(n.related_dispatch_id));
-      params.set('notificationId', normalizeId(n.id));
-      navigate(createPageUrl(`Portal?${params.toString()}`));
+      const targetPath = buildDispatchOpenPath('Portal', {
+        dispatchId: n.related_dispatch_id,
+        notificationId: n.id,
+        normalizeId,
+      });
+      navigate(createPageUrl(targetPath));
     } else {
       navigate(createPageUrl('Notifications'));
     }

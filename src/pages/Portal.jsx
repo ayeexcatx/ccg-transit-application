@@ -22,6 +22,11 @@ import { areAllAssignedTrucksTimeComplete } from '@/lib/timeLogs';
 import { getDispatchBucket } from '../components/portal/dispatchBuckets';
 import { sortTemplateNotesForDispatch } from '@/lib/templateNotes';
 import {
+  clearDispatchOpenParams,
+  getDispatchOpenTargets,
+  resolveDispatchOpenTab,
+} from '@/lib/dispatchOpenOrchestration';
+import {
   notifyTruckConfirmation,
   resolveOwnerNotificationIfComplete,
 } from '../components/notifications/createNotifications';
@@ -66,9 +71,10 @@ export default function Portal() {
   const pendingOwnerConfirmationKeysRef = useRef(new Set());
   const swapConfirmationResolverRef = useRef(null);
 
-  const urlParams = new URLSearchParams(location.search);
-  const targetDispatchId = normalizeId(urlParams.get('dispatchId'));
-  const targetNotificationId = normalizeId(urlParams.get('notificationId'));
+  const {
+    targetDispatchId,
+    targetNotificationId,
+  } = getDispatchOpenTargets(location.search, { normalizeId });
   const actorMetadata = getSessionActorMetadata(session);
 
   const { data: dispatches = [] } = useQuery({
@@ -350,10 +356,7 @@ export default function Portal() {
 
     if (!targetDispatchId) return;
 
-    const nextParams = new URLSearchParams(location.search);
-    nextParams.delete('dispatchId');
-    nextParams.delete('notificationId');
-    navigate({ search: nextParams.toString() ? `?${nextParams.toString()}` : '' }, { replace: true });
+    navigate({ search: clearDispatchOpenParams(location.search) }, { replace: true });
   };
 
   const openDrawer = (dispatchId) => {
@@ -420,7 +423,12 @@ export default function Portal() {
     const inToday = todayDispatches.some(d => normalizeId(d.id) === idToOpen);
     const inHistory = historyDispatches.some(d => normalizeId(d.id) === idToOpen);
 
-    const correctTab = inUpcoming ? 'upcoming' : inToday ? 'today' : inHistory ? 'history' : null;
+    const correctTab = resolveDispatchOpenTab({
+      dispatchId: idToOpen,
+      inUpcoming,
+      inToday,
+      inHistory,
+    });
     if (!correctTab) return;
 
     if (tab !== correctTab) {

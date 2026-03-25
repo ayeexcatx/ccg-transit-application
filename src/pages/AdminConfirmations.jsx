@@ -6,6 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createPageUrl } from '../utils';
+import { buildDispatchOpenPath } from '@/lib/dispatchOpenOrchestration';
 import { buildOpenConfirmationRows } from '@/components/notifications/openConfirmations';
 import { statusBadgeColors } from '@/components/portal/statusConfig';
 
@@ -237,7 +238,7 @@ export default function AdminConfirmations() {
   const isLoading = notificationsLoading || confirmationsLoading || dispatchesLoading;
 
   const openDispatch = (dispatchId) => {
-    navigate(`${createPageUrl('AdminDispatches')}?dispatchId=${dispatchId}`);
+    navigate(createPageUrl(buildDispatchOpenPath('AdminDispatches', { dispatchId })));
   };
 
   return (

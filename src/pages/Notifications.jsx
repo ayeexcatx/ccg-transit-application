@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Bell, CheckCircle2, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
+import { buildDispatchOpenPath } from '@/lib/dispatchOpenOrchestration';
 import { useNavigate } from 'react-router-dom';
 import NotificationStatusBadge from '@/components/notifications/NotificationStatusBadge';
 import { useOwnerNotifications } from '@/components/notifications/useOwnerNotifications';
@@ -58,10 +59,11 @@ export default function Notifications() {
 
     if (n.related_dispatch_id) {
       const targetPage = session?.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
-      const params = new URLSearchParams();
-      params.set('dispatchId', n.related_dispatch_id);
-      params.set('notificationId', n.id);
-      navigate(createPageUrl(`${targetPage}?${params.toString()}`));
+      const targetPath = buildDispatchOpenPath(targetPage, {
+        dispatchId: n.related_dispatch_id,
+        notificationId: n.id,
+      });
+      navigate(createPageUrl(targetPath));
     }
   };
 

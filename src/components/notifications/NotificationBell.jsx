@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
+import { buildDispatchOpenPath } from '@/lib/dispatchOpenOrchestration';
 import { useNavigate } from 'react-router-dom';
 import NotificationStatusBadge from './NotificationStatusBadge';
 import { useOwnerNotifications } from './useOwnerNotifications';
@@ -78,11 +79,13 @@ export default function NotificationBell({ session }) {
 
     if (n.related_dispatch_id) {
       const targetPage = session.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
-      const params = new URLSearchParams();
-      params.set('dispatchId', normalizeId(n.related_dispatch_id));
-      params.set('notificationId', normalizeId(n.id));
+      const targetPath = buildDispatchOpenPath(targetPage, {
+        dispatchId: n.related_dispatch_id,
+        notificationId: n.id,
+        normalizeId,
+      });
       setOpen(false);
-      setTimeout(() => navigate(createPageUrl(`${targetPage}?${params.toString()}`)), 0);
+      setTimeout(() => navigate(createPageUrl(targetPath)), 0);
     } else {
       navigate(createPageUrl('Notifications'));
     }

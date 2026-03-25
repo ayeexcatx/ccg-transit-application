@@ -20,6 +20,11 @@ import DispatchDetailDrawer from '../components/portal/DispatchDetailDrawer';
 import { useSession } from '../components/session/SessionContext';
 import { Label } from '@/components/ui/label';
 import { statusBadgeColors, statusBorderAccent, scheduledStatusMessage } from '../components/portal/statusConfig';
+import {
+  clearDispatchOpenParams,
+  getDispatchOpenTargets,
+  resolveDispatchOpenTab,
+} from '@/lib/dispatchOpenOrchestration';
 import { syncDispatchHtmlToDrive } from '@/lib/dispatchDriveSync';
 import { toast } from 'sonner';
 import { runAdminDispatchMutation } from '@/services/adminDispatchMutationService';
@@ -526,9 +531,7 @@ export default function AdminDispatches() {
   const pendingOpenIdRef = useRef(null);
   const activeEditLockDispatchIdRef = useRef(null);
 
-  const urlParams = new URLSearchParams(location.search);
-  const targetDispatchId = urlParams.get('dispatchId');
-  const targetNotificationId = urlParams.get('notificationId');
+  const { targetDispatchId, targetNotificationId } = getDispatchOpenTargets(location.search);
   const openNewDispatch = Boolean(location.state?.openNewDispatch);
 
   const { data: dispatches = [], isLoading } = useQuery({
@@ -1042,7 +1045,13 @@ export default function AdminDispatches() {
 
     const inUpcoming = upcomingDispatches.some((d) => d.id === idToOpen);
     const inToday = todayDispatches.some((d) => d.id === idToOpen);
-    const correctTab = inUpcoming ? 'upcoming' : inToday ? 'today' : 'history';
+    const correctTab = resolveDispatchOpenTab({
+      dispatchId: idToOpen,
+      inUpcoming,
+      inToday,
+      inHistory: false,
+      historyFallback: true,
+    });
 
     if (tab !== correctTab) {
       pendingOpenIdRef.current = idToOpen;
@@ -1074,10 +1083,7 @@ export default function AdminDispatches() {
 
     if (!targetDispatchId && !targetNotificationId) return;
 
-    const nextParams = new URLSearchParams(location.search);
-    nextParams.delete('dispatchId');
-    nextParams.delete('notificationId');
-    navigate({ search: nextParams.toString() ? `?${nextParams.toString()}` : '' }, { replace: true });
+    navigate({ search: clearDispatchOpenParams(location.search) }, { replace: true });
   };
 
   const liveBoardDispatchCount = useMemo(() => liveBoardGroupedShifts.reduce((sum, shiftGroup) =>
