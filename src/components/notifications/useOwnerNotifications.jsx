@@ -35,6 +35,25 @@ export function useOwnerNotifications(session) {
       if (session.code_type === 'Admin') {
         return base44.entities.Notification.filter({ recipient_type: 'Admin' }, '-created_date', 200);
       }
+
+      const isAdminOwnerWorkspace = session.code_type === 'CompanyOwner' && session.raw_code_type === 'Admin';
+      if (isAdminOwnerWorkspace && session.company_id) {
+        const [allAccessCodeNotifications, ownerCodes] = await Promise.all([
+          base44.entities.Notification.filter({ recipient_type: 'AccessCode' }, '-created_date', 200),
+          base44.entities.AccessCode.filter({
+            code_type: 'CompanyOwner',
+            active_flag: true,
+            company_id: session.company_id,
+          }, '-created_date', 500),
+        ]);
+
+        const ownerCodeIdSet = new Set((ownerCodes || []).map((code) => String(code.id)));
+        return (allAccessCodeNotifications || []).filter((notification) => {
+          const recipientId = String(notification.recipient_access_code_id || notification.recipient_id || '');
+          return ownerCodeIdSet.has(recipientId);
+        });
+      }
+
       const all = await base44.entities.Notification.filter({ recipient_type: 'AccessCode' }, '-created_date', 200);
       return all.filter(n =>
         n.recipient_access_code_id === session.id || n.recipient_id === session.id
