@@ -766,7 +766,7 @@ export default function Portal() {
         {!isDriverUser && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-slate-500">Trucks:</span>
-            {allowedTrucks.map(t => (
+            {(session?.allowed_trucks || []).map(t => (
               <Badge key={t} variant="outline" className="font-mono text-xs">
                 <Truck className="h-3 w-3 mr-1" />{t}
               </Badge>
