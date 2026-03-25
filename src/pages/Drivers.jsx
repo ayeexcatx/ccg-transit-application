@@ -513,7 +513,7 @@ export default function Drivers() {
                     <Label>Driver personal SMS opt-in</Label>
                     <p className="text-xs text-slate-500">View only — drivers manage this themselves from Profile.</p>
                   </div>
-                  <Switch checked={editing?.driver_sms_opt_in === true || (editing?.driver_sms_opt_in == null && editing?.sms_enabled === true)} disabled />
+                  <Switch checked={getDriverSmsState(editing).driverOptedIn} disabled />
                 </div>
               </div>
             </div>

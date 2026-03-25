@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { BellRing, Building2, Copy, Eye, KeyRound, Shield, UserRound } from 'lucide-react';
-import { buildCompanyProfileRequestPayload, formatPhoneNumber, getCompanyOwnerSmsState, getCompanySmsContact, getDriverSmsState, normalizeContactMethods, normalizeSmsPhone, PHONE_CONTACT_TYPES } from '@/lib/sms';
+import { buildCompanyProfileRequestPayload, formatPhoneNumber, getAdminSmsProductState, getCompanyOwnerSmsState, getCompanySmsContact, getDriverSmsState, hasUsSmsPhone, normalizeContactMethods, normalizeSmsPhone, PHONE_CONTACT_TYPES } from '@/lib/sms';
 
 const CONTACT_TYPE_OPTIONS = ['Office', 'Cell', 'Email', 'Fax', 'Other'];
 
@@ -78,7 +78,7 @@ function ContactMethodEditor({ methods, setMethods, smsIndex, setSmsIndex, readO
     <div className="space-y-2">
       {methods.map((method, index) => {
         const isPhoneType = PHONE_CONTACT_TYPES.includes(method.type);
-        const canUseForSms = isPhoneType && normalizeSmsPhone(method.value).startsWith('+');
+        const canUseForSms = isPhoneType && hasUsSmsPhone(normalizeSmsPhone(method.value));
         return (
           <div key={`contact-method-${index}`} className="rounded-lg border border-slate-200 p-3 bg-white space-y-2">
             <div className="flex items-center justify-between gap-3">
@@ -119,7 +119,8 @@ function AdminProfile({ session }) {
   const adminAccessCode = accessCodes[0] || session || null;
   const adminName = adminAccessCode?.label || adminAccessCode?.name || adminAccessCode?.code || 'Admin';
   const adminPhone = adminAccessCode?.sms_phone || '';
-  const adminSmsOptedIn = adminAccessCode?.sms_enabled === true;
+  const adminSmsState = getAdminSmsProductState(adminAccessCode);
+  const adminSmsOptedIn = adminSmsState.optedIn;
   const hasChanges = form.label !== adminName
     || normalizeSmsPhone(form.sms_phone) !== normalizeSmsPhone(adminPhone)
     || form.sms_enabled !== adminSmsOptedIn;
@@ -209,7 +210,7 @@ function AdminProfile({ session }) {
             <div className="rounded-lg bg-slate-50 p-3 border"><p className="text-slate-500">Phone for future SMS</p><p className="font-medium text-slate-900">{adminPhone ? formatPhoneNumber(adminPhone) : 'No phone selected'}</p></div>
             <div className="rounded-lg bg-slate-50 p-3 border"><p className="text-slate-500">SMS opt-in saved</p><p className={`font-medium ${adminSmsOptedIn ? 'text-emerald-700' : 'text-slate-900'}`}>{adminSmsOptedIn ? 'Yes' : 'No'}</p></div>
           </div>
-          <p className="text-sm text-slate-500">Admin SMS delivery is not enabled yet. Saving this preference does not change current notification behavior.</p>
+          {!adminSmsState.deliveryActive && <p className="text-sm text-slate-500">Admin SMS delivery is not enabled yet. Saving this preference does not change current notification behavior.</p>}
         </CardContent>
       </Card>
 

@@ -1,3 +1,6 @@
+import { getAdminSmsProductState, getCompanyOwnerEffectiveSmsState, getDriverEffectiveSmsState } from '@/lib/smsDerivedState';
+import { hasUsSmsPhone } from '@/lib/smsPhone';
+
 export const PHONE_CONTACT_TYPES = ['Office', 'Cell', 'Fax'];
 
 export function formatPhoneNumber(value) {
@@ -45,7 +48,7 @@ export function getCompanySmsContact(company) {
     : -1;
 
   const selectedMethod = methods[selectedIndex] || null;
-  if (selectedMethod && PHONE_CONTACT_TYPES.includes(selectedMethod.type) && normalizeSmsPhone(selectedMethod.value).startsWith('+')) {
+  if (selectedMethod && PHONE_CONTACT_TYPES.includes(selectedMethod.type) && hasUsSmsPhone(normalizeSmsPhone(selectedMethod.value))) {
     return {
       index: selectedIndex,
       method: selectedMethod,
@@ -54,7 +57,7 @@ export function getCompanySmsContact(company) {
   }
 
   const fallbackIndex = methods.findIndex((method) =>
-    PHONE_CONTACT_TYPES.includes(method?.type) && normalizeSmsPhone(method?.value).startsWith('+')
+    PHONE_CONTACT_TYPES.includes(method?.type) && hasUsSmsPhone(normalizeSmsPhone(method?.value))
   );
 
   if (fallbackIndex >= 0) {
@@ -73,33 +76,27 @@ export function getCompanySmsContact(company) {
 }
 
 export function getDriverSmsState(driver) {
-  const ownerEnabled = driver?.owner_sms_enabled === true;
-  const driverOptedIn = driver?.driver_sms_opt_in === true || (driver?.driver_sms_opt_in == null && driver?.sms_enabled === true);
   const normalizedPhone = normalizeSmsPhone(driver?.phone || '');
-  const hasValidPhone = normalizedPhone.startsWith('+');
-  const effective = ownerEnabled && driverOptedIn && hasValidPhone;
+  const state = getDriverEffectiveSmsState({ driver, normalizedPhone });
 
   return {
-    ownerEnabled,
-    driverOptedIn,
-    hasValidPhone,
+    ...state,
     normalizedPhone,
-    effective,
   };
 }
 
 export function getCompanyOwnerSmsState({ accessCode, company }) {
-  const optedIn = accessCode?.sms_enabled === true;
   const target = getCompanySmsContact(company);
-  const hasValidPhone = Boolean(target.phone);
+  const state = getCompanyOwnerEffectiveSmsState({ accessCode, normalizedPhone: target.phone });
+
   return {
-    optedIn,
-    hasValidPhone,
+    ...state,
     normalizedPhone: target.phone,
     target,
-    effective: optedIn && hasValidPhone,
   };
 }
+
+export { getAdminSmsProductState, hasUsSmsPhone };
 
 export function buildCompanyProfileRequestPayload({ form, currentCompany }) {
   const cleanedContactMethods = (form.contact_methods || [])
