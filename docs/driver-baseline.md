@@ -12,10 +12,11 @@ Date reviewed: 2026-03-25.
 ## 1) Driver Home
 
 ### Confirmed from code
-- Uses same home shell but driver data is constrained by active `DriverDispatchAssignment` visibility.
+- Uses the shared home/app shell, with driver data constrained by active `DriverDispatchAssignment` visibility (assignment-based visibility).
 - Today/Upcoming dispatch lists include only assigned dispatches.
 - Visible truck badges are based on assigned truck(s) per dispatch for that driver.
-- Action items come from notification stream filtered by driver visibility rules.
+- Action items come from notification stream filtered by driver visibility rules (assignment-based, not company-wide).
+- See `docs/portal-dispatch-drawer-behavior-baseline.md` for assignment-based dispatch visibility details.
 
 ### Present in personal baseline
 - Driver home aligns with owner-style layout but with restricted scope.
@@ -37,9 +38,10 @@ Date reviewed: 2026-03-25.
 ### Confirmed from code
 - Driver name and phone are read-only.
 - Driver can toggle only their own SMS consent (`driver_sms_opt_in`).
-- Effective SMS requires owner enabled + driver opt-in + valid phone.
+- Effective SMS enabled requires `owner_sms_enabled` + `driver_sms_opt_in` + valid phone.
 - Saving opt-in synchronizes linked driver access-code SMS fields.
 - SMS confirmation text messages are attempted on opt-in/opt-out.
+- See `docs/notifications-behavior-baseline.md` for notification/SMS delivery-side eligibility details.
 
 ### Present in personal baseline
 - View-only identity fields.
@@ -64,6 +66,7 @@ Date reviewed: 2026-03-25.
 - Prefill includes dispatch/company and prefilled truck only when uniquely resolvable.
 - Driver can view incidents they created and incidents tied to dispatches they are assigned to.
 - Driver can add timeline updates/notes on visible incidents.
+- See `docs/admin-dispatches-behavior-baseline.md` and `docs/portal-dispatch-drawer-behavior-baseline.md` for dispatch-linked incident entry context.
 
 ### Present in personal baseline
 - Driver incident creation from dispatch drawer.
