@@ -16,9 +16,10 @@ Date reviewed: 2026-03-25.
 ### Confirmed from code
 - Greeting uses Eastern-time-based daypart logic and workspace display label.
 - Announcement Center shows active announcements filtered by target scope (All / company / access code).
-- Action Needed section is driven by unresolved notifications with dispatch visibility checks.
+- Action Needed section is driven by unresolved notifications after visibility filtering (company-scoped + truck-scoped).
 - Quick lists for Today and Upcoming dispatches are filtered by allowed trucks (owner) and sorted/limited.
 - Clicking actionable notifications routes into dispatch drawer context (Portal with query params).
+- See `docs/portal-dispatch-drawer-behavior-baseline.md` for detailed drawer/deep-link behavior.
 
 ### Present in personal baseline
 - Home landing with greeting.
@@ -89,9 +90,10 @@ Date reviewed: 2026-03-25.
 
 ### Confirmed from code
 - Notifications page uses shared notifications hook and supports mark-all-read.
-- Notification list is visibility-filtered by dispatch existence/scope.
-- Owner unread state can be "effectively read" even when raw `read_flag` is false (confirmation logic).
-- Clicking dispatch-related notifications navigates into dispatch context; some categories mark read on click.
+- Notification list is visibility-filtered by dispatch existence/scope (company-scoped + truck-scoped).
+- Owner unread state can be effectively read even when raw `read_flag` is false (effective read state from confirmation logic).
+- Clicking dispatch-related notifications navigates into dispatch context; some categories are action-marked read on click.
+- See `docs/notifications-behavior-baseline.md` for full `read_flag` vs effective-read vs action-marked-read logic.
 
 ### Present in personal baseline
 - Notification feed and action handling.
@@ -115,7 +117,7 @@ Date reviewed: 2026-03-25.
 - Edit flow submits a **pending profile change request** (not direct overwrite) for admin approval.
 - Owner can request a new owner access code if missing.
 - Contact methods are typed; one can be designated for SMS.
-- SMS preference for owner is tied to both access-code opt-in and valid designated company SMS contact.
+- Effective SMS enabled for owner is tied to both access-code opt-in and valid SMS-designated company contact.
 - Related owner access codes are synchronized when company SMS contact changes.
 
 ### Present in personal baseline

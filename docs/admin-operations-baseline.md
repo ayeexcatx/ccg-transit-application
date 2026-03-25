@@ -131,8 +131,8 @@ This baseline treats repository code as source of truth and compares it against 
 - Driver code creation can originate from pending driver requests and updates driver `access_code_status`.
 - Admin code supports multi-workspace fields (`available_views`, `linked_company_ids`) with validation.
 - SMS behavior differs by type:
-  - Driver: derived from driver+owner state.
-  - CompanyOwner: derived from company SMS contact + owner opt-in.
+  - Driver: derived from `owner_sms_enabled` + `driver_sms_opt_in` + valid phone (effective SMS enabled).
+  - CompanyOwner: derived from owner opt-in + valid SMS-designated company contact (effective SMS enabled).
   - Others: uses direct code fields.
 - Copy-to-clipboard shortcut for code values.
 
@@ -207,6 +207,7 @@ This baseline treats repository code as source of truth and compares it against 
 - Open section shows company, dispatch date, status/type, truck, client, job number, reference, notification timestamp, and a computed pending-age field.
 - History section is sourced from completed `Confirmation` records and shows company/date/truck/client/job/reference plus `Confirmed At` and `Confirmed By`.
 - Clicking either open/history rows deep-links to the target dispatch in Admin Dispatches (`AdminDispatches?dispatchId=...`).
+- See `docs/notifications-behavior-baseline.md` for full owner-notification / open-confirmation reconciliation logic.
 
 ### Present in personal baseline
 - Two-section structure (open + history).
@@ -230,6 +231,7 @@ This baseline treats repository code as source of truth and compares it against 
 - Admin pages use a shared sticky header with logo/title, workspace identity line, notification bell, profile menu trigger, and logout action.
 - Admin nav tabs are explicitly rendered as: Dashboard, Dispatches, Availability, Confirmations, Incidents, Announcements, Companies, Access Codes, Notes.
 - Pending badges for company profile requests and driver requests are attached to Companies and Access Codes nav items.
+- See `docs/behavior-preservation-baseline.md` (App shell / header section) for cross-role shell behavior.
 
 ### Present in personal baseline
 - Persistent header concept with logo, role/workspace identity, notification bell, profile/menu, and logout.

@@ -25,8 +25,10 @@ No currently confirmed code-vs-reference conflicts remain for the audited baseli
 
 - **Potential completion-control gap (Incidents)**: UI warns to save restart time before completion, but status mutation path is not hard-blocked by visible frontend check at mutation level.
 - **Potential wording/behavior drift**: several long instructional text blocks in Drivers page can diverge from actual workflow logic over time.
-- **Complex read-state logic risk**: owner notifications depend on computed effective-read state combining notifications, confirmations, and truck visibility; regression risk is high without focused tests.
+- **Complex read-state logic risk**: owner notifications depend on raw `read_flag`, computed effective read state, and action-based read transitions; regression risk is high without focused tests.
 - **Admin SMS ambiguity risk**: profile stores admin SMS preference while UI says delivery is not active; this can confuse operators unless policy is explicit.
+
+See `docs/notifications-behavior-baseline.md` for the full notification read-state and SMS eligibility logic.
 
 ## 6) Needs manual verification (cross-cutting)
 
@@ -42,4 +44,5 @@ No currently confirmed code-vs-reference conflicts remain for the audited baseli
   - `docs/company-owner-baseline.md`
   - `docs/driver-baseline.md`
 - Updated comparison sections so that stale "Missing from personal baseline" and "Conflicts with personal baseline" bullets were removed or rewritten to explicit "None currently confirmed" where appropriate.
+- Terminology kept aligned with existing baselines for assignment-based/company-scoped/truck-scoped visibility and effective SMS enabled semantics.
 - Remaining unresolved differences between audited baseline docs and personal reference: **None currently confirmed**.
