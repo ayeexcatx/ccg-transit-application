@@ -181,7 +181,6 @@ export default function Home() {
 
   const workspaceDisplayLabel = getWorkspaceDisplayLabel(session, activeCompanyName);
   const homeHeading = getHomeGreeting(workspaceDisplayLabel || session?.code_type);
-  const allowedTrucks = session?.allowed_trucks || [];
   const isDriver = session?.code_type === 'Driver';
 
 
@@ -202,6 +201,16 @@ export default function Home() {
     queryFn: () => base44.entities.Dispatch.filter({ company_id: session.company_id }, '-date', 200),
     enabled: !!session?.company_id,
   });
+  const { data: ownerCompany = null } = useQuery({
+    queryKey: ['owner-company-notification-scope', session?.company_id],
+    queryFn: async () => {
+      if (!session?.company_id) return null;
+      const companies = await base44.entities.Company.filter({ id: session.company_id }, '-created_date', 1);
+      return companies?.[0] || null;
+    },
+    enabled: session?.code_type === 'CompanyOwner' && !!session?.company_id,
+  });
+  const ownerScopeTrucks = Array.isArray(ownerCompany?.trucks) ? ownerCompany.trucks : [];
 
   const { data: allAnnouncements = [] } = useQuery({
     queryKey: ['announcements'],
@@ -268,7 +277,7 @@ export default function Home() {
           notification,
           dispatch: notification.related_dispatch_id ? dispatchMap[normalizeId(notification.related_dispatch_id)] : null,
           confirmations,
-          ownerAllowedTrucks: allowedTrucks,
+          ownerAllowedTrucks: ownerScopeTrucks,
         });
         if (effectiveReadFlag) return false;
         if (!notification.related_dispatch_id) return true;
@@ -279,7 +288,7 @@ export default function Home() {
         notification,
         dispatch: notification.related_dispatch_id ? dispatchMap[normalizeId(notification.related_dispatch_id)] : null,
       }));
-  }, [notifications, filteredDispatches, session?.code_type, confirmations, allowedTrucks]);
+  }, [notifications, filteredDispatches, session?.code_type, confirmations, ownerScopeTrucks]);
 
   const handleNotificationClick = async (n) => {
     if (!session) return;
@@ -336,7 +345,7 @@ export default function Home() {
           unreadCount={unreadCount}
           actionItems={actionItems}
           confirmations={confirmations}
-          ownerAllowedTrucks={allowedTrucks}
+          ownerAllowedTrucks={ownerScopeTrucks}
           getVisibleTrucksForDispatch={getVisibleTrucksForDispatch}
           onNotificationClick={handleNotificationClick}
         />

@@ -20,13 +20,13 @@ const parseStatusFromDedupKey = (notification) => {
   return parseStatusFromDispatchStatusKey(notification?.dispatch_status_key);
 };
 
-const resolveRequiredTrucks = (notification, dispatch, ownerCode) => {
+const resolveRequiredTrucks = (notification, dispatch, ownerScopeTrucks = []) => {
   const baseRequired = Array.isArray(notification?.required_trucks)
     ? notification.required_trucks
     : [];
 
   if (!baseRequired.length) return [];
-  if (!ownerCode) {
+  if (!ownerScopeTrucks?.length) {
     const dispatchTruckSet = new Set(dispatch?.trucks_assigned || []);
     return baseRequired.filter((truck) => dispatchTruckSet.has(truck));
   }
@@ -34,7 +34,7 @@ const resolveRequiredTrucks = (notification, dispatch, ownerCode) => {
   return reconcileRequiredTruckList({
     existingRequired: baseRequired,
     dispatchTrucks: dispatch?.trucks_assigned || [],
-    ownerAllowedTrucks: ownerCode?.allowed_trucks || [],
+    ownerAllowedTrucks: ownerScopeTrucks,
   });
 };
 
@@ -67,8 +67,10 @@ export function buildOpenConfirmationRows({
     const ownerCodeId = notification.recipient_access_code_id || notification.recipient_id;
     const ownerCode = accessCodeById.get(ownerCodeId);
     if (ownerCode && ownerCode.code_type !== 'CompanyOwner') return;
+    const ownerCompany = companyById.get(dispatch.company_id);
+    const ownerScopeTrucks = Array.isArray(ownerCompany?.trucks) ? ownerCompany.trucks : [];
 
-    const requiredTrucks = resolveRequiredTrucks(notification, dispatch, ownerCode);
+    const requiredTrucks = resolveRequiredTrucks(notification, dispatch, ownerScopeTrucks);
     if (!requiredTrucks.length) return;
 
     const confirmedTrucks = buildConfirmedTruckSetForStatus({

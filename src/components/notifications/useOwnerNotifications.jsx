@@ -75,6 +75,15 @@ export function useOwnerNotifications(session) {
   });
 
   const { data: confirmations = [] } = useConfirmationsQuery(session?.code_type === 'CompanyOwner');
+  const { data: ownerCompany = null } = useQuery({
+    queryKey: ['owner-company-notification-scope', session?.company_id],
+    queryFn: async () => {
+      if (!session?.company_id) return null;
+      const companies = await base44.entities.Company.filter({ id: session.company_id }, '-created_date', 1);
+      return companies?.[0] || null;
+    },
+    enabled: session?.code_type === 'CompanyOwner' && !!session?.company_id,
+  });
 
   const { data: dispatches = [] } = useQuery({
     queryKey: ['portal-dispatches', session?.company_id],
@@ -92,6 +101,8 @@ export function useOwnerNotifications(session) {
     }))
     .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
 
+  const ownerScopeTrucks = Array.isArray(ownerCompany?.trucks) ? ownerCompany.trucks : [];
+
   const notificationsWithStatus = notifications.map((notification) => ({
     ...notification,
     effectiveReadFlag: getNotificationEffectiveReadFlag({
@@ -99,7 +110,7 @@ export function useOwnerNotifications(session) {
       notification,
       dispatch: notification.related_dispatch_id ? dispatches.find((dispatch) => dispatch.id === notification.related_dispatch_id) || null : null,
       confirmations,
-      ownerAllowedTrucks: session?.allowed_trucks || [],
+      ownerAllowedTrucks: ownerScopeTrucks,
     }),
   }));
 

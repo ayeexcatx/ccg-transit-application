@@ -65,6 +65,16 @@ export default function NotificationBell({ session }) {
   );
 
   const { data: confirmations = [] } = useConfirmationsQuery(session?.code_type === 'CompanyOwner');
+  const { data: ownerCompany = null } = useQuery({
+    queryKey: ['owner-company-notification-scope', session?.company_id],
+    queryFn: async () => {
+      if (!session?.company_id) return null;
+      const companies = await base44.entities.Company.filter({ id: session.company_id }, '-created_date', 1);
+      return companies?.[0] || null;
+    },
+    enabled: session?.code_type === 'CompanyOwner' && !!session?.company_id,
+  });
+  const ownerScopeTrucks = Array.isArray(ownerCompany?.trucks) ? ownerCompany.trucks : [];
 
   const shouldMarkReadOnClick = (notification) => {
     if (notification.read_flag) return false;
@@ -150,7 +160,7 @@ export default function NotificationBell({ session }) {
                 notification: n,
                 dispatch,
                 confirmations,
-                ownerAllowedTrucks: session?.allowed_trucks || [],
+                ownerAllowedTrucks: ownerScopeTrucks,
               });
 
               return (
@@ -161,7 +171,7 @@ export default function NotificationBell({ session }) {
                   effectiveReadFlag={effectiveReadFlag}
                   dispatch={dispatch}
                   confirmations={confirmations}
-                  ownerAllowedTrucks={session?.allowed_trucks || []}
+                  ownerAllowedTrucks={ownerScopeTrucks}
                   onClick={() => handleNotificationClick(n)}
                 />
               );

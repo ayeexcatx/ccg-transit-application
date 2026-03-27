@@ -42,7 +42,16 @@ export default function Notifications() {
       driverDispatchIds: visibleDispatchIds,
     })
   );
-  const allowedTrucks = session?.allowed_trucks || [];
+  const { data: ownerCompany = null } = useQuery({
+    queryKey: ['owner-company-notification-scope', session?.company_id],
+    queryFn: async () => {
+      if (!session?.company_id) return null;
+      const companies = await base44.entities.Company.filter({ id: session.company_id }, '-created_date', 1);
+      return companies?.[0] || null;
+    },
+    enabled: session?.code_type === 'CompanyOwner' && !!session?.company_id,
+  });
+  const ownerScopeTrucks = Array.isArray(ownerCompany?.trucks) ? ownerCompany.trucks : [];
   
   const handleNotificationClick = async (n) => {
     if (!session) return;
@@ -108,7 +117,7 @@ export default function Notifications() {
               notification: n,
               dispatch,
               confirmations,
-              ownerAllowedTrucks: allowedTrucks,
+              ownerAllowedTrucks: ownerScopeTrucks,
             });
 
             return (
@@ -119,7 +128,7 @@ export default function Notifications() {
                 effectiveReadFlag={effectiveReadFlag}
                 dispatch={dispatch}
                 confirmations={confirmations}
-                ownerAllowedTrucks={allowedTrucks}
+                ownerAllowedTrucks={ownerScopeTrucks}
                 onClick={() => handleNotificationClick(n)}
               />
             );

@@ -40,7 +40,6 @@ export default function AdminAccessCodes() {
     active_flag: true,
     code_type: 'CompanyOwner',
     company_id: '',
-    allowed_trucks: [],
     driver_id: '',
     sms_enabled: false,
     sms_phone: '',
@@ -118,7 +117,6 @@ export default function AdminAccessCodes() {
       active_flag: true,
       code_type: type || 'CompanyOwner',
       company_id: '',
-      allowed_trucks: [],
       driver_id: '',
       sms_enabled: false,
       sms_phone: '',
@@ -136,7 +134,6 @@ export default function AdminAccessCodes() {
       active_flag: true,
       code_type: 'Driver',
       company_id: driver.company_id || '',
-      allowed_trucks: [],
       driver_id: driver.id || '',
       sms_enabled: driver.sms_enabled === true,
       sms_phone: formatPhoneNumber(driver.phone || ''),
@@ -154,7 +151,6 @@ export default function AdminAccessCodes() {
       active_flag: code.active_flag !== false,
       code_type: code.code_type,
       company_id: code.company_id || '',
-      allowed_trucks: code.allowed_trucks || [],
       driver_id: code.driver_id || '',
       sms_enabled: code.sms_enabled === true,
       sms_phone: formatPhoneNumber(code.sms_phone || ''),
@@ -431,7 +427,7 @@ export default function AdminAccessCodes() {
               <Label>Code Type</Label>
               <Select
                 value={form.code_type}
-                onValueChange={(v) => setForm({ ...form, code_type: v, allowed_trucks: [], company_id: '', driver_id: '', available_views: v === 'Admin' ? ['Admin'] : [], linked_company_ids: [] })}
+                onValueChange={(v) => setForm({ ...form, code_type: v, company_id: '', driver_id: '', available_views: v === 'Admin' ? ['Admin'] : [], linked_company_ids: [] })}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -491,7 +487,7 @@ export default function AdminAccessCodes() {
               <>
                 <div>
                   <Label>Company *</Label>
-                  <Select value={form.company_id} onValueChange={(v) => setForm({ ...form, company_id: v, allowed_trucks: [], driver_id: '' })}>
+                  <Select value={form.company_id} onValueChange={(v) => setForm({ ...form, company_id: v, driver_id: '' })}>
                     <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
                     <SelectContent>
                       {companies.map((c) => (

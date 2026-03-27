@@ -59,16 +59,12 @@ function buildEffectiveSession(accessCode, activeViewMode, activeCompanyId, owne
   }
 
   if (activeViewMode === 'CompanyOwner') {
-    const allowedTrucks = Array.isArray(ownerWorkspaceAllowedTrucks)
-      ? ownerWorkspaceAllowedTrucks
-      : [];
-
     return {
       ...accessCode,
       raw_code_type: accessCode.code_type,
       code_type: 'CompanyOwner',
       company_id: activeCompanyId,
-      allowed_trucks: Array.isArray(allowedTrucks) ? allowedTrucks : [],
+      owner_scope_trucks: Array.isArray(ownerWorkspaceAllowedTrucks) ? ownerWorkspaceAllowedTrucks : [],
       activeViewMode: 'CompanyOwner',
       activeCompanyId,
     };
@@ -110,7 +106,6 @@ function buildLinkedUserSession({
     code_type: codeType,
     company_id: companyId,
     driver_id: driverId,
-    allowed_trucks: Array.isArray(fallbackSession?.allowed_trucks) ? fallbackSession.allowed_trucks : [],
     activeViewMode,
     activeCompanyId,
   };

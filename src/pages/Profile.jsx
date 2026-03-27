@@ -435,7 +435,6 @@ function CompanyOwnerProfile({ session }) {
         linked_company_ids: Array.isArray(activeAccessCode?.linked_company_ids) && activeAccessCode.linked_company_ids.length > 0
           ? activeAccessCode.linked_company_ids
           : [company.id],
-        allowed_trucks: [],
         sms_enabled: smsState.effective,
         sms_phone: smsState.normalizedPhone || '',
       });

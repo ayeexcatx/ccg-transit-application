@@ -138,6 +138,16 @@ function areAssignedTruckListsEqual(previousAssignments = [], nextAssignments = 
   return previousTrucks.every((truck, index) => truck === nextTrucks[index]);
 }
 
+function getCompanyScopedDispatchTrucks(dispatch = {}, company = null) {
+  const dispatchTrucks = Array.isArray(dispatch?.trucks_assigned) ? dispatch.trucks_assigned : [];
+  const companyTrucks = Array.isArray(company?.trucks) ? company.trucks : [];
+
+  if (!companyTrucks.length) return [...new Set(dispatchTrucks.filter(Boolean))];
+
+  const companyTruckSet = new Set(companyTrucks.filter(Boolean));
+  return [...new Set(dispatchTrucks.filter((truck) => companyTruckSet.has(truck)))];
+}
+
 async function buildDriverAccessCodeMap(driverIds = []) {
   const uniqueIds = [...new Set((driverIds || []).filter(Boolean))];
   if (!uniqueIds.length) return new Map();
@@ -249,6 +259,10 @@ export async function notifyOwnerDriverSeen({
       active_flag: true,
       code_type: 'CompanyOwner',
     }, '-created_date', 200);
+    const companyRecords = await base44.entities.Company.filter({ id: dispatch.company_id }, '-created_date', 1);
+    const company = companyRecords?.[0] || null;
+    const scopedConfirmedTrucks = getCompanyScopedDispatchTrucks({ trucks_assigned: confirmedTrucks }, company);
+    if (!scopedConfirmedTrucks.length) return;
 
     const jobTag = dispatch.reference_tag || dispatch.job_number || dispatch.id;
     const statusText = statusLabels[dispatch.status] || dispatch.status || 'Dispatch';
@@ -259,7 +273,7 @@ export async function notifyOwnerDriverSeen({
     const seenStatusKey = `${dispatch.id}:${normalizedDriverKey}:${normalizedSeenKind}:${normalizedSeenVersionKey}`;
 
     await Promise.all((ownerCodes || []).map(async (ownerCode) => {
-      const relevantTrucks = confirmedTrucks.filter((truck) => (ownerCode.allowed_trucks || []).includes(truck));
+      const relevantTrucks = scopedConfirmedTrucks;
       if (!relevantTrucks.length) return;
 
       const lineTwo = [
@@ -428,16 +442,14 @@ export async function notifyDriversForDispatchEdit({
 }
 
 function getRelevantTrucks(dispatch, accessCode) {
-  return (dispatch?.trucks_assigned || []).filter(t =>
-    (accessCode?.allowed_trucks || []).includes(t)
-  );
+  return getCompanyScopedDispatchTrucks(dispatch, accessCode);
 }
 
-function reconcileExistingRequiredTrucks(notification, dispatch, accessCode) {
+function reconcileExistingRequiredTrucks(notification, dispatch, company) {
   return reconcileRequiredTruckList({
     existingRequired: Array.isArray(notification?.required_trucks) ? notification.required_trucks : [],
     dispatchTrucks: dispatch?.trucks_assigned || [],
-    ownerAllowedTrucks: accessCode?.allowed_trucks || [],
+    ownerAllowedTrucks: Array.isArray(company?.trucks) ? company.trucks : [],
   });
 }
 
@@ -515,15 +527,15 @@ export async function notifyDispatchChange(dispatch, oldStatus, newStatus, compa
       });
     }
 
-    // CompanyOwner codes whose allowed_trucks intersect dispatch
+    const relevantCompanyTrucks = getCompanyScopedDispatchTrucks(dispatch, company);
+    if (!relevantCompanyTrucks.length) return;
+
+    // CompanyOwner codes scoped by company ownership
     const affectedOwnerCodes = ownerCodes.filter(ac => {
       if (!ac.active_flag) return false;
       if (ac.code_type !== 'CompanyOwner') return false;
       if (ac.company_id !== company.id) return false;
-      const intersection = (dispatch.trucks_assigned || []).filter(t =>
-        (ac.allowed_trucks || []).includes(t)
-      );
-      return intersection.length > 0;
+      return true;
     });
 
     if (!affectedOwnerCodes || affectedOwnerCodes.length === 0) return;
@@ -544,7 +556,7 @@ export async function notifyDispatchChange(dispatch, oldStatus, newStatus, compa
 
       if (existing && existing.length > 0) continue;
 
-      const relevantTrucks = getRelevantTrucks(dispatch, ac);
+      const relevantTrucks = getRelevantTrucks(dispatch, company);
       const message = buildOwnerDispatchMessage(dispatch, statusText, relevantTrucks);
 
       const notification = await base44.entities.Notification.create({
@@ -605,12 +617,14 @@ export async function notifyDispatchInformationalUpdate(dispatch, customMessage,
       });
     }
 
-    const affectedOwnerCodes = ownerCodes.filter(ac => {
-      const intersection = (dispatch.trucks_assigned || []).filter(t =>
-        (ac.allowed_trucks || []).includes(t)
-      );
-      return intersection.length > 0;
-    });
+    const relevantCompanyTrucks = getCompanyScopedDispatchTrucks(dispatch, company);
+    if (!relevantCompanyTrucks.length) return;
+
+    const affectedOwnerCodes = ownerCodes.filter((ac) => (
+      ac?.active_flag !== false &&
+      ac?.code_type === 'CompanyOwner' &&
+      ac?.company_id === company.id
+    ));
 
     if (!affectedOwnerCodes?.length) return;
 
@@ -667,6 +681,8 @@ export async function expandCurrentStatusRequiredTrucks(dispatch, addedTrucks = 
     }
 
     if (!ownerCodes?.length) return;
+    const companyRecords = await base44.entities.Company.filter({ id: dispatch.company_id }, '-created_date', 1);
+    const company = companyRecords?.[0] || null;
 
     const status = dispatch.status;
     const statusText = statusLabels[status] || status;
@@ -681,9 +697,7 @@ export async function expandCurrentStatusRequiredTrucks(dispatch, addedTrucks = 
     });
 
     for (const ownerCode of ownerCodes) {
-      const ownerAddedTrucks = normalizedAdded.filter(truck =>
-        (ownerCode.allowed_trucks || []).includes(truck)
-      );
+      const ownerAddedTrucks = getCompanyScopedDispatchTrucks({ trucks_assigned: normalizedAdded }, company);
       if (!ownerAddedTrucks.length) continue;
 
       const dedupKey = `${dispatch.id}:${status}:${ownerCode.id}`;
@@ -694,7 +708,7 @@ export async function expandCurrentStatusRequiredTrucks(dispatch, addedTrucks = 
 
       const existingNotification = existing?.[0];
       const existingRequired = existingNotification
-        ? reconcileExistingRequiredTrucks(existingNotification, dispatch, ownerCode)
+        ? reconcileExistingRequiredTrucks(existingNotification, dispatch, company)
         : [];
       const nextRequired = expandRequiredTruckList(existingRequired, ownerAddedTrucks);
       const newlyAddedRequired = nextRequired.filter((truck) => !existingRequired.includes(truck));
@@ -762,6 +776,8 @@ export async function reconcileOwnerNotificationsForDispatch(dispatch, accessCod
     }, '-created_date', 500);
 
     if (!ownerNotifications?.length) return;
+    const companyRecords = await base44.entities.Company.filter({ id: dispatch.company_id }, '-created_date', 1);
+    const company = companyRecords?.[0] || null;
 
     let ownerCodes = accessCodes;
     if (!ownerCodes || ownerCodes.length === 0) {
@@ -809,7 +825,7 @@ export async function reconcileOwnerNotificationsForDispatch(dispatch, accessCod
       const ownerCode = ownerCodeMap.get(notification.recipient_access_code_id || notification.recipient_id);
       if (!ownerCode) continue;
 
-      const relevantTrucks = reconcileExistingRequiredTrucks(notification, dispatch, ownerCode);
+      const relevantTrucks = reconcileExistingRequiredTrucks(notification, dispatch, company);
       const statusText = statusLabels[status] || status;
       const message = buildOwnerDispatchMessage(dispatch, statusText, relevantTrucks);
       const confirmedTruckSet = buildConfirmedTruckSetForStatus({
