@@ -162,6 +162,36 @@ async function resolveLinkedIdentityAccessCode(linkedIdentity) {
   return null;
 }
 
+async function resolveStoredAccessCodeById(storedId) {
+  if (!storedId) return null;
+
+  const codes = await base44.entities.AccessCode.filter({ id: storedId });
+  const storedAccessCode = codes?.[0] || null;
+  if (!isActiveSupportedCode(storedAccessCode)) return null;
+  return storedAccessCode;
+}
+
+function isAccessCodeCompatibleWithLinkedIdentity(accessCode, linkedIdentity) {
+  if (!accessCode || !linkedIdentity?.app_role) return false;
+  if (accessCode.code_type !== linkedIdentity.app_role) return false;
+
+  if (linkedIdentity.app_role === 'Driver') {
+    if (linkedIdentity.driver_id) {
+      return String(accessCode.driver_id || '') === String(linkedIdentity.driver_id);
+    }
+    return true;
+  }
+
+  if (linkedIdentity.app_role === 'CompanyOwner') {
+    if (linkedIdentity.company_id) {
+      return String(accessCode.company_id || '') === String(linkedIdentity.company_id);
+    }
+    return true;
+  }
+
+  return true;
+}
+
 export function useAccessSession() {
   const { currentAppIdentity, isAuthenticated, isLoadingAuth } = useAuth();
   const [accessCode, setAccessCode] = useState(null);
@@ -235,10 +265,15 @@ export function useAccessSession() {
       try {
         if (isAuthenticated) {
           restoredAccessCode = await resolveLinkedIdentityAccessCode(currentAppIdentity);
+          if (!restoredAccessCode && storedId) {
+            const storedAccessCode = await resolveStoredAccessCodeById(storedId);
+            if (isAccessCodeCompatibleWithLinkedIdentity(storedAccessCode, currentAppIdentity)) {
+              restoredAccessCode = storedAccessCode;
+            }
+          }
         } else if (storedId) {
-          const codes = await base44.entities.AccessCode.filter({ id: storedId });
-          const storedAccessCode = codes?.[0] || null;
-          if (isActiveSupportedCode(storedAccessCode)) {
+          const storedAccessCode = await resolveStoredAccessCodeById(storedId);
+          if (storedAccessCode) {
             restoredAccessCode = storedAccessCode;
           } else {
             localStorage.removeItem(STORAGE_ACCESS_CODE_ID);
