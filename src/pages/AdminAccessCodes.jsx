@@ -7,11 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import DeleteConfirmationDialog from '@/components/admin/DeleteConfirmationDialog';
 import { Key, Plus, Pencil, Trash2, Building2, Shield, Copy, UserRound } from 'lucide-react';
 import { getCompanyOwnerSmsState, getDriverSmsState, normalizeSmsPhone as normalizePhoneShared, formatPhoneNumber as formatPhoneShared } from '@/lib/sms';
+import { buildSmsConsentFields } from '@/lib/smsConsent';
+import SmsConsentDisclosure from '@/components/profile/SmsConsentDisclosure';
 import { toast } from 'sonner';
 
 function formatPhoneNumber(value) {
@@ -34,6 +37,7 @@ export default function AdminAccessCodes() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [accessCodePendingDelete, setAccessCodePendingDelete] = useState(null);
+  const [smsConsentChecked, setSmsConsentChecked] = useState(false);
   const [form, setForm] = useState({
     code: '',
     label: '',
@@ -128,6 +132,7 @@ export default function AdminAccessCodes() {
       linked_company_ids: [],
     });
     setOpen(true);
+    setSmsConsentChecked(false);
   };
 
   const openPendingDriverCodeDialog = (driver) => {
@@ -146,6 +151,7 @@ export default function AdminAccessCodes() {
       linked_company_ids: [],
     });
     setOpen(true);
+    setSmsConsentChecked(false);
   };
 
   const openEdit = (code) => {
@@ -164,6 +170,7 @@ export default function AdminAccessCodes() {
       linked_company_ids: code.linked_company_ids || [],
     });
     setOpen(true);
+    setSmsConsentChecked(false);
   };
 
   const toggleTruck = (t) => {
@@ -225,6 +232,11 @@ export default function AdminAccessCodes() {
     }
 
     if (form.code_type === 'Admin') {
+      if (form.sms_enabled && !smsConsentChecked) {
+        toast.error('Consent is required before enabling SMS notifications.');
+        return;
+      }
+
       const normalizedViews = Array.from(new Set(['Admin', ...(form.available_views || [])]));
       const requiresLinkedCompanies = normalizedViews.includes('CompanyOwner');
       const linkedCompanyIds = form.linked_company_ids || [];
@@ -234,12 +246,16 @@ export default function AdminAccessCodes() {
         return;
       }
 
-      saveMutation.mutate({
+      const payload = {
         ...form,
         sms_phone: smsPhone,
         available_views: normalizedViews,
         linked_company_ids: linkedCompanyIds,
-      });
+      };
+      if (form.sms_enabled) {
+        Object.assign(payload, buildSmsConsentFields());
+      }
+      saveMutation.mutate(payload);
       return;
     }
 
@@ -563,8 +579,23 @@ export default function AdminAccessCodes() {
             {form.code_type === 'Admin' ? (<>
             <div className="flex items-center justify-between">
               <Label>SMS Enabled</Label>
-              <Switch checked={form.sms_enabled} onCheckedChange={(v) => setForm({ ...form, sms_enabled: v })} />
+              <Switch
+                checked={form.sms_enabled}
+                disabled={!smsConsentChecked && !form.sms_enabled}
+                onCheckedChange={(v) => {
+                  if (v && !smsConsentChecked) {
+                    toast.error('Consent is required before enabling SMS notifications.');
+                    return;
+                  }
+                  setForm({ ...form, sms_enabled: v });
+                }}
+              />
             </div>
+            <label className="flex items-start gap-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
+              <Checkbox checked={smsConsentChecked} onCheckedChange={(checked) => setSmsConsentChecked(checked === true)} className="mt-0.5" />
+              <span>I agree to receive operational SMS notifications from CCG Transit.</span>
+            </label>
+            <SmsConsentDisclosure />
 
             <div>
               <Label>SMS Phone</Label>

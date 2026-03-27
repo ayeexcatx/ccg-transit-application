@@ -8,14 +8,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { BellRing, Copy, Shield, UserRound } from 'lucide-react';
 import { buildCompanyProfileRequestPayload, formatPhoneNumber, getAdminSmsProductState, getCompanyOwnerSmsState, getCompanySmsContact, getDriverSmsState, hasUsSmsPhone, normalizeContactMethods, normalizeSmsPhone, PHONE_CONTACT_TYPES } from '@/lib/sms';
+import { buildSmsConsentFields } from '@/lib/smsConsent';
 import DriverProfileSmsCard from '@/components/profile/DriverProfileSmsCard';
 import { CompanyOwnerProfileOverview, CompanyOwnerSmsCard } from '@/components/profile/CompanyOwnerProfileSections';
+import SmsConsentDisclosure from '@/components/profile/SmsConsentDisclosure';
 
 const CONTACT_TYPE_OPTIONS = ['Office', 'Cell', 'Email', 'Fax', 'Other'];
 
@@ -28,13 +31,19 @@ async function sendProfileSmsConfirmation(phone, message) {
   }
 }
 
-async function syncDriverAccessCode(driver) {
+async function syncDriverAccessCode(driver, nextOptIn = null) {
   if (!driver?.access_code_id) return;
   const state = getDriverSmsState(driver);
-  await base44.entities.AccessCode.update(driver.access_code_id, {
+  const payload = {
     sms_enabled: state.effective,
     sms_phone: state.normalizedPhone || '',
-  });
+  };
+
+  if (nextOptIn === true) {
+    Object.assign(payload, buildSmsConsentFields());
+  }
+
+  await base44.entities.AccessCode.update(driver.access_code_id, payload);
 }
 
 async function syncOwnerAccessCodes(company, accessCodeId = null, accessCodeSmsEnabled = null) {
@@ -110,6 +119,7 @@ function ContactMethodEditor({ methods, setMethods, smsIndex, setSmsIndex, readO
 function AdminProfile({ session }) {
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+  const [smsConsentChecked, setSmsConsentChecked] = useState(false);
   const [form, setForm] = useState({ label: '', sms_phone: '', sms_enabled: false });
 
   const { data: accessCodes = [] } = useQuery({
@@ -138,6 +148,7 @@ function AdminProfile({ session }) {
 
   const closeEditModal = (nextOpen) => {
     if (nextOpen) {
+      setSmsConsentChecked(false);
       setEditOpen(true);
       return;
     }
@@ -147,6 +158,7 @@ function AdminProfile({ session }) {
     }
 
     setEditOpen(false);
+    setSmsConsentChecked(false);
     setForm({
       label: adminName,
       sms_phone: formatPhoneNumber(adminPhone),
@@ -155,16 +167,28 @@ function AdminProfile({ session }) {
   };
 
   const mutation = useMutation({
-    mutationFn: async () => base44.entities.AccessCode.update(adminAccessCode.id, {
-      label: form.label.trim() || adminName,
-      sms_phone: normalizeSmsPhone(form.sms_phone),
-      sms_enabled: form.sms_enabled,
-    }),
+    mutationFn: async () => {
+      if (form.sms_enabled && !smsConsentChecked) {
+        throw new Error('Consent is required before enabling SMS notifications.');
+      }
+      const payload = {
+        label: form.label.trim() || adminName,
+        sms_phone: normalizeSmsPhone(form.sms_phone),
+        sms_enabled: form.sms_enabled,
+      };
+      if (form.sms_enabled) {
+        Object.assign(payload, buildSmsConsentFields());
+      }
+      return base44.entities.AccessCode.update(adminAccessCode.id, payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-profile', session?.id] });
       queryClient.invalidateQueries({ queryKey: ['access-codes'] });
       setEditOpen(false);
       toast.success('Admin profile updated');
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Unable to update admin profile');
     },
   });
 
@@ -182,7 +206,7 @@ function AdminProfile({ session }) {
                 <p className="text-sm text-slate-500">Basic access details for this admin sign-in. Edit profile details in the modal below.</p>
               </div>
             </div>
-            <Button onClick={() => setEditOpen(true)} className="bg-slate-900 hover:bg-slate-800">Edit Profile</Button>
+            <Button onClick={() => closeEditModal(true)} className="bg-slate-900 hover:bg-slate-800">Edit Profile</Button>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -244,8 +268,23 @@ function AdminProfile({ session }) {
                 <Label className="text-base">Receive SMS Notifications</Label>
                 <p className="text-sm text-slate-500">This preference is stored now for future admin SMS support. It does not enable admin SMS delivery today.</p>
               </div>
-              <Switch checked={form.sms_enabled} onCheckedChange={(checked) => setForm((prev) => ({ ...prev, sms_enabled: checked }))} />
+              <Switch
+                checked={form.sms_enabled}
+                disabled={!smsConsentChecked && !form.sms_enabled}
+                onCheckedChange={(checked) => {
+                  if (checked && !smsConsentChecked) {
+                    toast.error('Please confirm SMS consent before enabling notifications.');
+                    return;
+                  }
+                  setForm((prev) => ({ ...prev, sms_enabled: checked }));
+                }}
+              />
             </div>
+            <label className="flex items-start gap-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
+              <Checkbox checked={smsConsentChecked} onCheckedChange={(checked) => setSmsConsentChecked(checked === true)} className="mt-0.5" />
+              <span>I agree to receive operational SMS notifications from CCG Transit.</span>
+            </label>
+            <SmsConsentDisclosure />
             {hasChanges && <p className="text-xs text-amber-700">You have unsaved changes. Use Save to keep them or Cancel to discard them.</p>}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -270,6 +309,7 @@ function DriverProfile({ session }) {
   const driver = drivers[0] || null;
   const smsState = getDriverSmsState(driver);
   const [optedIn, setOptedIn] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
 
   useEffect(() => {
     setOptedIn(smsState.driverOptedIn);
@@ -277,8 +317,11 @@ function DriverProfile({ session }) {
 
   const mutation = useMutation({
     mutationFn: async (nextOptIn) => {
+      if (nextOptIn && !consentChecked) {
+        throw new Error('Consent is required before enabling SMS notifications.');
+      }
       const updated = await base44.entities.Driver.update(driver.id, { driver_sms_opt_in: nextOptIn });
-      await syncDriverAccessCode(updated);
+      await syncDriverAccessCode(updated, nextOptIn);
       await sendProfileSmsConfirmation(
         normalizeSmsPhone(updated.phone),
         nextOptIn
@@ -293,6 +336,9 @@ function DriverProfile({ session }) {
       queryClient.invalidateQueries({ queryKey: ['drivers-all'] });
       queryClient.invalidateQueries({ queryKey: ['access-codes'] });
       toast.success('SMS preference updated');
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Unable to update SMS preference');
     },
   });
 
@@ -315,8 +361,14 @@ function DriverProfile({ session }) {
         <DriverProfileSmsCard
           smsState={smsState}
           optedIn={optedIn}
+          consentChecked={consentChecked}
+          onConsentChange={setConsentChecked}
           isPending={mutation.isPending}
           onToggle={(checked) => {
+            if (checked && !consentChecked) {
+              toast.error('Please confirm SMS consent before enabling notifications.');
+              return;
+            }
             setOptedIn(checked);
             mutation.mutate(checked);
           }}
@@ -332,6 +384,7 @@ function CompanyOwnerProfile({ session }) {
   const [viewCodeOpen, setViewCodeOpen] = useState(false);
   const [form, setForm] = useState({ name: '', address: '', contact_methods: [{ type: 'Office', value: '' }] });
   const [smsIndex, setSmsIndex] = useState(0);
+  const [smsConsentChecked, setSmsConsentChecked] = useState(false);
 
   const { data: companies = [] } = useQuery({
     queryKey: ['owner-profile-company', session?.company_id],
@@ -417,10 +470,17 @@ function CompanyOwnerProfile({ session }) {
 
   const smsMutation = useMutation({
     mutationFn: async (nextOptIn) => {
-      const updatedAccessCode = await base44.entities.AccessCode.update(activeAccessCode.id, {
+      if (nextOptIn && !smsConsentChecked) {
+        throw new Error('Consent is required before enabling SMS notifications.');
+      }
+      const payload = {
         sms_enabled: nextOptIn && Boolean(smsState.target.phone),
         sms_phone: smsState.target.phone || '',
-      });
+      };
+      if (nextOptIn) {
+        Object.assign(payload, buildSmsConsentFields());
+      }
+      const updatedAccessCode = await base44.entities.AccessCode.update(activeAccessCode.id, payload);
       await sendProfileSmsConfirmation(
         smsState.target.phone,
         nextOptIn
@@ -433,6 +493,9 @@ function CompanyOwnerProfile({ session }) {
       queryClient.invalidateQueries({ queryKey: ['owner-profile-access-codes', session?.company_id] });
       queryClient.invalidateQueries({ queryKey: ['access-codes'] });
       toast.success('Owner SMS preference updated');
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Unable to update owner SMS preference');
     },
   });
 
@@ -472,7 +535,15 @@ function CompanyOwnerProfile({ session }) {
         smsState={smsState}
         smsContact={smsContact}
         smsPending={smsMutation.isPending}
-        onToggle={(checked) => smsMutation.mutate(checked)}
+        consentChecked={smsConsentChecked}
+        onConsentChange={setSmsConsentChecked}
+        onToggle={(checked) => {
+          if (checked && !smsConsentChecked) {
+            toast.error('Please confirm SMS consent before enabling notifications.');
+            return;
+          }
+          smsMutation.mutate(checked);
+        }}
       />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
