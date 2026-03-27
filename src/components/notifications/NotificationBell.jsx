@@ -13,6 +13,7 @@ import { useOwnerNotifications } from './useOwnerNotifications';
 import { useAuth } from '@/lib/AuthContext';
 import { getNotificationDisplay } from './formatNotificationDetailsMessage';
 import { useConfirmationsQuery } from './useConfirmationsQuery';
+import { getActiveCompanyId, getEffectiveView } from '@/components/session/workspaceUtils';
 import {
   getNotificationEffectiveReadFlag,
   isNotificationMarkedReadOnClick,
@@ -31,7 +32,11 @@ export default function NotificationBell({ session }) {
   const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
   const { notifications, unreadCount, markReadAsync } = useOwnerNotifications(session);
-  const isDriver = session?.code_type === 'Driver';
+  const effectiveView = getEffectiveView(session);
+  const activeCompanyId = getActiveCompanyId(session);
+  const isDriver = effectiveView === 'Driver';
+  const isOwner = effectiveView === 'CompanyOwner';
+  const isAdmin = effectiveView === 'Admin';
   const driverIdentity = React.useMemo(
     () => resolveDriverIdentity({ currentAppIdentity, session }),
     [currentAppIdentity, session],
@@ -44,9 +49,9 @@ export default function NotificationBell({ session }) {
   });
 
   const { data: dispatches = [] } = useQuery({
-    queryKey: ['portal-dispatches', session?.company_id],
-    queryFn: () => base44.entities.Dispatch.filter({ company_id: session.company_id }, '-date', 200),
-    enabled: !!session?.company_id && session?.code_type !== 'Admin',
+    queryKey: ['portal-dispatches', activeCompanyId],
+    queryFn: () => base44.entities.Dispatch.filter({ company_id: activeCompanyId }, '-date', 200),
+    enabled: !!activeCompanyId && !isAdmin,
   });
 
   const dispatchMap = Object.fromEntries(
@@ -64,15 +69,15 @@ export default function NotificationBell({ session }) {
     })
   );
 
-  const { data: confirmations = [] } = useConfirmationsQuery(session?.code_type === 'CompanyOwner');
+  const { data: confirmations = [] } = useConfirmationsQuery(isOwner);
   const { data: ownerCompany = null } = useQuery({
-    queryKey: ['owner-company-notification-scope', session?.company_id],
+    queryKey: ['owner-company-notification-scope', activeCompanyId],
     queryFn: async () => {
-      if (!session?.company_id) return null;
-      const companies = await base44.entities.Company.filter({ id: session.company_id }, '-created_date', 1);
+      if (!activeCompanyId) return null;
+      const companies = await base44.entities.Company.filter({ id: activeCompanyId }, '-created_date', 1);
       return companies?.[0] || null;
     },
-    enabled: session?.code_type === 'CompanyOwner' && !!session?.company_id,
+    enabled: isOwner && !!activeCompanyId,
   });
   const ownerScopeTrucks = Array.isArray(ownerCompany?.trucks) ? ownerCompany.trucks : [];
 
@@ -85,7 +90,7 @@ export default function NotificationBell({ session }) {
   const handleNotificationClick = async (n) => {
     if (!session) return;
 
-    if (shouldMarkReadOnClick(n) && session?.code_type !== 'Driver') {
+    if (shouldMarkReadOnClick(n) && !isDriver) {
       try {
         await markReadAsync(n.id);
       } catch {
@@ -94,7 +99,7 @@ export default function NotificationBell({ session }) {
     }
 
     if (n.related_dispatch_id) {
-      const targetPage = session.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
+      const targetPage = isAdmin ? 'AdminDispatches' : 'Portal';
       const targetPath = buildDispatchOpenPath(targetPage, {
         dispatchId: n.related_dispatch_id,
         notificationId: n.id,

@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useConfirmationsQuery } from './useConfirmationsQuery';
 import { getNotificationEffectiveReadFlag } from './ownerActionStatus';
 import { notifyOwnerDriverSeen } from './createNotifications';
+import { getActiveCompanyId, getEffectiveView } from '@/components/session/workspaceUtils';
 import {
   canUserSeeNotification,
   getDriverDispatchIdSet,
@@ -29,6 +30,11 @@ export function useOwnerNotifications(session) {
   const queryClient = useQueryClient();
   const pendingDriverSeenKeysRef = useRef(new Set());
   const driverIdentity = resolveDriverIdentity({ currentAppIdentity, session });
+  const effectiveView = getEffectiveView(session);
+  const activeCompanyId = getActiveCompanyId(session);
+  const isDriver = effectiveView === 'Driver';
+  const isOwner = effectiveView === 'CompanyOwner';
+  const isAdmin = effectiveView === 'Admin';
 
   const queryKey = ['notifications', session?.id];
 
@@ -36,19 +42,19 @@ export function useOwnerNotifications(session) {
     queryKey,
     queryFn: async () => {
       if (!session) return [];
-      if (!['Admin', 'CompanyOwner', 'Driver'].includes(session.code_type)) return [];
-      if (session.code_type === 'Admin') {
+      if (!['Admin', 'CompanyOwner', 'Driver'].includes(effectiveView)) return [];
+      if (isAdmin) {
         return base44.entities.Notification.filter({ recipient_type: 'Admin' }, '-created_date', 200);
       }
 
-      const isAdminOwnerWorkspace = session.code_type === 'CompanyOwner' && session.raw_code_type === 'Admin';
-      if (isAdminOwnerWorkspace && session.company_id) {
+      const isAdminOwnerWorkspace = isOwner && session.raw_code_type === 'Admin';
+      if (isAdminOwnerWorkspace && activeCompanyId) {
         const [allAccessCodeNotifications, ownerCodes] = await Promise.all([
           base44.entities.Notification.filter({ recipient_type: 'AccessCode' }, '-created_date', 200),
           base44.entities.AccessCode.filter({
             code_type: 'CompanyOwner',
             active_flag: true,
-            company_id: session.company_id,
+            company_id: activeCompanyId,
           }, '-created_date', 500),
         ]);
 
@@ -71,24 +77,24 @@ export function useOwnerNotifications(session) {
   const { data: driverAssignments = [] } = useQuery({
     queryKey: ['driver-dispatch-assignments', driverIdentity],
     queryFn: () => base44.entities.DriverDispatchAssignment.filter({ driver_id: driverIdentity }, '-assigned_datetime', 500),
-    enabled: session?.code_type === 'Driver' && !!driverIdentity,
+    enabled: isDriver && !!driverIdentity,
   });
 
-  const { data: confirmations = [] } = useConfirmationsQuery(session?.code_type === 'CompanyOwner');
+  const { data: confirmations = [] } = useConfirmationsQuery(isOwner);
   const { data: ownerCompany = null } = useQuery({
-    queryKey: ['owner-company-notification-scope', session?.company_id],
+    queryKey: ['owner-company-notification-scope', activeCompanyId],
     queryFn: async () => {
-      if (!session?.company_id) return null;
-      const companies = await base44.entities.Company.filter({ id: session.company_id }, '-created_date', 1);
+      if (!activeCompanyId) return null;
+      const companies = await base44.entities.Company.filter({ id: activeCompanyId }, '-created_date', 1);
       return companies?.[0] || null;
     },
-    enabled: session?.code_type === 'CompanyOwner' && !!session?.company_id,
+    enabled: isOwner && !!activeCompanyId,
   });
 
   const { data: dispatches = [] } = useQuery({
-    queryKey: ['portal-dispatches', session?.company_id],
-    queryFn: () => base44.entities.Dispatch.filter({ company_id: session.company_id }, '-date', 200),
-    enabled: !!session?.company_id && session?.code_type !== 'Admin',
+    queryKey: ['portal-dispatches', activeCompanyId],
+    queryFn: () => base44.entities.Dispatch.filter({ company_id: activeCompanyId }, '-date', 200),
+    enabled: !!activeCompanyId && !isAdmin,
   });
 
   const driverDispatchIds = getDriverDispatchIdSet(driverAssignments);
@@ -119,7 +125,7 @@ export function useOwnerNotifications(session) {
   const invalidateNotificationQueries = () => Promise.all([
     queryClient.invalidateQueries({ queryKey }),
     queryClient.invalidateQueries({ queryKey: ['notifications'] }),
-    queryClient.invalidateQueries({ queryKey: ['portal-dispatches', session?.company_id] }),
+    queryClient.invalidateQueries({ queryKey: ['portal-dispatches', activeCompanyId] }),
     queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', driverIdentity] }),
   ]);
 
@@ -155,7 +161,7 @@ export function useOwnerNotifications(session) {
 
   const refresh = () => Promise.all([
     queryClient.invalidateQueries({ queryKey }),
-    queryClient.invalidateQueries({ queryKey: ['portal-dispatches', session?.company_id] }),
+    queryClient.invalidateQueries({ queryKey: ['portal-dispatches', activeCompanyId] }),
   ]);
 
   const markRead = (id) => markReadMutation.mutate(id);
@@ -163,7 +169,7 @@ export function useOwnerNotifications(session) {
   const markAllRead = () => markAllReadMutation.mutate();
 
   const markDispatchRelatedReadAsync = async (dispatchId) => {
-    if (session?.code_type !== 'Driver' || !dispatchId) return [];
+    if (!isDriver || !dispatchId) return [];
 
     const normalizedDispatchId = String(dispatchId);
     const matchingNotifications = notifications.filter((notification) =>
@@ -190,7 +196,7 @@ export function useOwnerNotifications(session) {
   };
 
   const markDriverDispatchSeenAsync = async ({ dispatch, notificationId = null } = {}) => {
-    if (session?.code_type !== 'Driver' || !dispatch?.id || !driverIdentity) return;
+    if (!isDriver || !dispatch?.id || !driverIdentity) return;
 
     const matchingAssignments = driverAssignments.filter((assignment) =>
       assignment?.active_flag !== false &&
@@ -257,7 +263,7 @@ export function useOwnerNotifications(session) {
   };
 
   const markDriverRemovalNotificationSeenAsync = async ({ notification, dispatch = null } = {}) => {
-    if (session?.code_type !== 'Driver' || !notification?.id) return;
+    if (!isDriver || !notification?.id) return;
 
     const seenActionKey = `${notification.related_dispatch_id || 'removed'}:${driverIdentity}:removed:${notification.id}`;
     if (pendingDriverSeenKeysRef.current.has(seenActionKey)) return;
@@ -282,7 +288,7 @@ export function useOwnerNotifications(session) {
       await notifyOwnerDriverSeen({
         dispatch: dispatch || {
           id: notification.related_dispatch_id,
-          company_id: notification.recipient_company_id || session?.company_id,
+          company_id: notification.recipient_company_id || activeCompanyId,
           status: 'Dispatch',
           shift_time: null,
           reference_tag: null,

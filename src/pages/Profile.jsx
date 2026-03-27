@@ -19,6 +19,7 @@ import { sendSmsWelcomeIfNeeded } from '@/lib/smsIntro';
 import DriverProfileSmsCard from '@/components/profile/DriverProfileSmsCard';
 import { CompanyOwnerProfileOverview, CompanyOwnerSmsCard } from '@/components/profile/CompanyOwnerProfileSections';
 import SmsConsentDisclosure from '@/components/profile/SmsConsentDisclosure';
+import { getActiveCompanyId, getEffectiveView } from '@/components/session/workspaceUtils';
 
 const CONTACT_TYPE_OPTIONS = ['Office', 'Cell', 'Email', 'Fax', 'Other'];
 
@@ -389,6 +390,7 @@ function DriverProfile({ session }) {
 }
 
 function CompanyOwnerProfile({ session }) {
+  const activeCompanyId = getActiveCompanyId(session);
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [viewCodeOpen, setViewCodeOpen] = useState(false);
@@ -396,15 +398,15 @@ function CompanyOwnerProfile({ session }) {
   const [smsIndex, setSmsIndex] = useState(0);
 
   const { data: companies = [] } = useQuery({
-    queryKey: ['owner-profile-company', session?.company_id],
-    queryFn: () => base44.entities.Company.filter({ id: session.company_id }, '-created_date', 1),
-    enabled: !!session?.company_id,
+    queryKey: ['owner-profile-company', activeCompanyId],
+    queryFn: () => base44.entities.Company.filter({ id: activeCompanyId }, '-created_date', 1),
+    enabled: !!activeCompanyId,
   });
 
   const { data: accessCodes = [] } = useQuery({
-    queryKey: ['owner-profile-access-codes', session?.company_id],
-    queryFn: () => base44.entities.AccessCode.filter({ company_id: session.company_id, code_type: 'CompanyOwner' }, '-created_date', 200),
-    enabled: !!session?.company_id,
+    queryKey: ['owner-profile-access-codes', activeCompanyId],
+    queryFn: () => base44.entities.AccessCode.filter({ company_id: activeCompanyId, code_type: 'CompanyOwner' }, '-created_date', 200),
+    enabled: !!activeCompanyId,
   });
 
   const company = companies[0] || null;
@@ -449,7 +451,7 @@ function CompanyOwnerProfile({ session }) {
       return newCode;
     },
     onSuccess: (newCode) => {
-      queryClient.invalidateQueries({ queryKey: ['owner-profile-access-codes', session?.company_id] });
+      queryClient.invalidateQueries({ queryKey: ['owner-profile-access-codes', activeCompanyId] });
       queryClient.invalidateQueries({ queryKey: ['access-codes'] });
       if (newCode?.code) setViewCodeOpen(true);
       toast.success('Access code generated');
@@ -470,7 +472,7 @@ function CompanyOwnerProfile({ session }) {
       return updatedCompany;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['owner-profile-company', session?.company_id] });
+      queryClient.invalidateQueries({ queryKey: ['owner-profile-company', activeCompanyId] });
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       queryClient.invalidateQueries({ queryKey: ['companies-workspace'] });
       queryClient.invalidateQueries({ queryKey: ['access-codes'] });
@@ -505,7 +507,7 @@ function CompanyOwnerProfile({ session }) {
       return updatedAccessCode;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['owner-profile-access-codes', session?.company_id] });
+      queryClient.invalidateQueries({ queryKey: ['owner-profile-access-codes', activeCompanyId] });
       queryClient.invalidateQueries({ queryKey: ['access-codes'] });
       toast.success('Owner SMS preference updated');
     },
@@ -600,9 +602,10 @@ function CompanyOwnerProfile({ session }) {
 
 export default function Profile() {
   const { session } = useSession();
-  const isAdmin = session?.code_type === 'Admin';
-  const isOwner = session?.code_type === 'CompanyOwner';
-  const isDriver = session?.code_type === 'Driver';
+  const effectiveView = getEffectiveView(session);
+  const isAdmin = effectiveView === 'Admin';
+  const isOwner = effectiveView === 'CompanyOwner';
+  const isDriver = effectiveView === 'Driver';
 
   if (!(isAdmin || isOwner || isDriver)) {
     return <div className="text-sm text-slate-500">Profile is not available for this login type.</div>;
