@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import { BellRing, Building2, Eye, KeyRound } from 'lucide-react';
 import { formatPhoneNumber } from '@/lib/sms';
 import SmsConsentDisclosure from '@/components/profile/SmsConsentDisclosure';
@@ -89,15 +88,8 @@ export function CompanyOwnerSmsCard({
   smsState,
   smsContact,
   smsPending,
-  consentChecked,
-  showConsentCheckbox,
-  onConsentChange,
   onToggle,
 }) {
-  const canEnableSms = smsState.target.phone && !smsState.optedIn
-    ? (showConsentCheckbox ? consentChecked : true)
-    : true;
-
   return (
     <Card>
       <CardContent className="p-6 space-y-4">
@@ -107,14 +99,8 @@ export function CompanyOwnerSmsCard({
             <Label className="text-base">Receive SMS notifications</Label>
             <p className="text-sm text-slate-500">You receive SMS only when you opt in here and a valid SMS contact is selected on the company profile.</p>
           </div>
-          <Switch checked={smsState.optedIn} disabled={smsPending || !smsState.target.phone || !canEnableSms} onCheckedChange={onToggle} />
+          <Switch checked={smsState.optedIn} disabled={smsPending || !smsState.target.phone} onCheckedChange={onToggle} />
         </div>
-        {showConsentCheckbox && (
-          <label className="flex items-start gap-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
-            <Checkbox checked={consentChecked} onCheckedChange={(checked) => onConsentChange(checked === true)} disabled={smsPending} className="mt-0.5" />
-            <span>I agree to receive operational SMS notifications from CCG Transit.</span>
-          </label>
-        )}
         <SmsConsentDisclosure />
         <div className="grid sm:grid-cols-3 gap-3 text-sm">
           <div className="rounded-lg bg-slate-50 p-3 border"><p className="text-slate-500">Use for SMS</p><p className="font-medium text-slate-900">{smsState.target.method ? `${smsState.target.method.type}: ${smsState.target.method.value}` : 'No phone selected'}</p></div>
