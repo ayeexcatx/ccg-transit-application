@@ -20,18 +20,24 @@ import {
   normalizeVisibilityId,
 } from '@/lib/dispatchVisibility';
 import NotificationsPageItem from '@/components/notifications/NotificationsPageItem';
+import { getActiveCompanyId, getEffectiveView } from '@/components/session/workspaceUtils';
 
 export default function Notifications() {
   const { session } = useSession();
   const navigate = useNavigate();
+  const effectiveView = getEffectiveView(session);
+  const activeCompanyId = getActiveCompanyId(session);
+  const isOwner = effectiveView === 'CompanyOwner';
+  const isDriver = effectiveView === 'Driver';
+  const isAdmin = effectiveView === 'Admin';
   const { notifications, unreadCount, isLoading, markReadAsync, markAllRead, markAllReadPending } = useOwnerNotifications(session);
 
-  const { data: confirmations = [] } = useConfirmationsQuery(session?.code_type === 'CompanyOwner');
+  const { data: confirmations = [] } = useConfirmationsQuery(isOwner);
 
   const { data: dispatches = [] } = useQuery({
-    queryKey: ['portal-dispatches', session?.company_id],
-    queryFn: () => base44.entities.Dispatch.filter({ company_id: session.company_id }, '-date', 200),
-    enabled: !!session?.company_id,
+    queryKey: ['portal-dispatches', activeCompanyId],
+    queryFn: () => base44.entities.Dispatch.filter({ company_id: activeCompanyId }, '-date', 200),
+    enabled: !!activeCompanyId,
   });
 
   const dispatchMap = Object.fromEntries(dispatches.map((dispatch) => [dispatch.id, dispatch]));
@@ -43,20 +49,20 @@ export default function Notifications() {
     })
   );
   const { data: ownerCompany = null } = useQuery({
-    queryKey: ['owner-company-notification-scope', session?.company_id],
+    queryKey: ['owner-company-notification-scope', activeCompanyId],
     queryFn: async () => {
-      if (!session?.company_id) return null;
-      const companies = await base44.entities.Company.filter({ id: session.company_id }, '-created_date', 1);
+      if (!activeCompanyId) return null;
+      const companies = await base44.entities.Company.filter({ id: activeCompanyId }, '-created_date', 1);
       return companies?.[0] || null;
     },
-    enabled: session?.code_type === 'CompanyOwner' && !!session?.company_id,
+    enabled: isOwner && !!activeCompanyId,
   });
   const ownerScopeTrucks = Array.isArray(ownerCompany?.trucks) ? ownerCompany.trucks : [];
   
   const handleNotificationClick = async (n) => {
     if (!session) return;
 
-    if (session?.code_type !== 'Driver' && n.related_dispatch_id && isNotificationMarkedReadOnClick(n) && !n.read_flag) {
+    if (!isDriver && n.related_dispatch_id && isNotificationMarkedReadOnClick(n) && !n.read_flag) {
       try {
         await markReadAsync(n.id);
       } catch {
@@ -65,7 +71,7 @@ export default function Notifications() {
     }
 
     if (n.related_dispatch_id) {
-      const targetPage = session?.code_type === 'Admin' ? 'AdminDispatches' : 'Portal';
+      const targetPage = isAdmin ? 'AdminDispatches' : 'Portal';
       const targetPath = buildDispatchOpenPath(targetPage, {
         dispatchId: n.related_dispatch_id,
         notificationId: n.id,

@@ -3,11 +3,15 @@ import { useSession } from '@/components/session/SessionContext';
 import { Card, CardContent } from '@/components/ui/card';
 import AvailabilityManager from '@/components/availability/AvailabilityManager';
 import AvailabilitySummaryBoxes from '@/components/availability/AvailabilitySummaryBoxes';
+import { getActiveCompanyId, getEffectiveView } from '@/components/session/workspaceUtils';
 
 export default function Availability() {
   const { session } = useSession();
+  const effectiveView = getEffectiveView(session);
+  const activeCompanyId = getActiveCompanyId(session);
+  const isOwner = effectiveView === 'CompanyOwner';
 
-  if (session?.code_type !== 'CompanyOwner') {
+  if (!isOwner) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -20,8 +24,8 @@ export default function Availability() {
 
   return (
     <div className="space-y-4">
-      <AvailabilitySummaryBoxes companyId={session.company_id} />
-      <AvailabilityManager companyId={session.company_id} />
+      <AvailabilitySummaryBoxes companyId={activeCompanyId} />
+      <AvailabilityManager companyId={activeCompanyId} />
     </div>
   );
 }

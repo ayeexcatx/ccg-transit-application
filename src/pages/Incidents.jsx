@@ -19,6 +19,7 @@ import { buildDispatchOpenPath } from '@/lib/dispatchOpenOrchestration';
 import { toast } from 'sonner';
 import { canUserSeeIncident, normalizeVisibilityId } from '@/lib/dispatchVisibility';
 import { resolveDriverIdentity } from '@/services/currentAppIdentityService';
+import { getActiveCompanyId, getEffectiveView } from '@/components/session/workspaceUtils';
 
 const INCIDENT_TYPES = [
   'Mechanical Issue',
@@ -100,9 +101,11 @@ export default function Incidents() {
   const [draftTimeStoppedTo, setDraftTimeStoppedTo] = useState({});
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
 
-  const isAdmin = session?.code_type === 'Admin';
-  const isOwner = session?.code_type === 'CompanyOwner';
-  const isDriver = session?.code_type === 'Driver';
+  const effectiveView = getEffectiveView(session);
+  const activeCompanyId = getActiveCompanyId(session);
+  const isAdmin = effectiveView === 'Admin';
+  const isOwner = effectiveView === 'CompanyOwner';
+  const isDriver = effectiveView === 'Driver';
   const driverIdentity = useMemo(
     () => resolveDriverIdentity({ currentAppIdentity, session }),
     [currentAppIdentity, session],
@@ -139,10 +142,10 @@ export default function Incidents() {
   });
 
   const { data: dispatches = [] } = useQuery({
-    queryKey: ['incident-dispatches', session?.company_id],
+    queryKey: ['incident-dispatches', activeCompanyId, effectiveView],
     queryFn: () => (isAdmin
       ? base44.entities.Dispatch.list('-date', 500)
-      : base44.entities.Dispatch.filter({ company_id: session.company_id }, '-date', 500)),
+      : base44.entities.Dispatch.filter({ company_id: activeCompanyId }, '-date', 500)),
     enabled: !!session,
   });
 
@@ -305,7 +308,7 @@ export default function Incidents() {
     setForm((prev) => ({
       ...prev,
       dispatch_id: queryDispatchId || '',
-      company_id: queryCompanyId || prefillDispatch?.company_id || session?.company_id || '',
+      company_id: queryCompanyId || prefillDispatch?.company_id || activeCompanyId || '',
       truck_number: prefillTruck || prev.truck_number,
     }));
     setCreateOpen(true);
@@ -333,7 +336,7 @@ export default function Incidents() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
       setCreateOpen(false);
-      setForm({ ...INITIAL_FORM, company_id: session?.company_id || '' });
+      setForm({ ...INITIAL_FORM, company_id: activeCompanyId || '' });
       toast.success('Incident report created.');
 
       if (createFromDispatch) {
@@ -358,7 +361,7 @@ export default function Incidents() {
         company_id: incident.company_id || null,
         truck_number: incident.truck_number || null,
         added_by_access_code_id: session?.id || null,
-        added_by_code_type: session?.code_type || null,
+        added_by_code_type: effectiveView || null,
         update_datetime: new Date().toISOString(),
         update_text: trimmed,
       });
@@ -449,11 +452,11 @@ export default function Incidents() {
 
     createMutation.mutate({
       dispatch_id: form.dispatch_id || null,
-      company_id: form.company_id || session?.company_id || null,
+      company_id: form.company_id || activeCompanyId || null,
       truck_number: form.truck_number,
       reported_by_access_code_id: session?.id,
-      reported_by_name: getBestReadableName(session, form.company_id || session?.company_id, session?.code_type),
-      reported_by_code_type: session?.code_type,
+      reported_by_name: getBestReadableName(session, form.company_id || activeCompanyId, effectiveView),
+      reported_by_code_type: effectiveView,
       incident_type: form.incident_type,
       status: 'Open',
       incident_datetime: new Date().toISOString(),

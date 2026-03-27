@@ -1,3 +1,5 @@
+import { getActiveCompanyId, getEffectiveView } from '@/components/session/workspaceUtils';
+
 const normalizeId = (value) => String(value ?? '');
 
 const getDispatchTrucks = (dispatch) => (Array.isArray(dispatch?.trucks_assigned) ? dispatch.trucks_assigned : []);
@@ -33,15 +35,16 @@ export function getDriverDispatchIdSet(driverAssignments = []) {
  */
 export function canUserSeeDispatch(session, dispatch, { driverDispatchIds = null, ownerCompanyId = null } = {}) {
   if (!session || !dispatch?.id) return false;
-  if (session.code_type === 'Admin') return true;
+  const effectiveView = getEffectiveView(session);
+  if (effectiveView === 'Admin') return true;
 
   const dispatchId = normalizeId(dispatch.id);
-  if (session.code_type === 'Driver') {
+  if (effectiveView === 'Driver') {
     return driverDispatchIds instanceof Set ? driverDispatchIds.has(dispatchId) : false;
   }
-  if (session.code_type !== 'CompanyOwner') return false;
+  if (effectiveView !== 'CompanyOwner') return false;
 
-  const effectiveCompanyId = ownerCompanyId ?? session.company_id;
+  const effectiveCompanyId = ownerCompanyId ?? getActiveCompanyId(session);
   return normalizeId(dispatch.company_id) === normalizeId(effectiveCompanyId);
 }
 
@@ -51,12 +54,13 @@ export function canUserSeeDispatch(session, dispatch, { driverDispatchIds = null
 export function getVisibleTrucksForDispatch(session, dispatch, { driverAssignedTrucks = [] } = {}) {
   const assigned = getDispatchTrucks(dispatch);
   if (!session) return [];
-  if (session.code_type === 'Admin') return assigned;
+  const effectiveView = getEffectiveView(session);
+  if (effectiveView === 'Admin') return assigned;
 
-  if (session.code_type === 'Driver') {
+  if (effectiveView === 'Driver') {
     return [...new Set((driverAssignedTrucks || []).filter(Boolean))];
   }
-  if (session.code_type !== 'CompanyOwner') return [];
+  if (effectiveView !== 'CompanyOwner') return [];
 
   return assigned;
 }
@@ -69,14 +73,15 @@ export function canUserSeeNotification(session, notification, {
   driverDispatchIds = new Set(),
 } = {}) {
   if (!notification?.related_dispatch_id) return true;
-  if (session?.code_type === 'Admin') return true;
+  const effectiveView = getEffectiveView(session);
+  if (effectiveView === 'Admin') return true;
 
   const relatedDispatchId = normalizeId(notification.related_dispatch_id);
-  if (session?.code_type === 'Driver') {
+  if (effectiveView === 'Driver') {
     if (notification.notification_category === 'driver_dispatch_update') return true;
     return driverDispatchIds.has(relatedDispatchId);
   }
-  if (session?.code_type !== 'CompanyOwner') return false;
+  if (effectiveView !== 'CompanyOwner') return false;
 
   return visibleDispatchIds.has(relatedDispatchId);
 }
@@ -88,18 +93,19 @@ export function canUserSeeIncident(session, incident, {
   visibleDispatchIds = new Set(),
 } = {}) {
   if (!session || !incident) return false;
+  const effectiveView = getEffectiveView(session);
 
-  if (session.code_type === 'Admin') return true;
+  if (effectiveView === 'Admin') return true;
 
-  if (session.code_type === 'Driver') {
+  if (effectiveView === 'Driver') {
     const createdByDriver = incident.reported_by_access_code_id === session.id;
     const tiedToAssignedDispatch = incident.dispatch_id && visibleDispatchIds.has(normalizeId(incident.dispatch_id));
     return createdByDriver || tiedToAssignedDispatch;
   }
 
-  if (session.code_type === 'CompanyOwner') {
+  if (effectiveView === 'CompanyOwner') {
     const createdByOwner = incident.reported_by_access_code_id === session.id;
-    const forOwnerCompany = incident.company_id === session.company_id;
+    const forOwnerCompany = incident.company_id === getActiveCompanyId(session);
     return createdByOwner || forOwnerCompany;
   }
 

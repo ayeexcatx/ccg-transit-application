@@ -13,6 +13,7 @@ import { Menu, Plus } from 'lucide-react';
 import { formatPhoneNumber, getDriverSmsState } from '@/lib/sms';
 import DriverCard from '@/components/drivers/DriverCard';
 import DriverGuidanceTabs from '@/components/drivers/DriverGuidanceTabs';
+import { getActiveCompanyId, getEffectiveView } from '@/components/session/workspaceUtils';
 
 const defaultForm = {
   driver_name: '',
@@ -33,6 +34,9 @@ async function syncDriverAccessCode(driver) {
 
 export default function Drivers() {
   const { session } = useSession();
+  const effectiveView = getEffectiveView(session);
+  const activeCompanyId = getActiveCompanyId(session);
+  const isOwner = effectiveView === 'CompanyOwner';
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -42,9 +46,9 @@ export default function Drivers() {
   const [helpLanguage, setHelpLanguage] = useState('en');
 
   const { data: drivers = [], isLoading } = useQuery({
-    queryKey: ['drivers', session?.company_id],
-    queryFn: () => base44.entities.Driver.filter({ company_id: session.company_id }, '-created_date', 200),
-    enabled: !!session?.company_id,
+    queryKey: ['drivers', activeCompanyId],
+    queryFn: () => base44.entities.Driver.filter({ company_id: activeCompanyId }, '-created_date', 200),
+    enabled: !!activeCompanyId,
   });
 
   const sortedDrivers = useMemo(
@@ -53,7 +57,7 @@ export default function Drivers() {
   );
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['drivers', session?.company_id] });
+    queryClient.invalidateQueries({ queryKey: ['drivers', activeCompanyId] });
     queryClient.invalidateQueries({ queryKey: ['drivers-all'] });
     queryClient.invalidateQueries({ queryKey: ['access-codes'] });
   };
@@ -64,7 +68,7 @@ export default function Drivers() {
         ? await base44.entities.Driver.update(editing.id, payload)
         : await base44.entities.Driver.create({
             ...payload,
-            company_id: session.company_id,
+            company_id: activeCompanyId,
             access_code_status: 'Not Requested',
             driver_sms_opt_in: false,
           });
@@ -131,7 +135,7 @@ export default function Drivers() {
     });
   };
 
-  if (session?.code_type !== 'CompanyOwner') {
+  if (!isOwner) {
     return <div className="text-sm text-slate-500">Driver management is only available to company owners.</div>;
   }
 

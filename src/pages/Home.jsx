@@ -16,7 +16,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import ActionNeededSection from '@/components/notifications/ActionNeededSection';
 import { useOwnerNotifications } from '../components/notifications/useOwnerNotifications';
 import { useConfirmationsQuery } from '../components/notifications/useConfirmationsQuery';
-import { getWorkspaceDisplayLabel } from '../components/session/workspaceUtils';
+import { getActiveCompanyId, getEffectiveView, getWorkspaceDisplayLabel } from '../components/session/workspaceUtils';
 import {
   getNotificationEffectiveReadFlag,
   isNotificationMarkedReadOnClick,
@@ -163,6 +163,10 @@ export default function Home() {
   const { session } = useSession();
   const { currentAppIdentity } = useAuth();
   const navigate = useNavigate();
+  const effectiveView = getEffectiveView(session);
+  const activeCompanyId = getActiveCompanyId(session);
+  const isOwner = effectiveView === 'CompanyOwner';
+  const isDriver = effectiveView === 'Driver';
   const driverIdentity = useMemo(
     () => resolveDriverIdentity({ currentAppIdentity, session }),
     [currentAppIdentity, session],
@@ -174,20 +178,19 @@ export default function Home() {
   });
 
   const activeCompanyName =
-    companies.find((company) => String(company.id) === String(session?.company_id))?.name ||
+    companies.find((company) => String(company.id) === String(activeCompanyId))?.name ||
     session?.company_name ||
     (typeof session?.company === 'object' ? session.company?.name : null) ||
-    (!session?.company_id && typeof session?.company === 'string' ? session.company : null);
+    (!activeCompanyId && typeof session?.company === 'string' ? session.company : null);
 
   const workspaceDisplayLabel = getWorkspaceDisplayLabel(session, activeCompanyName);
   const homeHeading = getHomeGreeting(workspaceDisplayLabel || session?.code_type);
-  const isDriver = session?.code_type === 'Driver';
 
 
   // Shared notifications hook — same query key as bell + notifications page
   const { notifications, unreadCount, markReadAsync } = useOwnerNotifications(session);
 
-  const { data: confirmations = [] } = useConfirmationsQuery(session?.code_type === 'CompanyOwner');
+  const { data: confirmations = [] } = useConfirmationsQuery(isOwner);
 
 
   const { data: driverAssignments = [] } = useQuery({
@@ -197,18 +200,18 @@ export default function Home() {
   });
 
   const { data: dispatches = [] } = useQuery({
-    queryKey: ['portal-dispatches', session?.company_id],
-    queryFn: () => base44.entities.Dispatch.filter({ company_id: session.company_id }, '-date', 200),
-    enabled: !!session?.company_id,
+    queryKey: ['portal-dispatches', activeCompanyId],
+    queryFn: () => base44.entities.Dispatch.filter({ company_id: activeCompanyId }, '-date', 200),
+    enabled: !!activeCompanyId,
   });
   const { data: ownerCompany = null } = useQuery({
-    queryKey: ['owner-company-notification-scope', session?.company_id],
+    queryKey: ['owner-company-notification-scope', activeCompanyId],
     queryFn: async () => {
-      if (!session?.company_id) return null;
-      const companies = await base44.entities.Company.filter({ id: session.company_id }, '-created_date', 1);
+      if (!activeCompanyId) return null;
+      const companies = await base44.entities.Company.filter({ id: activeCompanyId }, '-created_date', 1);
       return companies?.[0] || null;
     },
-    enabled: session?.code_type === 'CompanyOwner' && !!session?.company_id,
+    enabled: isOwner && !!activeCompanyId,
   });
   const ownerScopeTrucks = Array.isArray(ownerCompany?.trucks) ? ownerCompany.trucks : [];
 
@@ -222,11 +225,11 @@ export default function Home() {
   const announcements = useMemo(() => {
     return allAnnouncements.filter(a => {
       if (a.target_type === 'All') return true;
-      if (a.target_type === 'Companies') return (a.target_company_ids || []).includes(session?.company_id);
+      if (a.target_type === 'Companies') return (a.target_company_ids || []).includes(activeCompanyId);
       if (a.target_type === 'AccessCodes') return (a.target_access_code_ids || []).includes(session?.id);
       return false;
     }).sort((a, b) => (a.priority || 3) - (b.priority || 3));
-  }, [allAnnouncements, session]);
+  }, [allAnnouncements, activeCompanyId, session]);
 
   const driverAssignedTrucksByDispatch = useMemo(
     () => buildDriverAssignedTrucksByDispatch(driverAssignments),
@@ -293,7 +296,7 @@ export default function Home() {
   const handleNotificationClick = async (n) => {
     if (!session) return;
 
-    if (session?.code_type !== 'Driver' && n.related_dispatch_id && isNotificationMarkedReadOnClick(n) && !n.read_flag) {
+    if (!isDriver && n.related_dispatch_id && isNotificationMarkedReadOnClick(n) && !n.read_flag) {
       try {
         await markReadAsync(n.id);
       } catch {
@@ -340,7 +343,7 @@ export default function Home() {
       )}
 
       {/* Action Needed — always visible for CompanyOwner */}
-      {session?.code_type === 'CompanyOwner' && (
+      {isOwner && (
         <ActionNeededSection
           unreadCount={unreadCount}
           actionItems={actionItems}
