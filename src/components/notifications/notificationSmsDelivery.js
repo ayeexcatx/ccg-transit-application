@@ -3,6 +3,7 @@ import { formatDispatchDateTimeLine } from '@/components/notifications/dispatchD
 import { getCompanyOwnerSmsState, getDriverSmsState } from '@/lib/sms';
 
 const SMS_PROVIDER = 'signalwire';
+const SMS_BRAND_PREFIX = 'CCG Transit:';
 
 function normalizeText(value) {
   return typeof value === 'string' ? value.trim() : '';
@@ -20,6 +21,17 @@ function normalizeHeadline(value) {
   const headline = normalizeText(value);
   if (!headline) return '';
   return /[.!?]$/.test(headline) ? headline : `${headline}.`;
+}
+
+function hasBrandPrefix(message) {
+  return normalizeText(message).toLowerCase().startsWith(SMS_BRAND_PREFIX.toLowerCase());
+}
+
+function withSmsBranding(message) {
+  const text = normalizeText(message);
+  if (!text) return `${SMS_BRAND_PREFIX} Please open the app for updates.`;
+  if (hasBrandPrefix(text)) return text;
+  return `${SMS_BRAND_PREFIX} ${text}`;
 }
 
 async function resolveDispatchDateTimeLine(notification) {
@@ -42,14 +54,14 @@ async function resolveDispatchDateTimeLine(notification) {
 
 async function buildSmsMessage(notification) {
   if (!notification?.related_dispatch_id) {
-    return notification?.message || '';
+    return withSmsBranding(notification?.message || '');
   }
 
   const headline = normalizeHeadline(notification?.title || 'Dispatch update');
   const dispatchDateTimeLine = await resolveDispatchDateTimeLine(notification);
   const dispatchLine = dispatchDateTimeLine || 'Dispatch details are available in the app.';
 
-  return `CCG Transit: ${headline}\n${dispatchLine}\n\nPlease open the app to view and confirm.`;
+  return `${SMS_BRAND_PREFIX} ${headline}\n${dispatchLine}\n\nPlease open the app to view and confirm.`;
 }
 
 async function createSmsLog({
