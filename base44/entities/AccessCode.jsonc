@@ -91,54 +91,5 @@
   "required": [
     "code",
     "code_type"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "data.app_role": "admin"
-          }
-        },
-        {
-          "data.company_id": "{{user.data.company_id}}"
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "data.app_role": "admin"
-          }
-        },
-        {
-          "data.company_id": "{{user.data.company_id}}"
-        },
-        {
-          "data.driver_id": "{{user.data.driver_id}}"
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "data.app_role": "admin"
-          }
-        },
-        {
-          "data.company_id": "{{user.data.company_id}}"
-        },
-        {
-          "data.driver_id": "{{user.data.driver_id}}"
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "data.app_role": "admin"
-      }
-    }
-  }
+  ]
 }
