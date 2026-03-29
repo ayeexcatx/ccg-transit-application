@@ -120,7 +120,11 @@ function buildLinkedUserSession({
     };
   }
 
-  const companyId = linkedIdentity?.company_id || fallbackSession?.company_id || null;
+  const companyId =
+    linkedIdentity?.company_id
+    || authenticatedUser?.company_id
+    || fallbackSession?.company_id
+    || null;
   const driverId = linkedIdentity?.driver_id || fallbackSession?.driver_id || null;
   const activeViewMode = codeType === 'Admin'
     ? (workspace.activeViewMode || 'Admin')
