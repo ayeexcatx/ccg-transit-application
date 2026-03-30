@@ -34,20 +34,20 @@ export default function DispatchDrawerIdentitySection({
   }
 
   return (
-    <div className="space-y-4.5">
-      <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 px-3.5 py-3 sm:px-4">
+    <div className="space-y-4">
+      <div className="rounded-lg border border-slate-200/70 bg-slate-50/60 px-3.5 py-2.5 sm:px-4">
         {dispatch.client_name && (
-          <h2 className="text-xl font-semibold leading-tight text-slate-900">{dispatch.client_name}</h2>
+          <h2 className="text-lg font-semibold leading-tight text-slate-900 sm:text-[1.15rem]">{dispatch.client_name}</h2>
         )}
-        <div className="mt-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          <Building2 className="h-3.5 w-3.5 text-slate-400" />
-          <span>Working for CCG Transit</span>
+        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium tracking-[0.08em] text-slate-500">
+          <Building2 className="h-3.5 w-3.5 text-slate-400/90" />
+          <span className="uppercase">Working for CCG Transit</span>
         </div>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm sm:p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Assignment Summary</p>
+      <section className="rounded-xl border border-slate-200/80 bg-white/95 p-3 sm:p-3.5">
+        <div className="mb-2.5 flex items-center justify-between gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Assignment Summary</p>
           {isOwner && (
             <Button
               type="button"
@@ -64,28 +64,28 @@ export default function DispatchDrawerIdentitySection({
           )}
         </div>
 
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           <div className="flex items-start gap-2">
-            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100">
+            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100/80">
               <Truck className="h-3.5 w-3.5 text-slate-500" />
             </div>
             {(isAdmin || isOwner) ? (
-              <div className="min-w-0 flex-1 space-y-2">
+              <div className="min-w-0 flex-1 space-y-1.5">
                 {visibleTrucks.map((t) => {
                   const truckDriverSummaryLabel = getTruckDriverSummaryLabel(t);
 
                   return (
-                    <div key={t} className="flex items-start gap-2.5 rounded-md border border-slate-200 bg-slate-50/80 px-2.5 py-2">
-                      <Badge variant="outline" className="text-xs border-slate-900 text-slate-900 font-semibold shrink-0">
+                    <div key={t} className="flex items-start gap-2 rounded-md border border-slate-200/80 bg-slate-50/50 px-2.5 py-1.5">
+                      <Badge variant="outline" className="shrink-0 border-slate-700/80 bg-white text-[11px] font-semibold text-slate-800">
                         {t}
                       </Badge>
                       {truckDriverSummaryLabel && (
-                        <span className="text-xs text-slate-600 min-w-0 break-words leading-5">
+                        <span className="min-w-0 break-words text-xs leading-5 text-slate-600">
                           {truckDriverSummaryLabel}
                         </span>
                       )}
                       {hasTruckSeenStatus(t) && (
-                        <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold py-0 px-1.5">
+                        <Badge className="border border-emerald-200/80 bg-emerald-50/70 px-1.5 py-0 text-[10px] font-semibold text-emerald-700">
                           Seen
                         </Badge>
                       )}
