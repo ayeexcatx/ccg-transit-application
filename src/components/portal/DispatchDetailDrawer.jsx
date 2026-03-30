@@ -218,39 +218,51 @@ function TruckTimeRow({
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-3 space-y-2">
+    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:px-3.5 sm:py-3">
       <div className="flex items-center gap-2">
-        <Truck className="h-3.5 w-3.5 text-slate-400" />
-        <span className="text-sm font-mono font-medium">{truck}</span>
+        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100">
+          <Truck className="h-3.5 w-3.5 text-slate-500" />
+        </div>
+        <span className="text-sm font-semibold text-slate-800">{truck}</span>
         {existing && (
-          <div className="text-xs text-slate-400 ml-auto text-right">
-            <span>Saved: {formatTime24h(existing.start_time) || '—'} → {formatTime24h(existing.end_time) || '—'}</span>
+          <div className="ml-auto text-right text-[11px] text-slate-500">
+            <span className="font-medium">Saved: {formatTime24h(existing.start_time) || '—'} → {formatTime24h(existing.end_time) || '—'}</span>
             {workedHours != null && (
-              <span className="block text-[11px]">Total: {formatWorkedHours(workedHours)} hrs</span>
+              <span className="mt-0.5 block text-[10px] uppercase tracking-wide text-slate-400">Total: {formatWorkedHours(workedHours)} hrs</span>
             )}
           </div>
         )}
       </div>
-      <div className="flex gap-2 items-end">
-        <div className="flex-1">
-          <p className="text-xs text-slate-500 mb-1">Check-in</p>
-          <Input type="time" value={start} onChange={e => onChangeDraft(truck, 'start', e.target.value)} className="text-sm h-8" />
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-end">
+        <div>
+          <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-slate-600">Check-in</p>
+          <Input
+            type="time"
+            value={start}
+            onChange={e => onChangeDraft(truck, 'start', e.target.value)}
+            className="h-9 text-sm"
+          />
         </div>
         {isFirstRow && (
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 text-xs mb-0"
+            className="h-9 px-3 text-xs font-medium text-slate-600 sm:self-end"
             disabled={!start && !end}
             onClick={() => onCopyToAll(start, end)}
           >
             Copy to all
           </Button>
         )}
-        <div className="flex-1">
-          <p className="text-xs text-slate-500 mb-1">Check-out</p>
-          <Input type="time" value={end} onChange={e => onChangeDraft(truck, 'end', e.target.value)} className="text-sm h-8" />
+        <div>
+          <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-slate-600">Check-out</p>
+          <Input
+            type="time"
+            value={end}
+            onChange={e => onChangeDraft(truck, 'end', e.target.value)}
+            className="h-9 text-sm"
+          />
         </div>
       </div>
     </div>

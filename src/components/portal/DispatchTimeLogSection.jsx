@@ -26,9 +26,16 @@ export default function DispatchTimeLogSection({
   return (
     <>
       {isOwner && showOwnerAssignmentsAndTimeLogs && myTrucks.length > 0 && dispatchStatus !== 'Cancelled' && (
-        <div id="time-log-section" ref={timeLogSectionRef} data-tour="dispatch-time-log">
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Time Log</p>
-          <div className="space-y-2">
+        <section
+          id="time-log-section"
+          ref={timeLogSectionRef}
+          data-tour="dispatch-time-log"
+          className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 sm:p-4"
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Time Log</p>
+          </div>
+          <div className="space-y-2.5">
             {myTrucks.map((truck) => (
               <TruckTimeRow
                 key={truck}
@@ -43,18 +50,18 @@ export default function DispatchTimeLogSection({
               />
             ))}
           </div>
-          <div className="pt-3">
+          <div className="mt-3 border-t border-slate-200/80 pt-3">
             <Button
               type="button"
               onClick={onSaveAll}
               disabled={!hasUnsavedChanges || isSavingAll || entriesToSave.length === 0}
-              className="w-full bg-slate-900 hover:bg-slate-800"
+              className="h-9 w-full bg-slate-900 text-sm font-medium hover:bg-slate-800"
             >
               <Save className="h-4 w-4 mr-2" />
               {isSavingAll ? 'Saving…' : 'Save All Time Logs'}
             </Button>
           </div>
-        </div>
+        </section>
       )}
 
       {isDriverUser && visibleTrucks.length > 0 && dispatchStatus !== 'Cancelled' && (
