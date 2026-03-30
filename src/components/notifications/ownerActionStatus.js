@@ -39,23 +39,22 @@ export function getOwnerNotificationRequiredTrucks({ notification, dispatch = nu
   const fallbackRequired = Array.isArray(notification?.required_trucks)
     ? notification.required_trucks.filter(Boolean)
     : [];
+  const allowedSet = ownerAllowedTrucks?.length ? new Set(ownerAllowedTrucks) : null;
 
-  if (!dispatch) return fallbackRequired;
+  if (fallbackRequired.length) {
+    return allowedSet
+      ? fallbackRequired.filter((truck) => allowedSet.has(truck))
+      : fallbackRequired;
+  }
+
+  if (!dispatch) return [];
 
   const dispatchTrucks = Array.isArray(dispatch?.trucks_assigned)
     ? dispatch.trucks_assigned.filter(Boolean)
     : [];
 
-  if (!ownerAllowedTrucks?.length) return fallbackRequired.length ? fallbackRequired : dispatchTrucks;
-
-  const allowedSet = new Set(ownerAllowedTrucks);
-  const scopedDispatchTrucks = dispatchTrucks.filter((truck) => allowedSet.has(truck));
-
-  // Fallback to persisted required_trucks when live dispatch scope data is temporarily missing
-  // so unread/action-needed state does not silently auto-resolve for owner dispatch notifications.
-  if (!scopedDispatchTrucks.length && fallbackRequired.length) return fallbackRequired;
-
-  return scopedDispatchTrucks;
+  if (!allowedSet) return dispatchTrucks;
+  return dispatchTrucks.filter((truck) => allowedSet.has(truck));
 }
 
 export function getOwnerNotificationActionStatus({
