@@ -142,6 +142,11 @@
     },
     "update": {
       "id": "{{user.data.company_id}}"
+    },
+    "create": {
+      "user_condition": {
+        "data.app_role": "admin"
+      }
     }
   }
 }
