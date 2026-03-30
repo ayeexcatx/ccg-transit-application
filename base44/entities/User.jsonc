@@ -2,6 +2,14 @@
   "name": "User",
   "type": "object",
   "properties": {
+    "app_display_name": {
+      "type": "string",
+      "description": "App-level editable display name for this user"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Readable display name of the company associated with this user"
+    },
     "role": {
       "type": "string",
       "enum": [
