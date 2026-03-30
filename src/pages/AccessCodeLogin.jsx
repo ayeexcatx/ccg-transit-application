@@ -63,7 +63,11 @@ export default function AccessCodeLogin() {
       userUpdatePayload.company_id = match.company_id || null;
       userUpdatePayload.driver_id = null;
       userUpdatePayload.app_display_name = match.label || null;
-      // company_name: no reliable name string on access code context — leave unchanged
+      // Fetch company name via service-role to bypass RLS
+      if (match.company_id) {
+        const res = await base44.functions.invoke('lookupCompanyName', { company_id: match.company_id });
+        userUpdatePayload.company_name = res?.data?.company_name || null;
+      }
     }
 
     if (match.code_type === 'Driver') {
@@ -82,7 +86,12 @@ export default function AccessCodeLogin() {
       userUpdatePayload.driver_id = match.driver_id || null;
       userUpdatePayload.company_id = derivedCompanyId;
       userUpdatePayload.app_display_name = driverName || match.label || null;
-      // company_name: no reliable name string on access code context — leave unchanged
+
+      if (derivedCompanyId) {
+        // Fetch company name via service-role to bypass RLS
+        const res = await base44.functions.invoke('lookupCompanyName', { company_id: derivedCompanyId });
+        userUpdatePayload.company_name = res?.data?.company_name || null;
+      }
     }
 
     await base44.entities.User.update(user.id, userUpdatePayload);
