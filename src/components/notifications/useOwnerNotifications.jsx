@@ -12,6 +12,7 @@ import {
   normalizeVisibilityId,
 } from '@/lib/dispatchVisibility';
 import { resolveDriverIdentity } from '@/services/currentAppIdentityService';
+import { listDriverDispatchesForDriver } from '@/lib/driverDispatch';
 
 function getDriverNotificationSeenKind(notification, dispatch = null) {
   const notificationType = String(notification?.notification_type || '').toLowerCase();
@@ -66,9 +67,12 @@ export function useOwnerNotifications(session) {
       }
 
       const all = await base44.entities.Notification.filter({ recipient_type: 'AccessCode' }, '-created_date', 200);
-      return all.filter(n =>
-        n.recipient_access_code_id === session.id || n.recipient_id === session.id
-      );
+      return all.filter((notification) => {
+        const recipientAccessCodeId = String(notification?.recipient_access_code_id || '');
+        const recipientId = String(notification?.recipient_id || '');
+        const sessionId = String(session?.id || '');
+        return recipientAccessCodeId === sessionId || recipientId === sessionId;
+      });
     },
     enabled: !!session,
     refetchInterval: 30000,
@@ -76,7 +80,7 @@ export function useOwnerNotifications(session) {
 
   const { data: driverAssignments = [] } = useQuery({
     queryKey: ['driver-dispatch-assignments', driverIdentity],
-    queryFn: () => base44.entities.DriverDispatchAssignment.filter({ driver_id: driverIdentity }, '-assigned_datetime', 500),
+    queryFn: () => listDriverDispatchesForDriver(driverIdentity),
     enabled: isDriver && !!driverIdentity,
   });
 
@@ -100,6 +104,10 @@ export function useOwnerNotifications(session) {
   const driverDispatchIds = getDriverDispatchIdSet(driverAssignments);
   const validDispatchIds = new Set(dispatches.map((dispatch) => normalizeVisibilityId(dispatch.id)));
 
+  const dispatchById = new Map(
+    dispatches.map((dispatch) => [normalizeVisibilityId(dispatch.id), dispatch])
+  );
+
   const notifications = rawNotifications
     .filter((notification) => canUserSeeNotification(session, notification, {
       visibleDispatchIds: validDispatchIds,
@@ -114,7 +122,9 @@ export function useOwnerNotifications(session) {
     effectiveReadFlag: getNotificationEffectiveReadFlag({
       session,
       notification,
-      dispatch: notification.related_dispatch_id ? dispatches.find((dispatch) => dispatch.id === notification.related_dispatch_id) || null : null,
+      dispatch: notification.related_dispatch_id
+        ? dispatchById.get(normalizeVisibilityId(notification.related_dispatch_id)) || null
+        : null,
       confirmations,
       ownerAllowedTrucks: ownerScopeTrucks,
     }),
@@ -200,10 +210,12 @@ export function useOwnerNotifications(session) {
 
     const matchingAssignments = driverAssignments.filter((assignment) =>
       assignment?.active_flag !== false &&
+      assignment?.is_visible_to_driver !== false &&
+      ['sent', 'seen'].includes(String(assignment?.delivery_status || 'sent').toLowerCase()) &&
       String(assignment.dispatch_id ?? '') === String(dispatch.id)
     );
 
-    const unseenAssignments = matchingAssignments.filter((assignment) => !assignment?.receipt_confirmed_at);
+    const unseenAssignments = matchingAssignments.filter((assignment) => !assignment?.last_seen_at);
     const matchingNotifications = notifications
       .filter((notification) =>
         notification.notification_category === 'driver_dispatch_update' &&
@@ -236,14 +248,14 @@ export function useOwnerNotifications(session) {
       }
 
       if (unseenAssignments.length) {
-        await Promise.all(unseenAssignments.map((assignment) =>
-          base44.entities.DriverDispatchAssignment.update(assignment.id, {
-            receipt_confirmed_flag: true,
-            receipt_confirmed_at: seenAt,
-            receipt_confirmed_by_driver_id: driverIdentity,
-            receipt_confirmed_by_name: session?.label || session?.driver_name || session?.name || assignment?.driver_name || undefined,
-          })
-        ));
+        await Promise.all(unseenAssignments.map((assignment) => {
+          if (!assignment?.id) return Promise.resolve();
+          return base44.entities.DriverDispatch.update(assignment.id, {
+            delivery_status: 'seen',
+            last_seen_at: seenAt,
+            last_opened_at: seenAt,
+          });
+        }));
 
         await notifyOwnerDriverSeen({
           dispatch,
