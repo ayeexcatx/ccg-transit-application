@@ -397,6 +397,19 @@ export function useAccessSession() {
               // Ignore persistence sync errors; session restore should still succeed.
             }
           }
+
+          // Sync display-only convenience fields onto the User record.
+          if (isAuthenticated && authoritativeLinkedIdentity?.user_id) {
+            try {
+              const displayPayload = {
+                app_display_name: restoredAccessCode.label || '',
+                company_name: restoredAccessCode.company_name || '',
+              };
+              await base44.entities.User.update(authoritativeLinkedIdentity.user_id, displayPayload);
+            } catch {
+              // Non-critical; ignore display field sync errors.
+            }
+          }
         } else {
           if (isAuthenticated) {
             localStorage.removeItem(STORAGE_ACCESS_CODE_ID);

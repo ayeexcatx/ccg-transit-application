@@ -192,12 +192,14 @@ export default function AdminAccessCodes() {
       if (!form.company_id || !form.driver_id) return;
       const driver = drivers.find((d) => d.id === form.driver_id);
       const driverSmsState = getDriverSmsState(driver);
+      const driverCompany = companies.find((c) => c.id === form.company_id);
       saveMutation.mutate({
         code: form.code,
         label: form.label || driver?.driver_name || '',
         active_flag: form.active_flag,
         code_type: 'Driver',
         company_id: form.company_id,
+        company_name: driverCompany?.name || '',
         driver_id: form.driver_id,
         allowed_trucks: [],
         sms_enabled: driverSmsState.effective,
@@ -233,6 +235,7 @@ export default function AdminAccessCodes() {
       const ownerSmsState = getCompanyOwnerSmsState({ accessCode: editing || form, company });
       saveMutation.mutate({
         ...form,
+        company_name: company?.name || '',
         sms_enabled: ownerSmsState.effective,
         sms_phone: ownerSmsState.normalizedPhone || '',
         available_views: [],
