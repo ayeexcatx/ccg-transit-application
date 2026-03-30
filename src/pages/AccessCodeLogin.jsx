@@ -52,23 +52,45 @@ export default function AccessCodeLogin() {
     if (match.code_type === 'Admin') {
       userUpdatePayload.company_id = null;
       userUpdatePayload.driver_id = null;
+      // Only set app_display_name for admin on first link (don't overwrite existing editable name)
+      if (!user?.app_display_name && match.label) {
+        userUpdatePayload.app_display_name = match.label;
+      }
+      // company_name: leave blank for admins — no company association
     }
 
     if (match.code_type === 'CompanyOwner') {
       userUpdatePayload.company_id = match.company_id || null;
       userUpdatePayload.driver_id = null;
+      userUpdatePayload.app_display_name = match.label || null;
+      // Fetch company name from the Company record
+      if (match.company_id) {
+        const ownerCompanies = await base44.entities.Company.filter({ id: match.company_id }, '-created_date', 1);
+        userUpdatePayload.company_name = ownerCompanies?.[0]?.name || null;
+      }
     }
 
     if (match.code_type === 'Driver') {
       let derivedCompanyId = match.company_id || null;
+      let driverName = null;
 
       if (!derivedCompanyId && match.driver_id) {
         const drivers = await base44.entities.Driver.filter({ id: match.driver_id }, '-created_date', 1);
         derivedCompanyId = drivers?.[0]?.company_id || null;
+        driverName = drivers?.[0]?.driver_name || null;
+      } else if (match.driver_id) {
+        const drivers = await base44.entities.Driver.filter({ id: match.driver_id }, '-created_date', 1);
+        driverName = drivers?.[0]?.driver_name || null;
       }
 
       userUpdatePayload.driver_id = match.driver_id || null;
       userUpdatePayload.company_id = derivedCompanyId;
+      userUpdatePayload.app_display_name = driverName || match.label || null;
+
+      if (derivedCompanyId) {
+        const driverCompanies = await base44.entities.Company.filter({ id: derivedCompanyId }, '-created_date', 1);
+        userUpdatePayload.company_name = driverCompanies?.[0]?.name || null;
+      }
     }
 
     await base44.entities.User.update(user.id, userUpdatePayload);
