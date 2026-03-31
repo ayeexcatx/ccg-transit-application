@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/AuthContext';
 import {
   canCompanyOwnerViewAssignmentsAndTimeLogs,
 } from './statusConfig';
-import { NOTE_DISPLAY_WIDTH, NOTE_TYPES, normalizeTemplateNote } from '@/lib/templateNotes';
+import { filterTemplateNotesForDispatch, NOTE_DISPLAY_WIDTH, NOTE_TYPES, normalizeTemplateNote } from '@/lib/templateNotes';
 import { calculateWorkedHours, formatTime24h, formatWorkedHours } from '@/lib/timeLogs';
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
@@ -617,7 +617,8 @@ export default function DispatchDetailDrawer({
   });
   const hasAdditional = Array.isArray(dispatch.additional_assignments) && dispatch.additional_assignments.length > 0;
 
-  const normalizedTemplateNotes = (templateNotes || []).map(normalizeTemplateNote);
+  const dispatchScopedTemplateNotes = filterTemplateNotesForDispatch(templateNotes || [], dispatch?.job_number || '');
+  const normalizedTemplateNotes = dispatchScopedTemplateNotes.map(normalizeTemplateNote);
   const boxNotes = normalizedTemplateNotes.filter(n => n.note_type === NOTE_TYPES.BOX);
   const generalNotes = normalizedTemplateNotes.filter(n => n.note_type !== NOTE_TYPES.BOX);
 

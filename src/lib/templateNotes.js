@@ -9,6 +9,12 @@ export const NOTE_DISPLAY_WIDTH = {
   FULL: 'full',
 };
 
+export const NOTE_DISPLAY_SCOPE = {
+  ALL: 'all',
+  ONLY_SPECIFIC_JOBS: 'only_specific_jobs',
+  ALL_EXCEPT_SPECIFIC_JOBS: 'all_except_specific_jobs',
+};
+
 const NOTE_GROUP_ORDER = {
   [NOTE_TYPES.BOX]: 0,
   [NOTE_TYPES.GENERAL]: 1,
@@ -20,6 +26,12 @@ export const normalizeTemplateNote = (note = {}) => {
   const displayWidth = Object.values(NOTE_DISPLAY_WIDTH).includes(rawDisplayWidth)
     ? rawDisplayWidth
     : NOTE_DISPLAY_WIDTH.AUTO;
+  const rawDisplayScope = note.displayScope ?? note.display_scope;
+  const displayScope = Object.values(NOTE_DISPLAY_SCOPE).includes(rawDisplayScope)
+    ? rawDisplayScope
+    : NOTE_DISPLAY_SCOPE.ALL;
+  const rawJobNumbers = note.jobNumbers ?? note.job_numbers;
+  const job_numbers = normalizeJobNumbers(rawJobNumbers);
 
   const legacyText = typeof note.note_text === 'string' ? note.note_text.trim() : '';
   const rawBullets = Array.isArray(note.bullet_lines)
@@ -45,8 +57,41 @@ export const normalizeTemplateNote = (note = {}) => {
     active_flag: note.active_flag !== false,
     displayWidth,
     display_width: displayWidth,
+    displayScope,
+    display_scope: displayScope,
+    jobNumbers: job_numbers,
+    job_numbers,
   };
 };
+
+const normalizeJobNumber = (value = '') => String(value || '').trim().toUpperCase();
+
+export const normalizeJobNumbers = (value) => {
+  const source = Array.isArray(value) ? value : String(value || '').split(',');
+  return [...new Set(source
+    .map(normalizeJobNumber)
+    .filter(Boolean))];
+};
+
+export const doesTemplateNoteApplyToDispatchJobNumber = (note, dispatchJobNumber) => {
+  const normalizedNote = normalizeTemplateNote(note);
+  const normalizedDispatchJobNumber = normalizeJobNumber(dispatchJobNumber);
+  const hasMatch = normalizedNote.job_numbers.includes(normalizedDispatchJobNumber);
+
+  if (normalizedNote.display_scope === NOTE_DISPLAY_SCOPE.ONLY_SPECIFIC_JOBS) {
+    return normalizedDispatchJobNumber ? hasMatch : false;
+  }
+
+  if (normalizedNote.display_scope === NOTE_DISPLAY_SCOPE.ALL_EXCEPT_SPECIFIC_JOBS) {
+    return normalizedDispatchJobNumber ? !hasMatch : true;
+  }
+
+  return true;
+};
+
+export const filterTemplateNotesForDispatch = (notes = [], dispatchJobNumber = '') => (
+  notes.filter((note) => doesTemplateNoteApplyToDispatchJobNumber(note, dispatchJobNumber))
+);
 
 export const sortTemplateNotesForDispatch = (notes = []) => {
   return [...notes]

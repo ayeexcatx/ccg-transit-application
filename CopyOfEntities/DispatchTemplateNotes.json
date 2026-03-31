@@ -56,6 +56,23 @@
       ],
       "default": "auto",
       "description": "Controls how the note should render in the dispatch drawer layout."
+    },
+    "display_scope": {
+      "type": "string",
+      "enum": [
+        "all",
+        "only_specific_jobs",
+        "all_except_specific_jobs"
+      ],
+      "default": "all",
+      "description": "Controls whether note appears for all dispatches or by job number matching."
+    },
+    "job_numbers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional list of job numbers used when display_scope is job-number dependent."
     }
   },
   "required": []

@@ -11,7 +11,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StickyNote, Box, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Type } from 'lucide-react';
-import { NOTE_DISPLAY_WIDTH, NOTE_TYPES, normalizeTemplateNote, renderSimpleMarkupToHtml, sortTemplateNotesForDispatch } from '@/lib/templateNotes';
+import {
+  NOTE_DISPLAY_SCOPE,
+  NOTE_DISPLAY_WIDTH,
+  NOTE_TYPES,
+  normalizeJobNumbers,
+  normalizeTemplateNote,
+  renderSimpleMarkupToHtml,
+  sortTemplateNotesForDispatch,
+} from '@/lib/templateNotes';
 
 const DEFAULT_FORM = {
   note_type: NOTE_TYPES.GENERAL,
@@ -23,6 +31,8 @@ const DEFAULT_FORM = {
   active_flag: true,
   priority: 0,
   displayWidth: NOTE_DISPLAY_WIDTH.AUTO,
+  displayScope: NOTE_DISPLAY_SCOPE.ALL,
+  jobNumbersInput: '',
 };
 
 export default function AdminTemplateNotes() {
@@ -73,6 +83,8 @@ export default function AdminTemplateNotes() {
       active_flag: note.active_flag !== false,
       priority: note.priority || 0,
       displayWidth: note.displayWidth || NOTE_DISPLAY_WIDTH.AUTO,
+      displayScope: note.displayScope || NOTE_DISPLAY_SCOPE.ALL,
+      jobNumbersInput: (note.job_numbers || []).join(', '),
     });
     setOpen(true);
   };
@@ -124,6 +136,8 @@ export default function AdminTemplateNotes() {
 
   const saveForm = () => {
     const displayWidth = form.displayWidth || NOTE_DISPLAY_WIDTH.AUTO;
+    const displayScope = form.displayScope || NOTE_DISPLAY_SCOPE.ALL;
+    const job_numbers = normalizeJobNumbers(form.jobNumbersInput);
     const basePayload = {
       note_type: form.note_type,
       title: form.title.trim(),
@@ -133,6 +147,10 @@ export default function AdminTemplateNotes() {
       // in environments that store snake_case entity fields.
       displayWidth,
       display_width: displayWidth,
+      displayScope,
+      display_scope: displayScope,
+      jobNumbers: job_numbers,
+      job_numbers,
     };
 
     const payload = form.note_type === NOTE_TYPES.BOX
@@ -218,6 +236,7 @@ export default function AdminTemplateNotes() {
                           </Badge>
                           <Badge variant="outline" className="text-xs">Priority: {n.priority || 0}</Badge>
                           <Badge variant="outline" className="text-xs">Width: {n.displayWidth}</Badge>
+                          <Badge variant="outline" className="text-xs">Scope: {n.displayScope}</Badge>
                         </div>
                       </div>
                     </div>
@@ -332,6 +351,35 @@ export default function AdminTemplateNotes() {
               </div>
             )}
 
+
+            <div>
+              <Label>Display Scope</Label>
+              <Select
+                value={form.displayScope}
+                onValueChange={v => setForm(prev => ({ ...prev, displayScope: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NOTE_DISPLAY_SCOPE.ALL}>Always show on all dispatches</SelectItem>
+                  <SelectItem value={NOTE_DISPLAY_SCOPE.ONLY_SPECIFIC_JOBS}>Show only for specific job numbers</SelectItem>
+                  <SelectItem value={NOTE_DISPLAY_SCOPE.ALL_EXCEPT_SPECIFIC_JOBS}>Show for all job numbers except specific job numbers</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {form.displayScope !== NOTE_DISPLAY_SCOPE.ALL && (
+              <div>
+                <Label>Job Numbers</Label>
+                <Input
+                  value={form.jobNumbersInput}
+                  onChange={e => setForm(prev => ({ ...prev, jobNumbersInput: e.target.value }))}
+                  placeholder="e.g. 12345, ABC-100, 98765"
+                />
+                <p className="text-xs text-slate-500 mt-1">Enter one or more job numbers separated by commas.</p>
+              </div>
+            )}
 
             <div>
               <Label>Display Width</Label>
