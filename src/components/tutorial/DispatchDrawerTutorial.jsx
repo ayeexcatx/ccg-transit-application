@@ -4,13 +4,12 @@ import { CircleHelp } from 'lucide-react';
 import TutorialOverlay from './TutorialOverlay';
 import TutorialWelcomeModal from './TutorialWelcomeModal';
 import useTutorialRunner from './useTutorialRunner';
-import { cn } from '@/lib/utils';
 import {
   DISPATCH_DRAWER_TUTORIAL_LANGUAGE,
   tutorialRegistry,
 } from './tutorialConfig';
 
-export default function DispatchDrawerTutorial({ isOwner, drawerOpen, triggerClassName }) {
+export default function DispatchDrawerTutorial({ isOwner, drawerOpen }) {
   const tutorialConfig = tutorialRegistry.dispatchDrawer;
   const { seen: seenKey, completed: completedKey } = tutorialConfig.storageKeys;
 
@@ -119,10 +118,7 @@ export default function DispatchDrawerTutorial({ isOwner, drawerOpen, triggerCla
           size="sm"
           variant="default"
           onClick={openTutorialWelcome}
-          className={cn(
-            'h-7 border border-blue-700 bg-blue-600 px-2 text-xs text-white shadow-sm hover:bg-blue-700 focus-visible:ring-blue-500',
-            triggerClassName,
-          )}
+          className="absolute bottom-4 right-4 z-20 h-9 rounded-full border border-blue-700 bg-blue-600 px-3 text-xs text-white shadow-md hover:bg-blue-700 focus-visible:ring-blue-500 sm:bottom-5 sm:right-5"
           data-tour="dispatch-tutorial-trigger"
         >
           <CircleHelp className="mr-1 h-3.5 w-3.5" />
