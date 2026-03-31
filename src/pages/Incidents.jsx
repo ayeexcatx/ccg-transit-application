@@ -109,6 +109,7 @@ export default function Incidents() {
   const isAdmin = effectiveView === 'Admin';
   const isOwner = effectiveView === 'CompanyOwner';
   const isDriver = effectiveView === 'Driver';
+  const canManageIncidentStatus = isAdmin;
   const driverIdentity = useMemo(
     () => resolveDriverIdentity({ currentAppIdentity, session }),
     [currentAppIdentity, session],
@@ -807,31 +808,33 @@ export default function Incidents() {
                     </Button>
                   </div>
 
-                  <div className="space-y-1">
-                    <div className="flex justify-end">
-                      {incident.status === 'Completed' ? (
-                        <Button
-                          type="button"
-                          onClick={() => updateStatusMutation.mutate({ incidentId: incident.id, status: 'Open' })}
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          Reopen Incident
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          onClick={() => updateStatusMutation.mutate({ incidentId: incident.id, status: 'Completed' })}
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          Mark Completed
-                        </Button>
+                  {canManageIncidentStatus && (
+                    <div className="space-y-1">
+                      <div className="flex justify-end">
+                        {incident.status === 'Completed' ? (
+                          <Button
+                            type="button"
+                            onClick={() => updateStatusMutation.mutate({ incidentId: incident.id, status: 'Open' })}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            Reopen Incident
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            onClick={() => updateStatusMutation.mutate({ incidentId: incident.id, status: 'Completed' })}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            Mark Completed
+                          </Button>
+                        )}
+                      </div>
+                      {!incident.time_stopped_to && incident.status !== 'Completed' && (
+                        <p className="text-xs font-bold text-red-700 text-right">Please save restart time before marking complete.</p>
                       )}
+                      <p className="text-xs text-slate-500 text-right">You can still add updates after marking this incident complete.</p>
                     </div>
-                    {!incident.time_stopped_to && incident.status !== 'Completed' && (
-                      <p className="text-xs font-bold text-red-700 text-right">Please save restart time before marking complete.</p>
-                    )}
-                    <p className="text-xs text-slate-500 text-right">You can still add updates after marking this incident complete.</p>
-                  </div>
+                  )}
 
                   <div className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-3">
                     <p className="text-sm font-medium text-slate-700">Incident Timeline</p>
