@@ -270,7 +270,7 @@ function TruckTimeRow({
 
 export default function DispatchDetailDrawer({
   dispatch, session, confirmations, timeEntries, templateNotes,
-  onConfirm, onTimeEntry, onOwnerTruckUpdate, companyName: _companyName, open, onClose
+  onConfirm, onTimeEntry, onOwnerTruckUpdate, onAdminEditDispatch, companyName: _companyName, open, onClose
 }) {
   const { currentAppIdentity } = useAuth();
   const [draftTimeEntries, setDraftTimeEntries] = useState({});
@@ -906,6 +906,7 @@ export default function DispatchDetailDrawer({
           dispatch={dispatch}
           displayDate={displayDate}
           isOwner={isOwner}
+          isAdmin={isAdmin}
           isDriverUser={isDriverUser}
           open={open}
           onBack={handleDrawerClose}
@@ -913,6 +914,7 @@ export default function DispatchDetailDrawer({
           isEditingTrucks={isEditingTrucks}
           onReportIncident={handleReportIncident}
           onScreenshotDispatch={handleScreenshotDispatch}
+          onAdminEditDispatch={() => onAdminEditDispatch?.(dispatch)}
         />
 
         <div className="px-5 py-5 space-y-6">

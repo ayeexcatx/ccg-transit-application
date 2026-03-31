@@ -874,13 +874,23 @@ export default function AdminDispatches() {
   const openEdit = async (d) => {
     if (open && editing && editing.id === d.id) {
       toast.message('This dispatch is already open for editing in your session.');
-      return;
+      return false;
     }
 
     const dispatchForEdit = await acquireEditLock(d.id);
-    if (!dispatchForEdit) return;
+    if (!dispatchForEdit) return false;
     setEditing(dispatchForEdit);
     setOpen(true);
+    return true;
+  };
+
+
+  const handleAdminDrawerEdit = async (dispatchToEdit) => {
+    if (!dispatchToEdit) return;
+    const didOpen = await openEdit(dispatchToEdit);
+    if (didOpen) {
+      handleDrawerClose();
+    }
   };
 
   const copyShift = (d) => {
@@ -1172,6 +1182,7 @@ export default function AdminDispatches() {
         templateNotes={templateNotes}
         onConfirm={() => {}}
         onTimeEntry={() => {}}
+        onAdminEditDispatch={handleAdminDrawerEdit}
         companyName={previewDispatch ? companyMap[previewDispatch.company_id] : ''} />
 
     </div>);

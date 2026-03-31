@@ -2,7 +2,7 @@ import React from 'react';
 import { SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, ArrowLeft, Camera, Moon, Sun } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Camera, Moon, Pencil, Sun } from 'lucide-react';
 import DispatchDrawerTutorial from '@/components/tutorial/DispatchDrawerTutorial';
 import { statusBadgeColors } from './statusConfig';
 
@@ -10,6 +10,7 @@ export default function DispatchDrawerTopBar({
   dispatch,
   displayDate,
   isOwner,
+  isAdmin,
   isDriverUser,
   open,
   onBack,
@@ -17,9 +18,11 @@ export default function DispatchDrawerTopBar({
   isEditingTrucks,
   onReportIncident,
   onScreenshotDispatch,
+  onAdminEditDispatch,
 }) {
-  const canShowReportIncident = isDriverUser || isOwner;
-  const canShowScreenshot = isOwner;
+  const canShowAdminEdit = isAdmin && typeof onAdminEditDispatch === 'function';
+  const canShowReportIncident = isDriverUser || isOwner || isAdmin;
+  const canShowScreenshot = isOwner || isAdmin;
 
   return (
     <div className="sticky top-0 z-10 border-b border-slate-200 bg-white">
@@ -37,6 +40,18 @@ export default function DispatchDrawerTopBar({
           </Button>
 
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {canShowAdminEdit && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-lg px-3 text-xs font-medium"
+                onClick={onAdminEditDispatch}
+              >
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Edit
+              </Button>
+            )}
             {canShowReportIncident && (
               <Button
                 type="button"
@@ -63,7 +78,7 @@ export default function DispatchDrawerTopBar({
                 data-tour="dispatch-screenshot"
               >
                 <Camera className="mr-1.5 h-3.5 w-3.5" />
-                {isCreatingScreenshot ? 'Creating…' : 'Screenshot Dispatch'}
+                {isCreatingScreenshot ? 'Creating…' : (isAdmin ? 'Screenshot' : 'Screenshot Dispatch')}
               </Button>
             )}
           </div>
