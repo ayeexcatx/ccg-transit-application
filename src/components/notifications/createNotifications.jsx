@@ -280,6 +280,10 @@ export async function notifyOwnerDriverSeen({
     await Promise.all((ownerCodes || []).map(async (ownerCode) => {
       const relevantTrucks = scopedConfirmedTrucks;
       if (!relevantTrucks.length) return;
+      const effectiveTimes = [...new Set(relevantTrucks
+        .map((truckNumber) => getEffectiveTruckStartTime(dispatch, truckNumber))
+        .filter(Boolean))];
+      const driverSeenStartTime = effectiveTimes.length === 1 ? effectiveTimes[0] : null;
 
       const lineTwo = [
         dispatch.shift_time,
@@ -302,7 +306,7 @@ export async function notifyOwnerDriverSeen({
         recipient_id: ownerCode.id,
         recipient_company_id: dispatch.company_id,
         title,
-        message: `${formatDispatchDateTimeLine(dispatch)}
+        message: `${formatDispatchDateTimeLine(dispatch, 'at', driverSeenStartTime)}
 ${lineTwo}`,
         related_dispatch_id: dispatch.id,
         read_flag: false,

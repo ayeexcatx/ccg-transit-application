@@ -31,6 +31,11 @@ function getEffectiveOverrideField(dispatch, truckNumber, fieldName) {
   return normalizeText(dispatch?.[fieldName]);
 }
 
+export function getTruckOverrideField(dispatch, truckNumber, fieldName) {
+  const override = getTruckOverride(dispatch, truckNumber);
+  return normalizeText(override?.[fieldName]);
+}
+
 export function getEffectiveTruckStartTime(dispatch, truckNumber) {
   return getEffectiveOverrideField(dispatch, truckNumber, 'start_time');
 }

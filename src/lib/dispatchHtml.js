@@ -478,8 +478,9 @@ export const buildDispatchHtml = ({
 
               <div class="label">Start Time</div>
               <div class="value">
-                ${escapeHtml(assignment?.start_time || '—')}
-                ${index === 0 && truckSpecificStartTimes.length > 0 ? `<div style="margin-top:6px">${truckSpecificStartTimes.map((entry) => `<div>${escapeHtml(entry.truck)} — ${escapeHtml(entry.value)}</div>`).join('')}</div>` : ''}
+                ${index === 0 && truckSpecificStartTimes.length > 0
+    ? `<div>${truckSpecificStartTimes.map((entry) => `<div>${escapeHtml(entry.truck)} — ${escapeHtml(entry.value)}</div>`).join('')}</div>`
+    : escapeHtml(assignment?.start_time || '—')}
               </div>
 
               <div class="label">Start Location</div>

@@ -13,6 +13,9 @@ function DetailTextRow({ label, value, valueClassName = '' }) {
 }
 
 function AssignmentDetailBlock({ assignment, iconSize = 'h-4 w-4', textColor = 'text-slate-700' }) {
+  const startTimeRows = Array.isArray(assignment.start_time_rows) ? assignment.start_time_rows : null;
+  const hasStartTimeRows = Boolean(startTimeRows?.length);
+
   return (
     <>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -22,11 +25,21 @@ function AssignmentDetailBlock({ assignment, iconSize = 'h-4 w-4', textColor = '
             <span className="font-semibold text-slate-800">{assignment.job_number}</span>
           </div>
         )}
-        {assignment.start_time && (
+        {(assignment.start_time || hasStartTimeRows) && (
           <div className={`flex items-center gap-2 rounded-lg border border-slate-200/80 bg-white px-3 py-2 text-sm ${textColor}`}>
             <Clock className={`${iconSize} text-slate-400 shrink-0`} />
             <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Start Time</span>
-            <span className="font-medium text-slate-700">{assignment.formatTimeToAmPm(assignment.start_time)}</span>
+            {hasStartTimeRows ? (
+              <div className="space-y-0.5">
+                {startTimeRows.map((row) => (
+                  <p key={row.truckNumber} className="text-xs text-slate-700">
+                    <span className="font-mono">{row.truckNumber}</span> — {assignment.formatTimeToAmPm(row.time) || '—'}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <span className="font-medium text-slate-700">{assignment.formatTimeToAmPm(assignment.start_time)}</span>
+            )}
           </div>
         )}
       </div>
@@ -65,12 +78,15 @@ export default function DispatchDrawerAssignmentsSection({ dispatch, hasAddition
   const primary = { ...dispatch, formatTimeToAmPm, contentTextClass: 'text-slate-700', contentExtraClass: 'leading-relaxed' };
   const assignmentTitle = (dispatch.additional_assignments || []).length > 0 ? 'Assignment 1' : 'Assignment';
   const shouldShowMixedTimes = hasMixedTruckStartTimes(dispatch, visibleTrucks);
-  const truckTimes = shouldShowMixedTimes
+  const startTimeRows = shouldShowMixedTimes
     ? (visibleTrucks || []).map((truckNumber) => ({
       truckNumber,
       time: getEffectiveTruckStartTime(dispatch, truckNumber)
     }))
     : [];
+  if (startTimeRows.length > 0) {
+    primary.start_time_rows = startTimeRows;
+  }
 
   return (
     <section className="space-y-3">
@@ -80,18 +96,6 @@ export default function DispatchDrawerAssignmentsSection({ dispatch, hasAddition
         </div>
         <div className="mt-2.5 space-y-3">
           <AssignmentDetailBlock assignment={primary} />
-          {shouldShowMixedTimes && truckTimes.length > 0 && (
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Truck Start Times</p>
-              <div className="mt-1 space-y-1">
-                {truckTimes.map((entry) => (
-                  <p key={entry.truckNumber} className="text-xs text-slate-700">
-                    <span className="font-mono">{entry.truckNumber}</span> — {formatTimeToAmPm(entry.time) || '—'}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
