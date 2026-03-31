@@ -113,6 +113,10 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
   const isCanceled = normalizedStatus === 'cancelled' || normalizedStatus === 'canceled';
   const isAmended = normalizedStatus === 'amended';
   const showStatusReasonField = isCanceled || isAmended;
+  const isAmendedOrCanceledStatus = (statusValue) => {
+    const normalized = String(statusValue || '').toLowerCase();
+    return normalized === 'amended' || normalized === 'cancelled' || normalized === 'canceled';
+  };
 
   const normalizeAdditionalAssignments = (assignments) => {
     if (!Array.isArray(assignments)) return [];
@@ -425,7 +429,25 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
         </div>
         <div>
           <Label>Status</Label>
-          <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+          <Select
+            value={form.status}
+            onValueChange={(v) => {
+              setForm((prev) => {
+                const fromAmendedOrCanceled = isAmendedOrCanceledStatus(prev.status);
+                const toAmendedOrCanceled = isAmendedOrCanceledStatus(v);
+                const switchedBetweenAmendedAndCanceled =
+                  fromAmendedOrCanceled &&
+                  toAmendedOrCanceled &&
+                  String(prev.status || '').toLowerCase() !== String(v || '').toLowerCase();
+
+                return {
+                  ...prev,
+                  status: v,
+                  canceled_reason: switchedBetweenAmendedAndCanceled ? '' : prev.canceled_reason
+                };
+              });
+            }}
+          >
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Scheduled">Scheduled (pending dispatch)</SelectItem>
