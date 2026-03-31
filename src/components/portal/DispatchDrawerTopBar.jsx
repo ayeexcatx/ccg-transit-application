@@ -25,24 +25,18 @@ export default function DispatchDrawerTopBar({
     <div className="sticky top-0 z-10 border-b border-slate-200 bg-white">
       <div className="px-5 pb-3 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="-ml-2 h-9 rounded-lg px-2.5 text-slate-600 hover:text-slate-900"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="-ml-2 h-9 rounded-lg px-2.5 text-slate-600 hover:text-slate-900"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
 
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-            <DispatchDrawerTutorial
-              isOwner={isOwner}
-              drawerOpen={open}
-              triggerClassName="h-9 rounded-lg px-3 text-xs font-medium"
-            />
-
             {canShowReportIncident && (
               <Button
                 type="button"
@@ -94,6 +88,11 @@ export default function DispatchDrawerTopBar({
           </SheetTitle>
         </SheetHeader>
       </div>
+
+      <DispatchDrawerTutorial
+        isOwner={isOwner}
+        drawerOpen={open}
+      />
     </div>
   );
 }
