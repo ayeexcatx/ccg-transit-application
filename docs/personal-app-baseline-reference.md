@@ -868,10 +868,15 @@ Each card includes:
 
 ## **6\. Status Management**
 
-* **Mark Completed Button**
-  * Marks the incident as completed
-* **Reopen Option**
-  * Allows reopening a completed incident
+* **Admin-only controls**
+  * **Mark Completed Button**
+    * Marks the incident as completed
+  * **Reopen Option**
+    * Allows reopening a completed incident
+* **Company owners and drivers**
+  * Can view incident status
+  * Can add timeline updates
+  * Do not have status-change controls in the incident detail modal
 * Important behavior:
   * Changing status does **not restrict or change functionality**
   * Status is used only for:
