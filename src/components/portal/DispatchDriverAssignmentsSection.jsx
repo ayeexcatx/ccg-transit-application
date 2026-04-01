@@ -84,7 +84,13 @@ export default function DispatchDriverAssignmentsSection({
                     <Button type="button" size="sm" variant="outline" className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => onCancelDispatch(truckNumber)}>Cancel</Button>
                   )}
                   {isDispatchCanceledAndDriverAlreadyAutoCanceled && (
-                    <Button type="button" size="sm" variant="outline" disabled className="h-7 text-xs border-slate-200 text-slate-500">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled
+                      className="h-7 text-xs border-red-500 text-red-600 bg-white cursor-not-allowed hover:bg-white active:bg-white disabled:opacity-100 disabled:border-red-500 disabled:text-red-600 disabled:bg-white disabled:cursor-not-allowed"
+                    >
                       Already canceled
                     </Button>
                   )}
