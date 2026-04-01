@@ -17,6 +17,8 @@ import { format } from 'date-fns';
 import { calculateCompanyScore, SCORING_EVENT_TYPES, SCORING_PERIODS } from '@/lib/companyScoring';
 import { getCompanySmsContact, getDriverSmsState } from '@/lib/sms';
 import { validateAdminAccessCode } from '@/lib/adminAccessCodeValidation';
+import { reviewCompanyProfileChangeRequest } from '@/services/companyProfileChangeReviewService';
+import { toast } from 'sonner';
 
 const CONTACT_TYPE_OPTIONS = ['Office', 'Cell', 'Email', 'Fax', 'Other'];
 const PHONE_CONTACT_TYPES = ['Office', 'Cell', 'Fax'];
@@ -127,8 +129,6 @@ const InfoValueCard = ({ label, value, icon: Icon, tone = 'neutral', badge }) =>
   </div>
 );
 
-
-const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj || {}, key);
 
 const renderContactMethodsList = (contactMethods = [], fallbackText = '') => {
   if (Array.isArray(contactMethods) && contactMethods.some((method) => method?.value)) {
@@ -345,7 +345,7 @@ export default function AdminCompanies() {
   const [truckInput, setTruckInput] = useState('');
   const [periodKey, setPeriodKey] = useState('last30');
   const [selectedScoringCompany, setSelectedScoringCompany] = useState(null);
-  const [selectedCompanyDetail, setSelectedCompanyDetail] = useState(null);
+  const [selectedCompanyDetailId, setSelectedCompanyDetailId] = useState(null);
   const [eventForm, setEventForm] = useState(initialEventForm);
   const [companyPendingDelete, setCompanyPendingDelete] = useState(null);
   const [deleteAdminCode, setDeleteAdminCode] = useState('');
@@ -375,31 +375,14 @@ export default function AdminCompanies() {
   });
 
   const reviewProfileChangeMutation = useMutation({
-    mutationFn: async ({ company, action }) => {
-      const pending = company?.pending_profile_change;
-      if (!pending) return company;
-      if (action === 'approve') {
-        const reviewTimestamp = new Date().toISOString();
-        const approvedPayload = {
-          pending_profile_change: { ...pending, status: 'Approved', reviewed_at: reviewTimestamp },
-        };
-
-        if (hasOwn(pending, 'requested_name')) approvedPayload.name = pending.requested_name;
-        if (hasOwn(pending, 'requested_address')) approvedPayload.address = pending.requested_address;
-        if (hasOwn(pending, 'requested_contact_methods')) approvedPayload.contact_methods = pending.requested_contact_methods;
-        if (hasOwn(pending, 'requested_contact_info')) approvedPayload.contact_info = pending.requested_contact_info;
-
-        const approvedCompany = await base44.entities.Company.update(company.id, approvedPayload);
-        await base44.entities.Company.update(company.id, { pending_profile_change: null });
-        return approvedCompany;
-      }
-      return base44.entities.Company.update(company.id, {
-        pending_profile_change: { ...pending, status: 'Rejected', reviewed_at: new Date().toISOString() },
-      });
-    },
-    onSuccess: () => {
+    mutationFn: ({ companyId, action }) => reviewCompanyProfileChangeRequest({ companyId, action }),
+    onSuccess: (updatedCompany, { action }) => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       queryClient.invalidateQueries({ queryKey: ['access-codes'] });
+      toast.success(action === 'approve' ? 'Profile change approved' : 'Profile change rejected');
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Unable to review company profile request');
     },
   });
 
@@ -449,6 +432,7 @@ export default function AdminCompanies() {
   }, new Map()), [drivers]);
 
   const sortedCompanies = useMemo(() => companies.slice().sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })), [companies]);
+  const selectedCompanyDetail = useMemo(() => companies.find((company) => company.id === selectedCompanyDetailId) || null, [companies, selectedCompanyDetailId]);
   const accessCodeById = useMemo(() => accessCodes.reduce((map, code) => {
     map.set(code.id, code);
     return map;
@@ -556,7 +540,7 @@ export default function AdminCompanies() {
           ) : (
             <div className="grid gap-4">
               {companies.map((c) => (
-                <Card key={c.id} className="group relative cursor-pointer overflow-hidden border border-slate-200/90 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg" onClick={() => setSelectedCompanyDetail(c)}>
+                <Card key={c.id} className="group relative cursor-pointer overflow-hidden border border-slate-200/90 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg" onClick={() => setSelectedCompanyDetailId(c.id)}>
                   <div className="absolute inset-y-0 left-0 w-1 bg-slate-900/75 transition-colors group-hover:bg-slate-900" />
                   <CardContent className="p-5 sm:p-6">
                     <div className="flex items-start justify-between gap-3">
@@ -696,7 +680,7 @@ export default function AdminCompanies() {
         </DialogContent>
       </Dialog>
 
-      <Sheet open={!!selectedCompanyDetail} onOpenChange={(openState) => !openState && setSelectedCompanyDetail(null)}>
+      <Sheet open={!!selectedCompanyDetailId} onOpenChange={(openState) => !openState && setSelectedCompanyDetailId(null)}>
         <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{selectedCompanyDetail?.name || 'Company'} Details</SheetTitle>
@@ -832,8 +816,8 @@ export default function AdminCompanies() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" className="bg-slate-900 hover:bg-slate-800" onClick={() => reviewProfileChangeMutation.mutate({ company: selectedCompanyDetail, action: 'approve' })} disabled={reviewProfileChangeMutation.isPending}>Approve</Button>
-                      <Button size="sm" variant="outline" onClick={() => reviewProfileChangeMutation.mutate({ company: selectedCompanyDetail, action: 'reject' })} disabled={reviewProfileChangeMutation.isPending}>Reject</Button>
+                      <Button size="sm" className="bg-slate-900 hover:bg-slate-800" onClick={() => reviewProfileChangeMutation.mutate({ companyId: selectedCompanyDetail.id, action: 'approve' })} disabled={reviewProfileChangeMutation.isPending}>Approve</Button>
+                      <Button size="sm" variant="outline" onClick={() => reviewProfileChangeMutation.mutate({ companyId: selectedCompanyDetail.id, action: 'reject' })} disabled={reviewProfileChangeMutation.isPending}>Reject</Button>
                     </div>
                   </CardContent>
                 </Card>
