@@ -488,6 +488,13 @@ function parseStatusFromDedupKey(notification) {
   return parseStatusFromDispatchStatusKey(notification?.dispatch_status_key);
 }
 
+function resolveNotificationStatus(notification) {
+  const parsedStatus = parseStatusFromDedupKey(notification);
+  if (parsedStatus) return parsedStatus;
+  const confirmationType = String(notification?.confirmation_type || '').trim();
+  return confirmationType || '';
+}
+
 async function resolveStaleOwnerStatusNotifications(dispatchId, ownerAccessCodeId, currentStatus) {
   const ownerNotifications = await base44.entities.Notification.filter({
     recipient_type: 'AccessCode',
@@ -498,10 +505,10 @@ async function resolveStaleOwnerStatusNotifications(dispatchId, ownerAccessCodeI
     if (notification.read_flag) return false;
     if (NON_CONFIRMATION_CATEGORIES.has(notification.notification_category)) return false;
 
-    const recipientId = notification.recipient_access_code_id || notification.recipient_id;
-    if (recipientId !== ownerAccessCodeId) return false;
+    const recipientId = String(notification.recipient_access_code_id || notification.recipient_id || '');
+    if (recipientId !== String(ownerAccessCodeId || '')) return false;
 
-    const notificationStatus = parseStatusFromDedupKey(notification);
+    const notificationStatus = resolveNotificationStatus(notification);
     if (!notificationStatus) return false;
     return notificationStatus !== currentStatus;
   });

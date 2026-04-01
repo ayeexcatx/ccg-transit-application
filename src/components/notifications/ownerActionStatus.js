@@ -67,6 +67,8 @@ export function getOwnerNotificationActionStatus({
   const isConfirmationNotification = !NON_CONFIRMATION_NOTIFICATION_CATEGORIES.has(notification?.notification_category);
   const dispatchId = notification?.related_dispatch_id;
   const status = parseStatusFromDedupKey(notification);
+  const currentDispatchStatus = String(dispatch?.status || '').trim();
+  const isSupersededByCurrentStatus = Boolean(currentDispatchStatus && status && status !== currentDispatchStatus);
 
   if (!isOwnerNotification || !isConfirmationNotification || !dispatchId || !status) {
     return {
@@ -79,6 +81,20 @@ export function getOwnerNotificationActionStatus({
       done: 0,
       needsAction: !notification?.read_flag,
       effectiveReadFlag: Boolean(notification?.read_flag),
+    };
+  }
+
+  if (isSupersededByCurrentStatus) {
+    return {
+      isOwnerConfirmationNotification: true,
+      status,
+      requiredTrucks: [],
+      confirmedTrucks: [],
+      pendingTrucks: [],
+      total: 0,
+      done: 0,
+      needsAction: false,
+      effectiveReadFlag: true,
     };
   }
 
