@@ -1,5 +1,6 @@
 import {
   buildConfirmedTruckSetForStatus,
+  uniqueTruckNumbers,
   parseStatusFromDispatchStatusKey,
   reconcileRequiredTruckList,
 } from './confirmationStateHelpers';
@@ -16,21 +17,25 @@ const dedupeTruckRows = (rows) => {
 };
 
 const parseStatusFromDedupKey = (notification) => parseStatusFromDispatchStatusKey(notification?.dispatch_status_key);
+const normalizeId = (value) => String(value ?? '').trim();
+const normalizeStatus = (value) => String(value ?? '').trim();
 
 const resolveRequiredTrucks = (notification, dispatch, ownerScopeTrucks = []) => {
   const baseRequired = Array.isArray(notification?.required_trucks)
     ? notification.required_trucks
     : [];
 
-  if (!baseRequired.length) return [];
+  const dispatchTrucks = uniqueTruckNumbers(dispatch?.trucks_assigned || []);
+  const sourceRequired = baseRequired.length ? baseRequired : dispatchTrucks;
+  if (!sourceRequired.length) return [];
   if (!ownerScopeTrucks?.length) {
-    const dispatchTruckSet = new Set(dispatch?.trucks_assigned || []);
-    return baseRequired.filter((truck) => dispatchTruckSet.has(truck));
+    const dispatchTruckSet = new Set(dispatchTrucks);
+    return sourceRequired.filter((truck) => dispatchTruckSet.has(truck));
   }
 
   return reconcileRequiredTruckList({
-    existingRequired: baseRequired,
-    dispatchTrucks: dispatch?.trucks_assigned || [],
+    existingRequired: sourceRequired,
+    dispatchTrucks,
     ownerAllowedTrucks: ownerScopeTrucks,
   });
 };
@@ -42,9 +47,9 @@ export function buildOpenConfirmationRows({
   companies = [],
   accessCodes = [],
 }) {
-  const dispatchById = new Map(dispatches.map((dispatch) => [dispatch.id, dispatch]));
+  const dispatchById = new Map(dispatches.map((dispatch) => [normalizeId(dispatch.id), dispatch]));
   const companyById = new Map(companies.map((company) => [company.id, company]));
-  const accessCodeById = new Map(accessCodes.map((accessCode) => [accessCode.id, accessCode]));
+  const accessCodeById = new Map(accessCodes.map((accessCode) => [normalizeId(accessCode.id), accessCode]));
 
   const rows = [];
 
@@ -54,14 +59,14 @@ export function buildOpenConfirmationRows({
 
     if (!isOwnerNotification || !isConfirmationCategory) return;
 
-    const status = parseStatusFromDedupKey(notification);
+    const status = normalizeStatus(parseStatusFromDedupKey(notification));
     if (!status) return;
 
-    const dispatch = dispatchById.get(notification.related_dispatch_id);
+    const dispatch = dispatchById.get(normalizeId(notification.related_dispatch_id));
     if (!dispatch) return;
-    if (String(dispatch.status || '').trim() !== status) return;
+    if (normalizeStatus(dispatch.status) !== status) return;
 
-    const ownerCodeId = notification.recipient_access_code_id || notification.recipient_id;
+    const ownerCodeId = normalizeId(notification.recipient_access_code_id || notification.recipient_id);
     const ownerCode = accessCodeById.get(ownerCodeId);
     if (ownerCode && ownerCode.code_type !== 'CompanyOwner') return;
     const ownerCompany = companyById.get(dispatch.company_id);

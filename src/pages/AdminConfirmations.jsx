@@ -10,6 +10,7 @@ import { statusBadgeColors } from '@/components/portal/statusConfig';
 import { useAdminDispatchDrawer } from '@/components/portal/AdminDispatchDrawerContext';
 
 const EASTERN_TIMEZONE = 'America/New_York';
+const normalizeId = (value) => String(value ?? '').trim();
 
 function parseUtcTimestamp(value) {
   if (!value) return null;
@@ -205,7 +206,7 @@ export default function AdminConfirmations() {
   });
 
   const dispatchById = useMemo(
-    () => new Map(dispatches.map((dispatch) => [dispatch.id, dispatch])),
+    () => new Map(dispatches.map((dispatch) => [normalizeId(dispatch.id), dispatch])),
     [dispatches]
   );
 
@@ -220,17 +221,17 @@ export default function AdminConfirmations() {
   );
 
   const validDispatchIds = useMemo(
-    () => new Set(dispatches.map((dispatch) => dispatch.id)),
+    () => new Set(dispatches.map((dispatch) => normalizeId(dispatch.id))),
     [dispatches]
   );
 
   const filteredNotifications = useMemo(() => notifications.filter((notification) => {
     if (!notification.related_dispatch_id) return true;
-    return validDispatchIds.has(notification.related_dispatch_id);
+    return validDispatchIds.has(normalizeId(notification.related_dispatch_id));
   }), [notifications, validDispatchIds]);
 
   const filteredConfirmations = useMemo(() => confirmations.filter((confirmation) =>
-    validDispatchIds.has(confirmation.dispatch_id)
+    validDispatchIds.has(normalizeId(confirmation.dispatch_id))
   ), [confirmations, validDispatchIds]);
 
   const openRows = useMemo(() => buildOpenConfirmationRows({
@@ -243,7 +244,7 @@ export default function AdminConfirmations() {
 
   const historyRows = useMemo(() => filteredConfirmations
     .map((confirmation) => {
-      const dispatch = dispatchById.get(confirmation.dispatch_id);
+      const dispatch = dispatchById.get(normalizeId(confirmation.dispatch_id));
       if (!dispatch) return null;
 
       const accessCodeId = confirmation.access_code_id || confirmation.confirmed_by_access_code_id;
