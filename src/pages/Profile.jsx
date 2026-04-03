@@ -92,6 +92,7 @@ function ContactMethodEditor({ methods, setMethods, smsIndex, setSmsIndex, readO
         return (
           <div key={`contact-method-${index}`} className="rounded-lg border border-slate-200 p-3 bg-white space-y-2">
             <div className="flex items-center justify-between gap-3">
+              <Input value={method.name || ''} readOnly={readOnly} placeholder="Contact name" onChange={(e) => updateMethod(index, 'name', e.target.value)} />
               <Select value={method.type} disabled={readOnly} onValueChange={(value) => updateMethod(index, 'type', value)}>
                 <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                 <SelectContent>{CONTACT_TYPE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
@@ -412,7 +413,7 @@ function CompanyOwnerProfile({ session }) {
   const profileCompanyId = ownerWorkspaceCompanyId ?? null;
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', address: '', contact_methods: [{ type: 'Office', value: '' }] });
+  const [form, setForm] = useState({ name: '', address: '', contact_methods: [{ name: '', type: 'Office', value: '' }] });
   const [smsIndex, setSmsIndex] = useState(0);
 
   const { data: companies = [] } = useQuery({
@@ -540,7 +541,7 @@ function CompanyOwnerProfile({ session }) {
               <Label>Contact info</Label>
               <p className="text-xs text-slate-500 mb-2">Select which phone contact should be used for company owner SMS.</p>
               <ContactMethodEditor methods={form.contact_methods} setMethods={(updater) => setForm((prev) => ({ ...prev, contact_methods: typeof updater === 'function' ? updater(prev.contact_methods) : updater }))} smsIndex={smsIndex} setSmsIndex={setSmsIndex} />
-              <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setForm((prev) => ({ ...prev, contact_methods: [...prev.contact_methods, { type: 'Office', value: '' }] }))}>Add Contact</Button>
+              <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setForm((prev) => ({ ...prev, contact_methods: [...prev.contact_methods, { name: '', type: 'Office', value: '' }] }))}>Add Contact</Button>
             </div>
           </div>
           <DialogFooter>
