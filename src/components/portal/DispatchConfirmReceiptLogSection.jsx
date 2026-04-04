@@ -17,7 +17,7 @@ export default function DispatchConfirmReceiptLogSection({
 
   return (
     <section data-tour="dispatch-confirm-receipt" className="rounded-xl border border-slate-200 bg-white p-3 sm:p-3.5">
-      <p className="bg-stone-600 text-slate-50 mb-2 text-xs uppercase tracking-wide flex items-center gap-1.5">
+      <p className="bg-slate-50 text-slate-500 mb-2 text-xs uppercase tracking-wide flex items-center gap-1.5">
         <CheckCircle2 className="h-3.5 w-3.5 text-slate-400" />
         Confirm Receipt — <span className="text-slate-700">{currentConfType}</span>
       </p>
