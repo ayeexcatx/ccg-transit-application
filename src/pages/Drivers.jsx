@@ -53,7 +53,7 @@ export default function Drivers() {
   const [driverToDelete, setDriverToDelete] = useState(null);
   const [helpLanguage, setHelpLanguage] = useState('en');
   const appShareMessage =
-    'You have been invited to install the CCG Transit app. Please click on the link below and follow the instructions to install it on your phone or device. Please request the access code from your employer.\n\napp.ccgnj.com';
+    'Hi there,\n\nI am sharing with you the link to install the new CCG Transit app. Please click on the link below and follow the instructions to install it on your device.\n\nI will be sharing an access code with you, which you will need the first time you log in.\n\nhttps://app.ccgnj.com';
 
   const { data: drivers = [], isLoading } = useQuery({
     queryKey: ['drivers', activeCompanyId],
@@ -199,7 +199,6 @@ export default function Drivers() {
       try {
         await navigator.share({
           text: appShareMessage,
-          url: 'https://app.ccgnj.com',
         });
         return;
       } catch (error) {
@@ -225,9 +224,19 @@ export default function Drivers() {
             After you add a driver, you must click on Create Access Code. This will create a unique code to be given to your driver, which they will use after they sign up and log into the app.
           </p>
           <p className="text-sm text-slate-600">To share the app with them, use the link below.</p>
-          <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={handleShareAppLink}>
-            <Share2 className="h-4 w-4 mr-1" />Share App Link
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={handleShareAppLink}>
+              <Share2 className="h-4 w-4 mr-1" />Share App Link
+            </Button>
+            <a
+              href="https://app.ccgnj.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline text-sm"
+            >
+              or go to app.ccgnj.com
+            </a>
+          </div>
         </div>
         <Button onClick={openCreate} className="w-full bg-slate-900 hover:bg-slate-800 sm:w-auto">
           <Plus className="h-4 w-4 mr-1" />Add Driver
