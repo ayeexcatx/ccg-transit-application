@@ -481,7 +481,8 @@ export default function Incidents() {
           <p className="text-sm text-slate-500">View and create incident reports.
 
 An incident report should be created whenever there is an event that causes an irregularity in the operations. 
-We recommend that reports get created right after notifying the dispatcher of the incident. </p>
+We recommend that reports get created right after notifying the dispatcher of the incident. 
+As the incident progresses or gets resolved, you can c</p>
         </div>
         {!isDriver && <Button onClick={() => setCreateOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
@@ -508,8 +509,7 @@ We recommend that reports get created right after notifying the dispatcher of th
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All types</SelectItem>
-                {INCIDENT_TYPES.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>
-                )}
+                {INCIDENT_TYPES.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
