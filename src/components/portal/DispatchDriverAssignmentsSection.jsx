@@ -38,7 +38,11 @@ export default function DispatchDriverAssignmentsSection({
         <UserCog className="h-3.5 w-3.5 text-slate-400" />
         Driver Dispatch Assignments
       </p>
-      <p className="text-xs text-slate-500">Select a driver to stage. Use <span className="font-medium text-slate-700">Send</span> to deliver; use <span className="font-medium text-slate-700">Cancel</span> to remove delivery access.</p>
+      <p className="text-xs text-slate-500">
+        <span className="block">Select a driver. Then click Send to deliver the dispatch.</span>
+        <span className="block">Click Cancel to remove the driver and the dispatch from the driver’s portal.</span>
+        <span className="block">Please read all of the information on the driver’s page before assigning drivers.</span>
+      </p>
       {eligibleDrivers.length === 0 && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2">
           Create and activate a driver access code first.

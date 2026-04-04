@@ -21,6 +21,9 @@ export default function DispatchConfirmReceiptLogSection({
         <CheckCircle2 className="h-3.5 w-3.5 text-slate-400" />
         Confirm Receipt — <span className="text-slate-700">{currentConfType}</span>
       </p>
+      <p className="text-xs text-slate-500 mb-2.5">
+        Please confirm receipt for each truck shown. You will have to confirm any time there is a change or update to this dispatch.
+      </p>
       <div className="space-y-2">
         {myTrucks.map(truck => {
           const confirmed = isTruckConfirmedForCurrent(truck);

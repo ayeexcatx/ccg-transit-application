@@ -977,7 +977,7 @@ export default function DispatchDetailDrawer({
                     <div className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2.5">
                       <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700">
                         <Settings2 className="h-3.5 w-3.5 text-slate-500" />
-                        Operations Panel
+                        Operations Panel for Owners Only
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
                         Internal workflow controls for owner/admin use. These tools are not part of the formal dispatch record.
