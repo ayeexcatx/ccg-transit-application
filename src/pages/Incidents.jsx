@@ -478,12 +478,12 @@ export default function Incidents() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold text-slate-900">Incidents</h2>
-          <p className="text-sm text-slate-500">View and create incident reports.
+          <p className="text-sm text-slate-500">View and create incident reports. 
 
-An incident report should be created whenever there is an event that causes an irregularity in the operations. 
 
-We recommend that reports get created right after notifying the dispatcher of the incident. 
-As the incident progresses or gets resolved, you can reopen the incident to add updates and/or the time you restarted.</p>
+
+
+          </p>
         </div>
         {!isDriver && <Button onClick={() => setCreateOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
