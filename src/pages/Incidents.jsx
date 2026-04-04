@@ -480,7 +480,7 @@ export default function Incidents() {
           <h2 className="text-2xl font-semibold text-slate-900">Incidents</h2>
           <p className="text-sm text-slate-500">View and create incident reports.
 
-</p>
+An incident report should be created whenever there is an event t</p>
         </div>
         {!isDriver && <Button onClick={() => setCreateOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
