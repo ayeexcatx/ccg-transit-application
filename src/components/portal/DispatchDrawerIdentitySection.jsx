@@ -54,7 +54,7 @@ export default function DispatchDrawerIdentitySection({
             <div className="mb-1 rounded-md border border-slate-700/50 bg-gradient-to-r from-slate-700/85 via-slate-700/65 to-slate-700/15 px-2.5 py-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-100">Truck Assignments</p>
             </div>
-            <p className="text-xs text-slate-500">Below are the trucks assigned to this dispatch. Click Edit Trucks to c</p>
+            <p className="text-xs text-slate-500">Below are the trucks assigned to this dispatch. Click Edit Trucks to change them.</p>
           </div>
         </div>
 
