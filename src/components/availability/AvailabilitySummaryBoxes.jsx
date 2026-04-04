@@ -123,22 +123,23 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
       };
     }
 
-    const ownerRow = box.rows[0];
-    if (!ownerRow) {
-      const resolved = resolveAvailabilityForCompanyShift({
-        companyId,
-        date: box.date,
-        shift: box.shift,
-        defaultMap: compactDefaultMap,
-        overrideMap: compactOverrideMap,
-      });
+    const resolved = resolveAvailabilityForCompanyShift({
+      companyId,
+      date: box.date,
+      shift: box.shift,
+      defaultMap: compactDefaultMap,
+      overrideMap: compactOverrideMap,
+    });
 
-      if (resolved.status !== STATUS_AVAILABLE) return { ...box, rowLabel: `${dayLabel} — ${box.shift} Shift`, value: 'Unavailable' };
-      if (normalizeCount(resolved.available_truck_count)) return { ...box, rowLabel: `${dayLabel} — ${box.shift} Shift`, value: String(normalizeCount(resolved.available_truck_count)) };
-      return { ...box, rowLabel: `${dayLabel} — ${box.shift} Shift`, value: 'Available' };
+    let value;
+    if (resolved.status !== STATUS_AVAILABLE) {
+      value = 'Unavailable';
+    } else {
+      const count = normalizeCount(resolved.available_truck_count);
+      value = count !== null ? String(count) : '0';
     }
 
-    return { ...box, rowLabel: `${dayLabel} — ${box.shift} Shift`, value: String(ownerRow.total) };
+    return { ...box, rowLabel: `${dayLabel} — ${box.shift} Shift`, value };
   }), [summaryData, companyId, compactDefaultMap, compactOverrideMap]);
 
   if (variant === 'ownerCompact') {
