@@ -475,16 +475,16 @@ export default function Incidents() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="space-y-3 w-full">
+      <div className="flex items-center justify-between gap-3">
+        <div className="space-y-3">
           <h2 className="text-2xl font-semibold text-slate-900">Incidents</h2>
-          <Card className="w-full md:max-w-2xl bg-sky-50/70 border-sky-100">
+          <Card className="bg-sky-50/70 border-sky-100">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="h-4 w-4 text-sky-700 mt-0.5 shrink-0" />
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-sky-800">When to create an incident</p>
-                  <ul className="text-sm leading-relaxed text-slate-700 list-disc pl-5 space-y-1">
+                  <ul className="text-sm text-slate-700 list-disc pl-5 space-y-1">
                     <li>Create an incident report whenever something disrupts normal operations (breakdowns, delays, accidents, inspections, etc.)</li>
                     <li>Submit the report immediately after notifying the dispatcher</li>
                     <li>Reopen the incident to add updates as the situation progresses or is resolved</li>
@@ -498,7 +498,7 @@ export default function Incidents() {
             </CardContent>
           </Card>
         </div>
-        {!isDriver && <Button onClick={() => setCreateOpen(true)} className="gap-2 self-start sm:self-auto">
+        {!isDriver && <Button onClick={() => setCreateOpen(true)} className="bg-primary text-primary-foreground px-8 py-2 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow hover:bg-primary/90 h-9 gap-2 self-start sm:self-auto">
             <Plus className="h-4 w-4" />
             Create Incident
           </Button>}
