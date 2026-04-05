@@ -73,7 +73,7 @@ function DriverAccessCodeRow({ accessCodeValue, revealed, onToggleReveal, onCopy
 
   return (
     <div className="bg-transparent text-slate-600 text-sm flex items-center gap-1.5 sm:gap-2">
-      <span className="text-slate-500 shrink-0">{desktop ? 'Access Code:' : 'Access Code'}</span>
+      <span className="text-red-600 font-medium shrink-0">{desktop ? 'Access Code:' : 'Access Code'}</span>
       <code className="min-w-0 rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold tracking-wider text-slate-800">
         {revealed ? accessCodeValue : '••••••••'}
       </code>
