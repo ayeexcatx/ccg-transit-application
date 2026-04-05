@@ -84,11 +84,17 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
     return '';
   };
 
-  const activeCompaniesSorted = useMemo(() =>
-    [...(companies || [])]
+  const activeCompaniesSorted = useMemo(() => {
+    const rawCompanyNames = (companies || []).map((c) => c?.name);
+    const sortedCompanies = [...(companies || [])]
       .filter((c) => c.status === 'active')
-      .sort((a, b) => String(a?.name || '').trim().localeCompare(String(b?.name || '').trim(), undefined, { sensitivity: 'base' })),
-  [companies]);
+      .sort((a, b) => String(a?.name || '').trim().localeCompare(String(b?.name || '').trim(), undefined, { sensitivity: 'base' }));
+
+    console.log('Raw companies (incoming order):', rawCompanyNames);
+    console.log('Sorted companies (active + sorted):', sortedCompanies.map((c) => c?.name));
+
+    return sortedCompanies;
+  }, [companies]);
 
   const selectedCompany = companies.find((c) => c.id === form.company_id);
   const availableTrucks = selectedCompany?.trucks || [];
