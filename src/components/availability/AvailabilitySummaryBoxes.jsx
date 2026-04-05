@@ -10,34 +10,34 @@ import {
   getOperationalShifts,
   normalizeCount,
   resolveAvailabilityForCompanyShift,
-  toDateKey,
-} from './availabilityRules';
+  toDateKey } from
+'./availabilityRules';
 
 export default function AvailabilitySummaryBoxes({ companyId = null, includeAllCompanies = false, variant = 'default', referenceDate = null }) {
   const { data: companies = [] } = useQuery({
     queryKey: ['availability-summary-companies', companyId, includeAllCompanies],
-    queryFn: () => base44.entities.Company.list(),
+    queryFn: () => base44.entities.Company.list()
   });
 
   const { data: defaults = [] } = useQuery({
     queryKey: ['availability-summary-defaults'],
-    queryFn: () => base44.entities.CompanyAvailabilityDefault.list('-created_date', 5000),
+    queryFn: () => base44.entities.CompanyAvailabilityDefault.list('-created_date', 5000)
   });
 
   const { data: overrides = [] } = useQuery({
     queryKey: ['availability-summary-overrides'],
-    queryFn: () => base44.entities.CompanyAvailabilityOverride.list('-created_date', 5000),
+    queryFn: () => base44.entities.CompanyAvailabilityOverride.list('-created_date', 5000)
   });
 
   const { data: dispatches = [] } = useQuery({
     queryKey: ['availability-summary-dispatches'],
-    queryFn: () => base44.entities.Dispatch.list('-date', 1000),
+    queryFn: () => base44.entities.Dispatch.list('-date', 1000)
   });
 
   const summaryData = useMemo(() => {
-    const eligibleCompanies = includeAllCompanies
-      ? companies
-      : companies.filter((company) => company.id === companyId);
+    const eligibleCompanies = includeAllCompanies ?
+    companies :
+    companies.filter((company) => company.id === companyId);
 
     const defaultMap = new Map();
     defaults.forEach((d) => defaultMap.set(`${d.company_id}-${d.weekday}-${d.shift}`, d));
@@ -56,38 +56,38 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
           total: 0,
           dispatched: 0,
           remaining: 0,
-          rows: [],
+          rows: []
         };
       }
 
-      const rows = eligibleCompanies
-        .map((company) => {
-          const resolved = resolveAvailabilityForCompanyShift({
-            companyId: company.id,
-            date: target.date,
-            shift: target.shift,
-            defaultMap,
-            overrideMap,
-          });
+      const rows = eligibleCompanies.
+      map((company) => {
+        const resolved = resolveAvailabilityForCompanyShift({
+          companyId: company.id,
+          date: target.date,
+          shift: target.shift,
+          defaultMap,
+          overrideMap
+        });
 
-          if (resolved.status !== STATUS_AVAILABLE) return null;
+        if (resolved.status !== STATUS_AVAILABLE) return null;
 
-          const total = normalizeCount(resolved.available_truck_count);
-          if (!total) return null;
+        const total = normalizeCount(resolved.available_truck_count);
+        if (!total) return null;
 
-          const dispatched = countUsedTrucksForCompanyShift(dispatches, company.id, dateKey, target.shift);
-          const remaining = Math.max(total - dispatched, 0);
+        const dispatched = countUsedTrucksForCompanyShift(dispatches, company.id, dateKey, target.shift);
+        const remaining = Math.max(total - dispatched, 0);
 
-          return {
-            companyId: company.id,
-            companyName: company.name || company.id,
-            total,
-            dispatched,
-            remaining,
-          };
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.companyName.localeCompare(b.companyName));
+        return {
+          companyId: company.id,
+          companyName: company.name || company.id,
+          total,
+          dispatched,
+          remaining
+        };
+      }).
+      filter(Boolean).
+      sort((a, b) => a.companyName.localeCompare(b.companyName));
 
       return {
         ...target,
@@ -95,7 +95,7 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
         total: rows.reduce((sum, row) => sum + row.total, 0),
         dispatched: rows.reduce((sum, row) => sum + row.dispatched, 0),
         remaining: rows.reduce((sum, row) => sum + row.remaining, 0),
-        rows,
+        rows
       };
     });
   }, [companies, companyId, defaults, dispatches, includeAllCompanies, overrides, referenceDate]);
@@ -120,7 +120,7 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
       return {
         ...box,
         rowLabel: `${dayLabel} (${dateLabel}) — ${box.shift} Shift`,
-        value: 'N/A',
+        value: 'N/A'
       };
     }
 
@@ -129,7 +129,7 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
       date: box.date,
       shift: box.shift,
       defaultMap: compactDefaultMap,
-      overrideMap: compactOverrideMap,
+      overrideMap: compactOverrideMap
     });
 
     let value;
@@ -147,13 +147,13 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
     return (
       <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
         <CardContent className="p-0">
-          <div className="border-b border-slate-200/80 bg-slate-50/80 px-4 py-3">
+          <div className="bg-lime-200 px-4 py-3 border-b border-slate-200/80">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Availability Snapshot</p>
             <p className="mt-1 text-sm font-semibold leading-tight text-slate-900">Number of trucks available</p>
           </div>
           <div className="space-y-2 px-4 py-3">
-            {compactRows.map((row, index) => (
-              <React.Fragment key={`${row.label}-${row.dateKey}-${row.shift}`}>
+            {compactRows.map((row, index) =>
+            <React.Fragment key={`${row.label}-${row.dateKey}-${row.shift}`}>
                 {index === 2 && <div className="my-1.5 border-t border-dashed border-slate-200/90" />}
                 <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5">
                   <p className="text-[13px] font-medium leading-snug text-slate-700">{row.rowLabel}</p>
@@ -162,20 +162,20 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
                   </p>
                 </div>
               </React.Fragment>
-            ))}
+            )}
           </div>
         </CardContent>
-      </Card>
-    );
+      </Card>);
+
   }
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {summaryData.map((box) => (
-        <Card
-          key={`${box.label}-${box.dateKey}-${box.shift}`}
-          className="overflow-hidden border-slate-200 bg-white shadow-sm"
-        >
+      {summaryData.map((box) =>
+      <Card
+        key={`${box.label}-${box.dateKey}-${box.shift}`}
+        className="overflow-hidden border-slate-200 bg-white shadow-sm">
+        
           <CardContent className="p-0">
             <div className="border-b border-slate-200/80 bg-slate-50/80 px-3.5 py-3">
               <p className="text-sm font-semibold leading-tight text-slate-900">{box.label}</p>
@@ -198,27 +198,27 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
                 </div>
               </div>
 
-              {box.rows.length === 0 ? (
-                <div className="rounded-md border border-dashed border-slate-200 bg-slate-50/70 px-3 py-2 text-center">
+              {box.rows.length === 0 ?
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50/70 px-3 py-2 text-center">
                   <p className="text-[11px] font-medium text-slate-500">No counted availability</p>
-                </div>
-              ) : (
-                <ul className="space-y-1.5">
-                  {box.rows.map((row) => (
-                    <li
-                      key={`${box.label}-${row.companyId}`}
-                      className="rounded-md bg-slate-50/70 px-2.5 py-2 text-[11px] leading-snug text-slate-600"
-                    >
+                </div> :
+
+            <ul className="space-y-1.5">
+                  {box.rows.map((row) =>
+              <li
+                key={`${box.label}-${row.companyId}`}
+                className="rounded-md bg-slate-50/70 px-2.5 py-2 text-[11px] leading-snug text-slate-600">
+                
                       <span className="font-medium text-slate-700">{row.companyName}</span>
                       <span> — {row.total} total, {row.dispatched} dispatched, {row.remaining} remaining</span>
                     </li>
-                  ))}
-                </ul>
               )}
+                </ul>
+            }
             </div>
           </CardContent>
         </Card>
-      ))}
-    </div>
-  );
+      )}
+    </div>);
+
 }
