@@ -21,7 +21,7 @@ const defaultForm = {
   phone: '',
   owner_sms_enabled: false,
   notes: '',
-  status: 'Active',
+  status: 'Active'
 };
 
 function generateCode(len = 8) {
@@ -36,7 +36,7 @@ async function syncDriverAccessCode(driver) {
   const smsState = getDriverSmsState(driver);
   await base44.entities.AccessCode.update(driver.access_code_id, {
     sms_enabled: smsState.effective,
-    sms_phone: smsState.normalizedPhone || '',
+    sms_phone: smsState.normalizedPhone || ''
   });
 }
 
@@ -53,28 +53,28 @@ export default function Drivers() {
   const [driverToDelete, setDriverToDelete] = useState(null);
   const [helpLanguage, setHelpLanguage] = useState('en');
   const appShareMessage =
-    'Hi there,\n\nI am sharing with you the link to install the new CCG Transit app. Please click on the link below and follow the instructions to install it on your device.\n\nI will be sharing an access code with you, which you will need the first time you log in.\n\nhttps://app.ccgnj.com';
+  'Hi there,\n\nI am sharing with you the link to install the new CCG Transit app. Please click on the link below and follow the instructions to install it on your device.\n\nI will be sharing an access code with you, which you will need the first time you log in.\n\nhttps://app.ccgnj.com';
 
   const { data: drivers = [], isLoading } = useQuery({
     queryKey: ['drivers', activeCompanyId],
     queryFn: () => base44.entities.Driver.filter({ company_id: activeCompanyId }, '-created_date', 200),
-    enabled: !!activeCompanyId,
+    enabled: !!activeCompanyId
   });
 
   const { data: accessCodes = [] } = useQuery({
     queryKey: ['driver-access-codes', activeCompanyId],
     queryFn: () => base44.entities.AccessCode.filter({ company_id: activeCompanyId, code_type: 'Driver' }, '-created_date', 500),
-    enabled: !!activeCompanyId,
+    enabled: !!activeCompanyId
   });
 
   const { data: companies = [] } = useQuery({
     queryKey: ['companies'],
-    queryFn: () => base44.entities.Company.list(),
+    queryFn: () => base44.entities.Company.list()
   });
 
   const sortedDrivers = useMemo(
     () => [...drivers].sort((a, b) => (a.driver_name || '').localeCompare(b.driver_name || '')),
-    [drivers],
+    [drivers]
   );
 
   const accessCodeById = useMemo(() => {
@@ -93,23 +93,23 @@ export default function Drivers() {
 
   const refreshDriverPageData = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['drivers', activeCompanyId] }),
-      queryClient.invalidateQueries({ queryKey: ['driver-access-codes', activeCompanyId] }),
-      queryClient.refetchQueries({ queryKey: ['drivers', activeCompanyId], exact: true }),
-      queryClient.refetchQueries({ queryKey: ['driver-access-codes', activeCompanyId], exact: true }),
-    ]);
+    queryClient.invalidateQueries({ queryKey: ['drivers', activeCompanyId] }),
+    queryClient.invalidateQueries({ queryKey: ['driver-access-codes', activeCompanyId] }),
+    queryClient.refetchQueries({ queryKey: ['drivers', activeCompanyId], exact: true }),
+    queryClient.refetchQueries({ queryKey: ['driver-access-codes', activeCompanyId], exact: true })]
+    );
   };
 
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
-      const saved = editing
-        ? await base44.entities.Driver.update(editing.id, payload)
-        : await base44.entities.Driver.create({
-            ...payload,
-            company_id: activeCompanyId,
-            access_code_status: 'Not Requested',
-            driver_sms_opt_in: false,
-          });
+      const saved = editing ?
+      await base44.entities.Driver.update(editing.id, payload) :
+      await base44.entities.Driver.create({
+        ...payload,
+        company_id: activeCompanyId,
+        access_code_status: 'Not Requested',
+        driver_sms_opt_in: false
+      });
       await syncDriverAccessCode(saved);
       return saved;
     },
@@ -117,7 +117,7 @@ export default function Drivers() {
       invalidate();
       setOpen(false);
       setEditing(null);
-    },
+    }
   });
 
   const deleteMutation = useMutation({
@@ -125,7 +125,7 @@ export default function Drivers() {
     onSuccess: () => {
       invalidate();
       setDriverToDelete(null);
-    },
+    }
   });
 
   const createAccessCodeMutation = useMutation({
@@ -144,17 +144,17 @@ export default function Drivers() {
         sms_enabled: driverSmsState.effective,
         sms_phone: driverSmsState.normalizedPhone || '',
         available_views: [],
-        linked_company_ids: [],
+        linked_company_ids: []
       });
 
       await base44.entities.Driver.update(driver.id, {
         access_code_id: created.id,
-        access_code_status: 'Created',
+        access_code_status: 'Created'
       });
     },
     onSuccess: async () => {
       await refreshDriverPageData();
-    },
+    }
   });
 
   const openCreate = () => {
@@ -171,7 +171,7 @@ export default function Drivers() {
       phone: formatPhoneNumber(driver.phone || ''),
       owner_sms_enabled: driver.owner_sms_enabled === true,
       notes: driver.notes || '',
-      status: driver.status || 'Active',
+      status: driver.status || 'Active'
     });
     setErrors({});
     setOpen(true);
@@ -190,7 +190,7 @@ export default function Drivers() {
       owner_sms_enabled: form.owner_sms_enabled === true,
       notes: form.notes,
       status: form.status,
-      active_flag: form.status === 'Active',
+      active_flag: form.status === 'Active'
     });
   };
 
@@ -198,7 +198,7 @@ export default function Drivers() {
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
         await navigator.share({
-          text: appShareMessage,
+          text: appShareMessage
         });
         return;
       } catch (error) {
@@ -220,8 +220,8 @@ export default function Drivers() {
         <div className="space-y-3 sm:space-y-2">
           <h2 className="text-2xl font-semibold text-slate-900">Drivers</h2>
           <p className="text-sm text-slate-500">Manage driver records and SMS permissions.</p>
-          <p className="max-w-2xl text-sm text-slate-600">
-            After you add a driver, you must click on Create Access Code. This will create a unique code to be given to your driver, which they will use after they sign up and log into the app.
+          <p className="text-slate-600 text-sm text-left max-w-2xl">After you add a driver, you must click on Create Access Code. This will create a unique code to be given to your driver, which they will use after they sign up and log into the app.
+
           </p>
           <div className="space-y-2 pt-1">
             <p className="text-sm text-slate-600">To share the app with them, use the link below.</p>
@@ -233,8 +233,8 @@ export default function Drivers() {
                 href="https://app.ccgnj.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-center text-sm text-blue-600 hover:underline sm:text-left"
-              >
+                className="text-center text-sm text-blue-600 hover:underline sm:text-left">
+                
                 or go to app.ccgnj.com
               </a>
             </div>
@@ -247,31 +247,31 @@ export default function Drivers() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-12"><div className="animate-spin h-6 w-6 border-2 border-slate-300 border-t-slate-700 rounded-full" /></div>
-      ) : sortedDrivers.length === 0 ? (
-        <div className="text-center py-12 text-sm text-slate-500">No drivers added yet.</div>
-      ) : (
-        <div className="grid gap-3">
-          {sortedDrivers.map((driver) => {
-            const accessCodeStatus = driver.access_code_status || 'Not Requested';
-            const hasCreatedCode = accessCodeStatus === 'Created' && !!driver.access_code_id;
-            const driverAccessCode = driver.access_code_id ? accessCodeById[driver.access_code_id] : null;
+      {isLoading ?
+      <div className="flex justify-center py-12"><div className="animate-spin h-6 w-6 border-2 border-slate-300 border-t-slate-700 rounded-full" /></div> :
+      sortedDrivers.length === 0 ?
+      <div className="text-center py-12 text-sm text-slate-500">No drivers added yet.</div> :
 
-            return (
-              <DriverCard
-                key={driver.id}
-                driver={driver}
-                driverAccessCode={driverAccessCode}
-                onEdit={() => openEdit(driver)}
-                onDelete={() => setDriverToDelete(driver)}
-                onRequestCode={() => createAccessCodeMutation.mutate(driver)}
-                requestDisabled={createAccessCodeMutation.isPending || hasCreatedCode}
-              />
-            );
-          })}
+      <div className="grid gap-3">
+          {sortedDrivers.map((driver) => {
+          const accessCodeStatus = driver.access_code_status || 'Not Requested';
+          const hasCreatedCode = accessCodeStatus === 'Created' && !!driver.access_code_id;
+          const driverAccessCode = driver.access_code_id ? accessCodeById[driver.access_code_id] : null;
+
+          return (
+            <DriverCard
+              key={driver.id}
+              driver={driver}
+              driverAccessCode={driverAccessCode}
+              onEdit={() => openEdit(driver)}
+              onDelete={() => setDriverToDelete(driver)}
+              onRequestCode={() => createAccessCodeMutation.mutate(driver)}
+              requestDisabled={createAccessCodeMutation.isPending || hasCreatedCode} />);
+
+
+        })}
         </div>
-      )}
+      }
 
       <DriverGuidanceTabs helpLanguage={helpLanguage} onLanguageChange={setHelpLanguage} />
 
@@ -297,11 +297,11 @@ export default function Drivers() {
                 </div>
                 <Switch checked={form.owner_sms_enabled === true} onCheckedChange={(checked) => setForm((prev) => ({ ...prev, owner_sms_enabled: checked }))} />
               </div>
-              {form.owner_sms_enabled ? (
-                <p className="pr-6 text-xs leading-5 text-red-600">Please have your driver opt in to SMS notifications by clicking the menu button <Menu className="mx-0.5 inline h-3.5 w-3.5 align-text-bottom" />, going to Profile, and opting in to SMS notifications.</p>
-              ) : (
-                <p className="text-xs text-slate-500">This driver will not receive notifications on their phone. They will only see pending notifications when they open the app.</p>
-              )}
+              {form.owner_sms_enabled ?
+              <p className="pr-6 text-xs leading-5 text-red-600">Please have your driver opt in to SMS notifications by clicking the menu button <Menu className="mx-0.5 inline h-3.5 w-3.5 align-text-bottom" />, going to Profile, and opting in to SMS notifications.</p> :
+
+              <p className="text-xs text-slate-500">This driver will not receive notifications on their phone. They will only see pending notifications when they open the app.</p>
+              }
               <div className="rounded-lg bg-slate-50 border border-dashed p-3 opacity-70">
                 <div className="flex items-center justify-between">
                   <div>
@@ -340,6 +340,6 @@ export default function Drivers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
+    </div>);
+
 }
