@@ -87,7 +87,7 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
   const activeCompaniesSorted = useMemo(() =>
     [...(companies || [])]
       .filter((c) => c.status === 'active')
-      .sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), undefined, { sensitivity: 'base' })),
+      .sort((a, b) => String(a?.name || '').trim().localeCompare(String(b?.name || '').trim(), undefined, { sensitivity: 'base' })),
   [companies]);
 
   const selectedCompany = companies.find((c) => c.id === form.company_id);
