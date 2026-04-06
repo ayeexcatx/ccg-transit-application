@@ -119,7 +119,7 @@ function announceDispatchDrawerState() {
 
 function formatActivityTimestamp(value) {
   if (!value) return '';
-  const date = new Date(value);
+  const date = parseTimestampForDisplay(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleString('en-US', {
     timeZone: 'America/New_York',
@@ -130,6 +130,21 @@ function formatActivityTimestamp(value) {
     minute: '2-digit',
     hour12: true
   });
+}
+
+function parseTimestampForDisplay(value) {
+  if (!value) return new Date(NaN);
+  if (value instanceof Date) return value;
+  if (typeof value === 'number') return new Date(value);
+
+  const raw = String(value).trim();
+  if (!raw) return new Date(NaN);
+
+  const hasExplicitTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(raw);
+  if (hasExplicitTimezone) return new Date(raw);
+
+  const normalized = raw.includes(' ') ? raw.replace(' ', 'T') : raw;
+  return new Date(`${normalized}Z`);
 }
 function formatTimeToAmPm(value) {
   if (!value) return '';
@@ -174,7 +189,7 @@ function getEntryActorLabel(entry) {
 
 function formatLogTimestampWithActor(prefix, timestamp, actorLabel) {
   if (!timestamp) return '';
-  const parsed = new Date(timestamp);
+  const parsed = parseTimestampForDisplay(timestamp);
   if (Number.isNaN(parsed.getTime())) return '';
   const formattedTimestamp = parsed.toLocaleString('en-US', {
     timeZone: 'America/New_York',

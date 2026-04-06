@@ -53,6 +53,49 @@ export function formatWorkedHours(hours) {
   return Number(hours.toFixed(2)).toString();
 }
 
+export function getTimeEntryCompositeKey(dispatchId, truckNumber) {
+  if (!dispatchId || !truckNumber) return '';
+  return `${dispatchId}::${truckNumber}`;
+}
+
+export function getTimeEntryTimestampMs(entry) {
+  const value = entry?.last_updated_at || entry?.updated_date || entry?.created_date || 0;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function pickPreferredTimeEntry(left, right) {
+  if (!left) return right;
+  if (!right) return left;
+
+  const leftTime = getTimeEntryTimestampMs(left);
+  const rightTime = getTimeEntryTimestampMs(right);
+  if (rightTime !== leftTime) {
+    return rightTime > leftTime ? right : left;
+  }
+
+  const leftCreated = new Date(left?.created_date || 0).getTime();
+  const rightCreated = new Date(right?.created_date || 0).getTime();
+  if (rightCreated !== leftCreated) {
+    return rightCreated > leftCreated ? right : left;
+  }
+
+  return String(right?.id || '') > String(left?.id || '') ? right : left;
+}
+
+export function dedupeTimeEntries(entries = []) {
+  const byKey = new Map();
+
+  entries.forEach((entry) => {
+    const key = getTimeEntryCompositeKey(entry?.dispatch_id, entry?.truck_number);
+    if (!key) return;
+    const current = byKey.get(key);
+    byKey.set(key, pickPreferredTimeEntry(current, entry));
+  });
+
+  return [...byKey.values()];
+}
+
 export function areAllAssignedTrucksTimeComplete(dispatch, dispatchTimeEntries = []) {
   const assigned = dispatch?.trucks_assigned || [];
   if (assigned.length === 0) return false;

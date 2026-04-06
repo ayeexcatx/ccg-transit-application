@@ -41,6 +41,11 @@ import {
 import { listDriverDispatchesForDriver } from '@/lib/driverDispatch';
 import { buildConfirmedTruckSetForStatus } from '@/components/notifications/confirmationStateHelpers';
 import { resolveCompanyOwnerCompanyId, resolveDriverIdentity } from '@/services/currentAppIdentityService';
+import {
+  dedupeTimeEntries,
+  getTimeEntryCompositeKey,
+  pickPreferredTimeEntry,
+} from '@/lib/timeLogs';
 
 function getSessionActorMetadata(session) {
   const actorName = session?.label || session?.name || session?.driver_name || session?.code || '';
@@ -118,6 +123,10 @@ export default function Portal() {
     queryKey: ['time-entries'],
     queryFn: () => base44.entities.TimeEntry.list('-created_date', 500),
   });
+  const canonicalTimeEntries = useMemo(
+    () => dedupeTimeEntries(timeEntries),
+    [timeEntries],
+  );
 
   const { data: templateNotes = [] } = useQuery({
     queryKey: ['template-notes'],
@@ -160,8 +169,12 @@ export default function Portal() {
 
       for (const { truck, start, end } of entries) {
         const nowIso = new Date().toISOString();
-        const existing = timeEntries.find(te =>
+        const matchingEntries = timeEntries.filter((te) =>
           te.dispatch_id === dispatch.id && te.truck_number === truck
+        );
+        const existing = matchingEntries.reduce(
+          (selected, candidate) => pickPreferredTimeEntry(selected, candidate),
+          null,
         );
 
         if (existing) {
@@ -193,7 +206,15 @@ export default function Portal() {
         savedEntries.push(created);
       }
 
-      return savedEntries;
+      const savedByKey = new Map();
+      savedEntries.forEach((entry) => {
+        const key = getTimeEntryCompositeKey(entry?.dispatch_id, entry?.truck_number);
+        if (!key) return;
+        const current = savedByKey.get(key);
+        savedByKey.set(key, pickPreferredTimeEntry(current, entry));
+      });
+
+      return [...savedByKey.values()];
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['time-entries'] }),
   });
@@ -525,7 +546,7 @@ export default function Portal() {
         dispatchRefs={dispatchRefs}
         session={session}
         confirmations={confirmations}
-        timeEntries={timeEntries}
+        timeEntries={canonicalTimeEntries}
         sortedNotes={sortedNotes}
         handleConfirm={handleConfirm}
         handleTimeEntry={handleTimeEntry}
