@@ -209,8 +209,6 @@ function TruckTimeRow({
   readOnly,
   draft,
   onChangeDraft,
-  onCopyToAll,
-  isFirstRow,
   showActor = false,
   isEditing = true,
   onEdit
@@ -287,18 +285,6 @@ function TruckTimeRow({
             className="h-9 text-sm" />
           
         </div>
-        {isFirstRow &&
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-9 px-3 text-xs font-medium text-slate-600 sm:self-end"
-          disabled={!start && !end}
-          onClick={() => onCopyToAll(start, end)}>
-          
-            Copy to all
-          </Button>
-        }
         <div>
           <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-slate-600">Check-out</p>
           <Input
@@ -727,20 +713,6 @@ export default function DispatchDetailDrawer({
   (dispatch.trucks_assigned || []) :
   [];
 
-  const handleCopyToAll = (sourceStart, sourceEnd) => {
-    setDraftTimeEntries((prev) => {
-      const next = { ...prev };
-      editableTimeLogTrucks.forEach((truck) => {
-        next[truck] = {
-          ...(next[truck] || {}),
-          ...(sourceStart ? { start: sourceStart } : {}),
-          ...(sourceEnd ? { end: sourceEnd } : {})
-        };
-      });
-      return next;
-    });
-  };
-
   const entriesToSave = editableTimeLogTrucks.
   map((truck) => {
     const existing = effectiveTimeEntries.find((te) => te.dispatch_id === dispatch.id && te.truck_number === truck);
@@ -1128,7 +1100,6 @@ export default function DispatchDetailDrawer({
                     timeEntries={effectiveTimeEntries}
                     dispatch={dispatch}
                     onChangeDraft={handleChangeDraft}
-                    onCopyToAll={handleCopyToAll}
                     onSaveAll={handleSaveAll}
                     editingTimeLogTrucks={editingTimeLogTrucks}
                     onEditTruckTimeLog={(truck) => setEditingTimeLogTrucks((prev) => ({ ...prev, [truck]: true }))}

@@ -16,7 +16,6 @@ export default function DispatchTimeLogSection({
   timeEntries,
   dispatch,
   onChangeDraft,
-  onCopyToAll,
   onSaveAll,
   editingTimeLogTrucks,
   onEditTruckTimeLog,
@@ -66,8 +65,6 @@ export default function DispatchTimeLogSection({
                 readOnly={false}
                 draft={draftTimeEntries[truck]}
                 onChangeDraft={onChangeDraft}
-                onCopyToAll={onCopyToAll}
-                isFirstRow={truck === editableTrucks[0]}
                 isEditing={isTruckEditing(truck)}
                 showActor={!isTruckEditing(truck)}
                 onEdit={() => onEditTruckTimeLog(truck)}
