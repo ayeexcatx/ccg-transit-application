@@ -24,14 +24,15 @@ export default function DispatchTimeLogSection({
   isSavingAll,
   entriesToSave,
   TruckTimeRow,
+  editableTrucks: editableTrucksProp,
 }) {
-  const editableTrucks = isOwner
+  const editableTrucks = editableTrucksProp || (isOwner
     ? myTrucks
     : isDriverUser
       ? visibleTrucks
       : isAdmin
         ? assignedTrucks
-        : [];
+        : []);
   const canShowTimeLog = editableTrucks.length > 0 && dispatchStatus !== 'Cancelled' && (isOwner ? showOwnerAssignmentsAndTimeLogs : true);
 
   return (
