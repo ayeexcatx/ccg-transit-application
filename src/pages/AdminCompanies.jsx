@@ -146,6 +146,7 @@ const CompanyDetailHero = ({ company, driverCount, truckCount, smsStateLabel }) 
 const DriverAccordionCard = ({ driver, smsState, driverCode, protocolAck, latestProtocolAck, currentProtocolVersion }) => {
   const [isOpen, setIsOpen] = useState(false);
   const consentRecorded = driverCode?.sms_consent_given === true;
+  const protocolAcknowledged = Boolean(protocolAck);
   return (
     <div className="rounded-2xl border border-slate-200/90 bg-white shadow-sm">
       <button
@@ -164,11 +165,11 @@ const DriverAccordionCard = ({ driver, smsState, driverCode, protocolAck, latest
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Badge variant="outline" className={smsState.effective ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}>
+            <Badge variant="outline" className={smsState.effective ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700'}>
               {smsState.effective ? 'SMS Active' : 'SMS Off'}
             </Badge>
-            <Badge variant="secondary" className="hidden sm:inline-flex bg-slate-100 text-slate-700">
-              {consentRecorded ? 'Consent Recorded' : 'Consent Missing'}
+            <Badge variant="secondary" className={`hidden sm:inline-flex ${protocolAcknowledged ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700'}`}>
+              {protocolAcknowledged ? 'Protocol Acknowledged' : 'Protocol Not Acknowledged'}
             </Badge>
             <ChevronRight className={`h-4 w-4 text-slate-500 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
           </div>
@@ -875,7 +876,15 @@ export default function AdminCompanies() {
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">SMS Configuration</p>
                           <div className="mt-2">
                             <KeyValueRow label="SMS contact" value={smsContact.phone ? formatPhoneNumber(smsContact.phone) : 'No SMS phone selected'} />
-                            <KeyValueRow label="Owner SMS enabled" value={ownerSmsEnabled ? 'Yes' : 'No'} />
+                            <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-2 last:border-b-0">
+                              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Owner SMS enabled</p>
+                              <Badge
+                                variant="outline"
+                                className={ownerSmsEnabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700'}
+                              >
+                                {ownerSmsEnabled ? 'Yes' : 'No'}
+                              </Badge>
+                            </div>
                           </div>
                         </div>
                         <div className="rounded-xl border border-slate-200 bg-white p-4">
