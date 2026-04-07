@@ -275,14 +275,14 @@ function TruckTimeRow({
           </div>
         }
       </div>
-      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-end">
+      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end">
         <div>
           <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-slate-600">Check-in</p>
           <Input
             type="time"
             value={start}
             onChange={(e) => onChangeDraft(truck, 'start', e.target.value)}
-            className="h-9 text-sm" />
+            className="h-9 w-full text-sm" />
           
         </div>
         <div>
@@ -291,7 +291,7 @@ function TruckTimeRow({
             type="time"
             value={end}
             onChange={(e) => onChangeDraft(truck, 'end', e.target.value)}
-            className="h-9 text-sm" />
+            className="h-9 w-full text-sm" />
           
         </div>
       </div>
