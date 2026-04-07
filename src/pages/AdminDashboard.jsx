@@ -206,7 +206,7 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Admin Dashboard</h2>
-        <p className="text-sm text-slate-500 mt-1">Overview of your dispatch operations</p>
+        <p className="text-sm text-slate-500 mt-1">{format(today, 'EEEE, MMMM d, yyyy')} · Overview of your dispatch operations</p>
       </div>
 
       <DashboardSummaryCards stats={stats} createPageUrl={createPageUrl} />
