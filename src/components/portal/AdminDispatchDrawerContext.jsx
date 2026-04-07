@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import DispatchDetailDrawer from '@/components/portal/DispatchDetailDrawer';
 import { createPageUrl } from '@/utils';
+import { getTimeEntryCompositeKey, pickPreferredTimeEntry } from '@/lib/timeLogs';
 
 const AdminDispatchDrawerContext = createContext({
   openAdminDispatchDrawer: () => {},
@@ -108,6 +109,85 @@ export function AdminDispatchDrawerProvider({ children, session, isAdmin }) {
     });
   }, [closeAdminDispatchDrawer, navigate]);
 
+  const handleAdminTimeEntry = useCallback(async (dispatch, entries) => {
+    if (!dispatch?.id || !Array.isArray(entries) || entries.length === 0) return [];
+
+    const actorName = session?.label || session?.name || session?.code || '';
+    const actorType = session?.code_type || 'Admin';
+    const savedEntries = [];
+
+    for (const { truck, start, end } of entries) {
+      const nowIso = new Date().toISOString();
+      const matchingEntries = drawerTimeEntries.filter((te) =>
+        te.dispatch_id === dispatch.id && te.truck_number === truck
+      );
+      const existing = matchingEntries.reduce(
+        (selected, candidate) => pickPreferredTimeEntry(selected, candidate),
+        null,
+      );
+
+      if (existing) {
+        const updated = await base44.entities.TimeEntry.update(existing.id, {
+          start_time: start !== undefined ? start : existing.start_time,
+          end_time: end !== undefined ? end : existing.end_time,
+          entered_by_name: existing.entered_by_name || actorName || undefined,
+          entered_by_type: existing.entered_by_type || actorType || undefined,
+          last_updated_at: nowIso,
+          last_updated_by_name: actorName || undefined,
+          last_updated_by_type: actorType || undefined,
+        });
+        savedEntries.push(updated);
+        continue;
+      }
+
+      const created = await base44.entities.TimeEntry.create({
+        dispatch_id: dispatch.id,
+        access_code_id: session?.id,
+        truck_number: truck,
+        start_time: start,
+        end_time: end,
+        entered_by_name: actorName || undefined,
+        entered_by_type: actorType || undefined,
+        last_updated_at: nowIso,
+        last_updated_by_name: actorName || undefined,
+        last_updated_by_type: actorType || undefined,
+      });
+      savedEntries.push(created);
+    }
+
+    const savedByKey = new Map();
+    savedEntries.forEach((entry) => {
+      const key = getTimeEntryCompositeKey(entry?.dispatch_id, entry?.truck_number);
+      if (!key) return;
+      const current = savedByKey.get(key);
+      savedByKey.set(key, pickPreferredTimeEntry(current, entry));
+    });
+
+    const canonicalSavedEntries = [...savedByKey.values()];
+    if (canonicalSavedEntries.length > 0) {
+      queryClient.setQueryData(['admin-overlay-time-entries', dispatch.id], (prev = []) => {
+        const merged = [...prev];
+        canonicalSavedEntries.forEach((entry) => {
+          const key = getTimeEntryCompositeKey(entry?.dispatch_id, entry?.truck_number);
+          if (!key) return;
+          const index = merged.findIndex((candidate) =>
+            getTimeEntryCompositeKey(candidate?.dispatch_id, candidate?.truck_number) === key
+          );
+          if (index >= 0) merged[index] = pickPreferredTimeEntry(merged[index], entry);
+          else merged.push(entry);
+        });
+        return merged;
+      });
+    }
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['time-entries-admin'] }),
+      queryClient.invalidateQueries({ queryKey: ['time-entries'] }),
+    ]);
+
+    return canonicalSavedEntries;
+  }, [drawerTimeEntries, queryClient, session]);
+
   const value = useMemo(() => ({
     openAdminDispatchDrawer,
     closeAdminDispatchDrawer,
@@ -126,7 +206,7 @@ export function AdminDispatchDrawerProvider({ children, session, isAdmin }) {
           timeEntries={drawerTimeEntries}
           templateNotes={templateNotes}
           onConfirm={() => {}}
-          onTimeEntry={() => {}}
+          onTimeEntry={handleAdminTimeEntry}
           onAdminEditDispatch={handleAdminDrawerEdit}
           companyName={previewDispatch ? companyMap[previewDispatch.company_id] : ''}
         />
