@@ -475,8 +475,8 @@ export default function Incidents() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between gap-3">
-        <div className="space-y-3">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-3 min-w-0 flex-1">
           <h2 className="text-2xl font-semibold text-slate-900">Incidents</h2>
           <Card className="bg-sky-50/70 border-sky-100">
             <CardContent className="pt-4 pb-4">
@@ -498,7 +498,7 @@ export default function Incidents() {
             </CardContent>
           </Card>
         </div>
-        {!isDriver && <Button onClick={() => setCreateOpen(true)} className="bg-primary text-primary-foreground px-10 py-2 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow hover:bg-primary/90 h-9 gap-2 self-start sm:self-auto">
+        {!isDriver && <Button onClick={() => setCreateOpen(true)} className="w-full sm:w-auto bg-primary text-primary-foreground px-10 py-2 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow hover:bg-primary/90 h-9 gap-2 self-stretch sm:self-start">
             <Plus className="h-4 w-4" />
             Create Incident
           </Button>}
