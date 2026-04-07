@@ -13,6 +13,7 @@ import { useSession } from '../components/session/SessionContext';
 import AdminAnnouncementsHeader from '@/components/admin/admin-announcements/AdminAnnouncementsHeader';
 import AdminAnnouncementsList from '@/components/admin/admin-announcements/AdminAnnouncementsList';
 import { resolveAdminDisplayNameFromSession } from '@/lib/adminIdentity';
+import { ANNOUNCEMENT_TEXT_COLOR_OPTIONS } from '@/components/announcements/announcementTextColors';
 
 const priorityColors = {
   1: 'bg-red-50 text-red-700 border-red-200',
@@ -30,6 +31,7 @@ const defaultForm = {
   target_type: 'All',
   target_company_ids: [],
   target_access_code_ids: [],
+  text_color: 'default',
 };
 
 const getAdminDisplayName = (session) => {
@@ -80,7 +82,8 @@ const buildAnnouncementUpdateEntries = (previousAnnouncement, nextAnnouncement, 
   if (
     previousAnnouncement.title !== nextAnnouncement.title ||
     previousAnnouncement.message !== nextAnnouncement.message ||
-    previousAnnouncement.priority !== nextAnnouncement.priority
+    previousAnnouncement.priority !== nextAnnouncement.priority ||
+    (previousAnnouncement.text_color || 'default') !== (nextAnnouncement.text_color || 'default')
   ) {
     specificEntries.push(createAdminActivityEntry(session, 'updated_content', `${adminName} updated announcement content`));
   }
@@ -175,6 +178,7 @@ export default function AdminAnnouncements() {
       target_type: a.target_type || 'All',
       target_company_ids: a.target_company_ids || [],
       target_access_code_ids: a.target_access_code_ids || [],
+      text_color: a.text_color || 'default',
     });
     setOpen(true);
   };
@@ -274,6 +278,21 @@ export default function AdminAnnouncements() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Text Color</Label>
+              <Select value={form.text_color} onValueChange={v => setForm(f => ({ ...f, text_color: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ANNOUNCEMENT_TEXT_COLOR_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {form.target_type === 'Companies' && (

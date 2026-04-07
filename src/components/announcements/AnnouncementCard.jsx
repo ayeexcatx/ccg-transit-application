@@ -1,6 +1,7 @@
 import React from 'react';
 import { Megaphone } from 'lucide-react';
 import { format } from 'date-fns';
+import { getAnnouncementTextColorOption } from './announcementTextColors';
 
 const priorityCard = {
   1: 'border-red-200 bg-red-50/50',
@@ -31,6 +32,7 @@ export default function AnnouncementCard({ announcement, footer, showCreatedAt =
   const cardClass = priorityCard[announcement.priority] || priorityCard[3];
   const iconClass = priorityIcon[announcement.priority] || priorityIcon[3];
   const textClass = priorityText[announcement.priority] || priorityText[3];
+  const bodyTextColor = getAnnouncementTextColorOption(announcement.text_color);
 
   return (
     <div className={isPlain ? 'px-4 py-3 sm:px-5 sm:py-4' : `rounded-lg border p-3 sm:p-4 ${cardClass}`}>
@@ -40,7 +42,7 @@ export default function AnnouncementCard({ announcement, footer, showCreatedAt =
         </div>
         <div className="min-w-0 flex-1">
           <p className={`text-sm font-semibold leading-tight ${isPlain ? 'text-slate-900' : textClass}`}>{announcement.title}</p>
-          <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">{announcement.message}</p>
+          <p className={`mt-1 text-sm whitespace-pre-wrap break-words ${bodyTextColor.className}`}>{announcement.message}</p>
           {showCreatedAt && announcement.created_at && (
             <p className="mt-2 text-[11px] text-slate-500">
               {format(new Date(announcement.created_at), 'MMM d, yyyy · h:mm a')}

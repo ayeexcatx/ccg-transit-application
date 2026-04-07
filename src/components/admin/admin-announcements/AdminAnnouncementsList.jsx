@@ -10,7 +10,7 @@ export default function AdminAnnouncementsList({
   formatActivityTimestamp,
 }) {
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2.5">
       {announcements.map((announcement) => (
         <AdminAnnouncementCard
           key={announcement.id}

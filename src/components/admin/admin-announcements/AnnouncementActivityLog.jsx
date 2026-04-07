@@ -2,8 +2,8 @@ import React from 'react';
 
 export default function AnnouncementActivityLog({ entries, formatActivityTimestamp }) {
   return (
-    <div className="mt-2">
-      <p className="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Activity</p>
+    <div className="rounded-md border border-slate-200 bg-slate-50/70 px-3 py-2">
+      <p className="text-[11px] text-slate-500 uppercase tracking-wide mb-1">Activity</p>
       {Array.isArray(entries) && entries.length > 0 ? (
         <div className="space-y-1">
           {entries.slice(0, 3).map((entry, idx) => (
