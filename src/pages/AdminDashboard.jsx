@@ -10,7 +10,6 @@ import { createRuntimeVersionToken, APP_RUNTIME_VERSION_CONFIG_KEY } from '@/lib
 import { validateAdminAccessCode } from '@/lib/adminAccessCodeValidation';
 import DashboardSummaryCards from '@/components/admin/admin-dashboard/DashboardSummaryCards';
 import ActiveAnnouncementsSection from '@/components/admin/admin-dashboard/ActiveAnnouncementsSection';
-import QuickActionsSection from '@/components/admin/admin-dashboard/QuickActionsSection';
 import ForceRefreshSection from '@/components/admin/admin-dashboard/ForceRefreshSection';
 
 export default function AdminDashboard() {
@@ -216,8 +215,6 @@ export default function AdminDashboard() {
         announcements={activeAnnouncements}
         formatAudience={formatAudience}
       />
-
-      <QuickActionsSection createPageUrl={createPageUrl} />
 
       <ForceRefreshSection
         isOpen={isRefreshConfirmOpen}
