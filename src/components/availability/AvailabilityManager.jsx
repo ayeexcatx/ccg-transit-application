@@ -431,12 +431,13 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
   };
 
   const renderWeeklyDefaultsMatrix = () =>
-  <Card data-tour="recurring-weekly-defaults">
-      <CardContent className="bg-slate-50 p-4 space-y-3">
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-slate-800">Recurring Weekly Defaults</h3>
-          <p className="text-slate-500 text-sm font-medium opacity-100">Select your default availability that is the same every week.</p>
-        </div>
+  <div className="space-y-3">
+      <div>
+        <h2 className="text-2xl font-semibold text-slate-900">Weekly Defaults</h2>
+        <p className="text-slate-500 text-sm font-medium">Select your default availability that is the same every week.</p>
+      </div>
+      <Card data-tour="recurring-weekly-defaults">
+        <CardContent className="bg-slate-50 p-4 space-y-3">
         <div className="space-y-1 text-xs text-slate-500">
           <p className="text-red-500">(Example: I can work all day shifts + Mon/Wed/Fri night shifts) </p>
           <p>If you need off on a specific day when you are usually available (default), use the availability chart ABOVE to select Unavailable. </p>
@@ -463,15 +464,16 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
         <div className="flex justify-end">
           <Button size="sm" variant="outline" onClick={openDefaultsEditor}>Edit Defaults</Button>
         </div>
-      </CardContent>
-    </Card>;
+        </CardContent>
+      </Card>
+    </div>;
 
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900">Availability</h2>
+          <h2 className="text-2xl font-semibold text-slate-900">Calendar</h2>
           <p className="text-slate-500 text-sm font-medium text-left">Select how many trucks you have available for each shift.</p>
           <p className="text-slate-500 text-sm font-medium">Anything entered here will override any of your defaults (just for that specific day/shift only).</p> 
           <p className="text-red-600 text-sm font-bold">The correct way to fill this out is to select the date, then enter the number of trucks you have available for that shift.</p>
