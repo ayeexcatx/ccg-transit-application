@@ -146,6 +146,11 @@
       },
       "description": "Admin-only activity history for this dispatch"
     },
+    "admin_internal_notes": {
+      "type": "string",
+      "required": false,
+      "description": "Admin-only internal notes for dispatch operations"
+    },
     "additional_assignments": {
       "type": "array",
       "items": {
