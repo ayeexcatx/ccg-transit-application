@@ -2,6 +2,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Truck } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
@@ -317,6 +319,8 @@ export default function DispatchDetailDrawer({
   const [isCreatingScreenshot, setIsCreatingScreenshot] = useState(false);
   const [selectedDriverByTruck, setSelectedDriverByTruck] = useState({});
   const [driverAssignmentErrors, setDriverAssignmentErrors] = useState({});
+  const [isInternalNotesDialogOpen, setIsInternalNotesDialogOpen] = useState(false);
+  const [draftInternalNotes, setDraftInternalNotes] = useState('');
   const screenshotSectionRef = React.useRef(null);
   const queryClient = useQueryClient();
 
@@ -344,6 +348,11 @@ export default function DispatchDetailDrawer({
     setIsSavingTrucks(false);
     setTruckEditMessage(null);
   }, [dispatch?.id, dispatch?.trucks_assigned]);
+
+  useEffect(() => {
+    setDraftInternalNotes(dispatch?.admin_internal_notes || '');
+    setIsInternalNotesDialogOpen(false);
+  }, [dispatch?.id, dispatch?.admin_internal_notes]);
 
   useEffect(() => {
     if (!truckEditMessage) return undefined;
@@ -552,6 +561,29 @@ export default function DispatchDetailDrawer({
 
   const handleSendDriverDispatch = async (truckNumber) => sendDriverDispatchMutation.mutateAsync(truckNumber);
   const handleCancelDriverDispatch = async (truckNumber) => cancelDriverDispatchMutation.mutateAsync(truckNumber);
+  const saveInternalNotesMutation = useMutation({
+    mutationFn: async (internalNotes) => {
+      if (!dispatch?.id) throw new Error('Dispatch not found.');
+      return base44.entities.Dispatch.update(dispatch.id, {
+        admin_internal_notes: internalNotes.trim() || null
+      });
+    },
+    onSuccess: async (_, internalNotes) => {
+      queryClient.setQueryData(['dispatches-admin'], (current) => {
+        if (!Array.isArray(current)) return current;
+        return current.map((entry) =>
+        entry?.id === dispatch?.id ? { ...entry, admin_internal_notes: internalNotes.trim() } : entry
+        );
+      });
+      queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['portal-dispatches', dispatch?.company_id] });
+      setIsInternalNotesDialogOpen(false);
+      toast.success('Internal notes saved.');
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Unable to save internal notes.');
+    }
+  });
 
   const handleDriverSelection = async (truckNumber, driverId) => {
     const previousDriverId = selectedDriverByTruck[truckNumber] || UNASSIGNED_DRIVER_VALUE;
@@ -665,6 +697,7 @@ export default function DispatchDetailDrawer({
   };
 
   const currentConfType = dispatch.status;
+  const hasInternalNotes = Boolean(String(dispatch?.admin_internal_notes || '').trim());
   const currentConfirmedTruckSet = buildConfirmedTruckSetForStatus({
     confirmations,
     dispatchId: dispatch.id,
@@ -776,6 +809,9 @@ export default function DispatchDetailDrawer({
 
   const handleConfirmTruck = (truck) => {
     onConfirm(dispatch, truck, currentConfType);
+  };
+  const handleSaveInternalNotes = async () => {
+    await saveInternalNotesMutation.mutateAsync(draftInternalNotes);
   };
 
 
@@ -1014,7 +1050,34 @@ export default function DispatchDetailDrawer({
               hasTruckDraftChanges={hasTruckDraftChanges}
               isSavingTrucks={isSavingTrucks}
               onSaveTrucks={handleSaveTrucks} />
-            
+
+            {isAdmin &&
+            <section className="rounded-xl border border-red-200 bg-red-50/40 px-3.5 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">Admin Internal Notes</p>
+                  <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 border-red-300 text-red-700 hover:bg-red-100/80 hover:text-red-800"
+                  onClick={() => setIsInternalNotesDialogOpen(true)}>
+                    Internal Notes
+                    {hasInternalNotes &&
+                  <span className="ml-2 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                        Notes Added
+                      </span>
+                  }
+                  </Button>
+                </div>
+
+                {hasInternalNotes &&
+              <div className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-2.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-red-700">Saved Internal Note</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-red-700">{dispatch.admin_internal_notes}</p>
+                  </div>
+              }
+              </section>
+            }
 
           {dispatch.status !== 'Scheduled' &&
             <>
@@ -1118,6 +1181,32 @@ export default function DispatchDetailDrawer({
             </div>
           }
         </div>
+        <Dialog open={isInternalNotesDialogOpen} onOpenChange={setIsInternalNotesDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Internal Notes</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-xs text-slate-500">
+                Admin-only notes saved on this dispatch record. These notes are hidden from company owners and drivers.
+              </p>
+              <Textarea
+                value={draftInternalNotes}
+                onChange={(event) => setDraftInternalNotes(event.target.value)}
+                rows={8}
+                placeholder="Enter internal notes for dispatch operations..."
+                className="resize-y" />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsInternalNotesDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" onClick={handleSaveInternalNotes} disabled={saveInternalNotesMutation.isPending}>
+                  {saveInternalNotesMutation.isPending ? 'Saving…' : 'Save Notes'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </SheetContent>
     </Sheet>);
 
