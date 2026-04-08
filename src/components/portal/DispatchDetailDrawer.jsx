@@ -569,13 +569,28 @@ export default function DispatchDetailDrawer({
       });
     },
     onSuccess: async (_, internalNotes) => {
+      const normalizedNotes = internalNotes.trim();
       queryClient.setQueryData(['dispatches-admin'], (current) => {
         if (!Array.isArray(current)) return current;
         return current.map((entry) =>
-        entry?.id === dispatch?.id ? { ...entry, admin_internal_notes: internalNotes.trim() } : entry
+        entry?.id === dispatch?.id ? { ...entry, admin_internal_notes: normalizedNotes } : entry
+        );
+      });
+      queryClient.setQueryData(['dispatch-admin-overlay-target', String(dispatch?.id || '')], (current) => {
+        if (!current || current?.id !== dispatch?.id) return current;
+        return {
+          ...current,
+          admin_internal_notes: normalizedNotes
+        };
+      });
+      queryClient.setQueryData(['portal-dispatches', dispatch?.company_id], (current) => {
+        if (!Array.isArray(current)) return current;
+        return current.map((entry) =>
+        entry?.id === dispatch?.id ? { ...entry, admin_internal_notes: normalizedNotes } : entry
         );
       });
       queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['dispatch-admin-overlay-target', String(dispatch?.id || '')] });
       queryClient.invalidateQueries({ queryKey: ['portal-dispatches', dispatch?.company_id] });
       setIsInternalNotesDialogOpen(false);
       toast.success('Internal notes saved.');
