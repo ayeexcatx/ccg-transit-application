@@ -59,6 +59,17 @@ async function carryForwardDispatchConfirmations({
   }
 }
 
+async function fetchDispatchStatusConfirmations(dispatchId, status) {
+  if (!dispatchId || !status) return [];
+
+  // Must fetch at mutation time to avoid stale React-query snapshots dropping
+  // just-created owner confirmations during quick confirm -> truck edit/swap flows.
+  return base44.entities.Confirmation.filter({
+    dispatch_id: dispatchId,
+    confirmation_type: status,
+  }, '-confirmed_at', 500);
+}
+
 function formatConflictDispatchSummary(dispatch) {
   const parts = [
     dispatch?.job_number ? `JOB #${dispatch.job_number}` : dispatch?.job_number,
@@ -136,6 +147,7 @@ export async function runOwnerTruckEditMutation({
   }
 
   const actorName = getOwnerDisplayName(session);
+  void confirmations;
   void actorMetadata;
   const currentStatus = dispatch.status;
 
@@ -214,17 +226,22 @@ export async function runOwnerTruckEditMutation({
     });
 
     const conflictingStatus = conflictingDispatch.status;
+    const freshCurrentDispatchConfirmations = await fetchDispatchStatusConfirmations(dispatch.id, currentStatus);
     await carryForwardDispatchConfirmations({
       dispatchId: dispatch.id,
       status: currentStatus,
-      confirmations,
+      confirmations: freshCurrentDispatchConfirmations,
       replacementPairs: [{ fromTruck: outgoingTruck, toTruck: incomingTruck }],
     });
 
+    const freshConflictingDispatchConfirmations = await fetchDispatchStatusConfirmations(
+      conflictingDispatch.id,
+      conflictingStatus
+    );
     await carryForwardDispatchConfirmations({
       dispatchId: conflictingDispatch.id,
       status: conflictingStatus,
-      confirmations,
+      confirmations: freshConflictingDispatchConfirmations,
       replacementPairs: [{ fromTruck: incomingTruck, toTruck: outgoingTruck }],
     });
 
@@ -273,10 +290,11 @@ export async function runOwnerTruckEditMutation({
     nextTrucks: normalizedNext,
   });
 
+  const freshCurrentDispatchConfirmations = await fetchDispatchStatusConfirmations(dispatch.id, currentStatus);
   await carryForwardDispatchConfirmations({
     dispatchId: dispatch.id,
     status: currentStatus,
-    confirmations,
+    confirmations: freshCurrentDispatchConfirmations,
     replacementPairs,
   });
 
