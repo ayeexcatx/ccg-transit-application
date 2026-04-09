@@ -4,6 +4,7 @@ import { getAdminSmsProductState, getCompanyOwnerSmsState, getDriverSmsState } f
 import { getEffectiveTruckStartTime } from '@/lib/dispatchTruckOverrides';
 import { normalizeUsSmsPhone } from '@/lib/smsPhone';
 import { getSmsRules, resolveEffectiveSharedAdminAccessCode, resolveSmsRuleKeyForNotification } from '@/lib/smsConfig';
+import { format, isValid, parseISO } from 'date-fns';
 
 const SMS_PROVIDER = 'signalwire';
 const SMS_BRAND_PREFIX = 'CCG Transit:';
@@ -37,34 +38,156 @@ function withSmsBranding(message) {
   return `${SMS_BRAND_PREFIX} ${text}`;
 }
 
-async function resolveDispatchDateTimeLine(notification) {
+function parseDispatchStatusFromKey(dispatchStatusKey) {
+  const key = String(dispatchStatusKey || '').trim();
+  if (!key) return '';
+
+  const parts = key.split(':');
+  return String(parts?.[1] || '').trim();
+}
+
+function resolveOwnerDispatchSmsStatus(notification) {
+  const parsedStatus = parseDispatchStatusFromKey(notification?.dispatch_status_key);
+  if (parsedStatus) return parsedStatus;
+
+  const normalizedType = String(notification?.notification_type || '').trim().toLowerCase();
+  if (normalizedType === 'informational') return 'Update';
+
+  const normalizedCategory = String(notification?.notification_category || '').trim().toLowerCase();
+  if (normalizedCategory === 'dispatch_update_info') return 'Update';
+
+  const rawTitle = String(notification?.title || '').trim().toLowerCase();
+  if (rawTitle.includes('scheduled')) return 'Scheduled';
+  if (rawTitle.includes('dispatch')) return 'Dispatch';
+  if (rawTitle.includes('amended') || rawTitle.includes('amendment')) return 'Amended';
+  if (rawTitle.includes('cancelled') || rawTitle.includes('canceled') || rawTitle.includes('cancellation')) return 'Cancelled';
+  if (rawTitle.includes('update')) return 'Update';
+
+  return '';
+}
+
+function formatOwnerDispatchDateShiftLine(dispatch) {
+  const parsedDate = dispatch?.date ? parseISO(dispatch.date) : null;
+  if (!parsedDate || !isValid(parsedDate)) return '';
+
+  const dateText = format(parsedDate, 'EEE MM-dd-yyyy').toUpperCase();
+  const normalizedShift = String(dispatch?.shift_time || '').trim().toUpperCase();
+  const shiftText = normalizedShift.includes('NIGHT') ? 'NIGHT SHIFT' : 'DAY SHIFT';
+
+  return `${dateText} ▪ ${shiftText}`;
+}
+
+function formatOwnerDispatchDateTimeLine(dispatch) {
+  const dateTimeLine = formatDispatchDateTimeLine(dispatch, '▪');
+  return dateTimeLine.replace(/\s+▪\s+/g, ' ▪ ');
+}
+
+function buildCompanyOwnerDispatchSmsMessage(notification, dispatch) {
+  const status = resolveOwnerDispatchSmsStatus(notification);
+  const requiredTrucks = Array.isArray(notification?.required_trucks)
+    ? notification.required_trucks.filter(Boolean)
+    : [];
+  const truckCount = requiredTrucks.length || (Array.isArray(dispatch?.trucks_assigned) ? dispatch.trucks_assigned.filter(Boolean).length : 0);
+
+  if (status === 'Scheduled') {
+    const displayTruckCount = truckCount > 0 ? truckCount : 1;
+    const truckLine = displayTruckCount === 1
+      ? '(1) truck has been scheduled for:'
+      : `(${displayTruckCount}) trucks have been scheduled for:`;
+    const dateShiftLine = formatOwnerDispatchDateShiftLine(dispatch) || 'Dispatch details are available in the app.';
+
+    return [
+      `${SMS_BRAND_PREFIX} Scheduled`,
+      truckLine,
+      dateShiftLine,
+      '',
+      'Details to follow.',
+      'Please open the app to view and confirm.',
+    ].join('\n');
+  }
+
+  if (status === 'Dispatch') {
+    return [
+      `${SMS_BRAND_PREFIX} Dispatch`,
+      'You have received a new dispatch for:',
+      formatOwnerDispatchDateTimeLine(dispatch) || 'Dispatch details are available in the app.',
+      '',
+      'Please open the app to view and CONFIRM.',
+    ].join('\n');
+  }
+
+  if (status === 'Amended') {
+    return [
+      `${SMS_BRAND_PREFIX} Amendment`,
+      'Your dispatch has been amended to:',
+      formatOwnerDispatchDateTimeLine(dispatch) || 'Dispatch details are available in the app.',
+      '',
+      'Please open the app to view and CONFIRM.',
+    ].join('\n');
+  }
+
+  if (status === 'Cancelled') {
+    return [
+      `${SMS_BRAND_PREFIX} Cancellation`,
+      'Your dispatch has been cancelled:',
+      formatOwnerDispatchDateTimeLine(dispatch) || 'Dispatch details are available in the app.',
+      '',
+      'Please open the app to view and CONFIRM.',
+    ].join('\n');
+  }
+
+  if (status === 'Update') {
+    return [
+      `${SMS_BRAND_PREFIX} Update`,
+      'Your dispatch has been updated:',
+      formatOwnerDispatchDateTimeLine(dispatch) || 'Dispatch details are available in the app.',
+      '',
+      'Please open the app to view and CONFIRM.',
+    ].join('\n');
+  }
+
+  return '';
+}
+
+async function resolveRelatedDispatch(notification) {
   const dispatchId = notification?.related_dispatch_id;
-  if (!dispatchId) return '';
+  if (!dispatchId) return null;
 
   try {
     const records = await base44.entities.Dispatch.filter({ id: dispatchId }, '-created_date', 1);
-    const dispatch = records?.[0] || null;
-    const normalizedTrucks = [...new Set((notification?.required_trucks || []).filter(Boolean))];
-    const effectiveTimes = [...new Set(normalizedTrucks.map((truckNumber) => getEffectiveTruckStartTime(dispatch, truckNumber)).filter(Boolean))];
-    const driverStartTime = effectiveTimes.length === 1 ? effectiveTimes[0] : null;
-    return formatDispatchDateTimeLine(dispatch, 'at', driverStartTime);
+    return records?.[0] || null;
   } catch (error) {
     console.error('SMS debug: failed resolving dispatch for SMS format', {
       notificationId: notification?.id || null,
       dispatchId,
       error,
     });
-    return '';
+    return null;
   }
 }
 
-async function buildSmsMessage(notification) {
+function resolveDriverDispatchDateTimeLine(notification, dispatch) {
+  if (!dispatch) return '';
+  const normalizedTrucks = [...new Set((notification?.required_trucks || []).filter(Boolean))];
+  const effectiveTimes = [...new Set(normalizedTrucks.map((truckNumber) => getEffectiveTruckStartTime(dispatch, truckNumber)).filter(Boolean))];
+  const driverStartTime = effectiveTimes.length === 1 ? effectiveTimes[0] : null;
+  return formatDispatchDateTimeLine(dispatch, 'at', driverStartTime);
+}
+
+async function buildSmsMessage(notification, recipient) {
   if (!notification?.related_dispatch_id) {
     return withSmsBranding(notification?.message || '');
   }
 
+  const dispatch = await resolveRelatedDispatch(notification);
+
+  if (recipient?.code_type === 'CompanyOwner') {
+    const ownerDispatchMessage = buildCompanyOwnerDispatchSmsMessage(notification, dispatch);
+    if (ownerDispatchMessage) return ownerDispatchMessage;
+  }
+
   const headline = normalizeHeadline(notification?.title || 'Dispatch update');
-  const dispatchDateTimeLine = await resolveDispatchDateTimeLine(notification);
+  const dispatchDateTimeLine = resolveDriverDispatchDateTimeLine(notification, dispatch);
   const dispatchLine = dispatchDateTimeLine || 'Dispatch details are available in the app.';
 
   return `${SMS_BRAND_PREFIX} ${headline}\n${dispatchLine}\n\nPlease open the app to view and confirm.`;
@@ -300,7 +423,7 @@ export async function sendNotificationSmsIfEligible(notification) {
       relatedDispatchId: notification.related_dispatch_id || null,
     });
 
-    const smsMessage = await buildSmsMessage(notification);
+    const smsMessage = await buildSmsMessage(notification, recipient);
 
     const response = await base44.functions.invoke('sendNotificationSms/entry', {
       phone: smsPhone,
