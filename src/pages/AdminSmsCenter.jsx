@@ -57,6 +57,39 @@ function sampleOwnerDispatchDateShiftLine() {
   return 'TUE 04-14-2026 ▪ DAY SHIFT';
 }
 
+function getTemplateCardClasses(templateTitle) {
+  const title = String(templateTitle || '').toLowerCase();
+
+  if (title.includes('scheduled dispatch sms')) return 'border-blue-300 bg-blue-50';
+  if (title.includes('dispatch sms')) return 'border-emerald-300 bg-emerald-50';
+  if (title.includes('dispatch assigned sms')) return 'border-emerald-300 bg-emerald-50';
+  if (title.includes('all confirmed sms')) return 'border-emerald-300 bg-emerald-50';
+  if (title.includes('assignment removed sms')) return 'border-rose-300 bg-rose-50';
+  if (title.includes('amendment sms') || title.includes('amended sms') || title.includes('truck reassignment sms')) return 'border-amber-300 bg-amber-50';
+  if (title.includes('cancellation sms') || title.includes('cancelled sms')) return 'border-red-300 bg-red-50';
+  if (title.includes('optional informational update sms') || title.includes('broadcast / informational sms')) return 'border-orange-300 bg-orange-50';
+  if (title.includes('availability updated sms')) return 'border-violet-300 bg-violet-50';
+  return 'border-slate-300 bg-slate-50';
+}
+
+function getStatusClasses(status) {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'sent' || normalized === 'delivered') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (normalized === 'skipped') return 'border-amber-200 bg-amber-50 text-amber-700';
+  if (normalized === 'failed') return 'border-red-200 bg-red-50 text-red-700';
+  return 'border-slate-200 bg-slate-100 text-slate-700';
+}
+
+function formatPayload(payload) {
+  if (payload == null || payload === '') return '—';
+  if (typeof payload === 'string') return payload;
+  try {
+    return JSON.stringify(payload, null, 2);
+  } catch {
+    return String(payload);
+  }
+}
+
 export default function AdminSmsCenter() {
   const { session } = useSession();
   const queryClient = useQueryClient();
@@ -113,6 +146,73 @@ export default function AdminSmsCenter() {
       return statusOk && roleOk && searchOk && startOk && endOk;
     });
   }, [logs, statusFilter, roleFilter, search, startDate, endDate]);
+
+  const companiesById = useMemo(() => new Map(companies.map((company) => [company.id, company])), [companies]);
+  const driversById = useMemo(() => new Map(drivers.map((driver) => [driver.id, driver])), [drivers]);
+  const accessCodesById = useMemo(() => new Map(accessCodes.map((code) => [code.id, code])), [accessCodes]);
+
+  const knownSmsPhones = useMemo(() => {
+    const phoneMap = new Map();
+    const setPhone = (rawPhone, payload) => {
+      if (!rawPhone) return;
+      const candidates = [normalizeSmsPhone(rawPhone), normalizeUsSmsPhone(rawPhone), String(rawPhone).trim()].filter(Boolean);
+      candidates.forEach((phone) => {
+        const key = String(phone);
+        if (!phoneMap.has(key) || phoneMap.get(key).role === 'Admin') {
+          phoneMap.set(key, payload);
+        }
+      });
+    };
+
+    for (const code of accessCodes) {
+      if (code.code_type === 'CompanyOwner') {
+        const companyName = companiesById.get(code.company_id)?.company_name || companiesById.get(code.company_id)?.name || '—';
+        setPhone(code.sms_phone, {
+          role: 'Company Owner',
+          name: code.label || code.code || 'Company Owner',
+          company: companyName,
+        });
+      }
+      if (code.code_type === 'Admin') {
+        setPhone(code.sms_phone, {
+          role: 'Admin',
+          name: code.label || code.code || 'Admin',
+          company: '—',
+        });
+      }
+    }
+
+    for (const driver of drivers) {
+      const companyName = companiesById.get(driver.company_id)?.company_name || companiesById.get(driver.company_id)?.name || '—';
+      const driverName = driver.full_name || `${driver.first_name || ''} ${driver.last_name || ''}`.trim() || driver.name || 'Driver';
+      setPhone(driver.sms_phone || driver.phone, {
+        role: 'Driver',
+        name: driverName,
+        company: companyName,
+      });
+    }
+
+    return phoneMap;
+  }, [accessCodes, drivers, companiesById]);
+
+  const resolveLogCompanyName = (entry) => {
+    if (!entry) return '—';
+    const code = accessCodesById.get(entry.recipient_access_code_id);
+    const recipientType = String(entry.recipient_type || code?.code_type || '').toLowerCase();
+
+    if (recipientType === 'companyowner') {
+      const companyId = code?.company_id;
+      return companiesById.get(companyId)?.company_name || companiesById.get(companyId)?.name || '—';
+    }
+
+    if (recipientType === 'driver') {
+      const driverId = code?.driver_id;
+      const companyId = driversById.get(driverId)?.company_id;
+      return companiesById.get(companyId)?.company_name || companiesById.get(companyId)?.name || '—';
+    }
+
+    return '—';
+  };
 
   const templateCatalogByGroup = useMemo(() => {
     const dispatchLine = sampleDispatchDateTimeLine();
@@ -446,11 +546,10 @@ export default function AdminSmsCenter() {
                   <h3 className="text-sm font-semibold text-slate-900">{section.group}</h3>
                   <div className="grid gap-3 md:grid-cols-2">
                     {section.templates.map((template) => (
-                      <div key={`${section.group}-${template.title}`} className="rounded border p-3 bg-slate-50">
+                      <div key={`${section.group}-${template.title}`} className={`rounded border p-3 ${getTemplateCardClasses(template.title)}`}>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium text-sm">{template.title}</p>
                           <Badge variant="outline" className="text-[10px]">{template.group}</Badge>
-                          <Badge variant={template.editable ? 'default' : 'secondary'} className="text-[10px]">{template.editable ? 'Editable' : 'Locked / Dynamic'}</Badge>
                         </div>
                         {template.description && <p className="text-xs mt-1 text-slate-600">{template.description}</p>}
                         <pre className="whitespace-pre-wrap text-xs mt-2 text-slate-700">{template.body}</pre>
@@ -472,14 +571,31 @@ export default function AdminSmsCenter() {
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {filteredLogs.length === 0 ? <p className="text-sm text-slate-500">No SMS logs found for current filters.</p> : filteredLogs.map((entry) => (
-                <div key={entry.id} className="rounded border p-3 text-xs">
-                  <div className="flex flex-wrap gap-3"><span className="font-semibold uppercase">{entry.status}</span><span>{format(new Date(entry.sent_at || entry.created_date || entry.created_at || Date.now()), 'PPp')}</span><span>{entry.recipient_type || '—'}</span><span>{entry.recipient_name || '—'}</span></div>
-                  <div className="mt-1 text-slate-700">Phone: {normalizeSmsPhone(entry.phone) || entry.phone || '—'} • Dispatch: {entry.dispatch_id || '—'} • Provider: {entry.provider || '—'} • Provider ID: {entry.provider_message_id || '—'}</div>
-                  <div className="mt-1 text-slate-600">{entry.message || 'No message body logged.'}</div>
-                  {entry.skip_reason && <div className="mt-1 text-amber-700">Skip: {entry.skip_reason}</div>}
-                  {entry.error_message && <div className="mt-1 text-red-700">Error: {entry.error_message}</div>}
+                <div key={entry.id} className="rounded-lg border bg-white p-4 text-xs shadow-sm space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant="outline" className={`uppercase ${getStatusClasses(entry.status)}`}>{entry.status || 'unknown'}</Badge>
+                    <span className="text-slate-500">{format(new Date(entry.sent_at || entry.created_date || entry.created_at || Date.now()), 'PPp')}</span>
+                  </div>
+
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <p><span className="font-semibold text-slate-700">Recipient role:</span> {entry.recipient_type || '—'}</p>
+                    <p><span className="font-semibold text-slate-700">Recipient name:</span> {entry.recipient_name || '—'}</p>
+                    <p><span className="font-semibold text-slate-700">Phone:</span> {normalizeSmsPhone(entry.phone) || entry.phone || '—'}</p>
+                    <p><span className="font-semibold text-slate-700">Company:</span> {resolveLogCompanyName(entry)}</p>
+                    <p><span className="font-semibold text-slate-700">Dispatch ID:</span> {entry.dispatch_id || '—'}</p>
+                    <p><span className="font-semibold text-slate-700">Provider:</span> {entry.provider || '—'}</p>
+                    <p className="md:col-span-2"><span className="font-semibold text-slate-700">Provider message ID:</span> {entry.provider_message_id || '—'}</p>
+                  </div>
+
+                  <div className="rounded border bg-slate-50 p-3">
+                    <p className="mb-1 font-semibold text-slate-700">Message</p>
+                    <pre className="whitespace-pre-wrap break-words text-slate-700">{entry.message || 'No message body logged.'}</pre>
+                  </div>
+
+                  {entry.skip_reason && <div className="rounded border border-amber-200 bg-amber-50 p-2 text-amber-700"><span className="font-semibold">Skip reason:</span> {entry.skip_reason}</div>}
+                  {entry.error_message && <div className="rounded border border-red-200 bg-red-50 p-2 text-red-700"><span className="font-semibold">Error:</span> {entry.error_message}</div>}
                 </div>
               ))}
             </div>
@@ -491,13 +607,34 @@ export default function AdminSmsCenter() {
             {inbound.length === 0 ? (
               <p className="text-sm text-slate-500">No inbound SMS records yet. When provider callbacks/webhooks are wired, replies (STOP/HELP/etc.), opt-outs, and payload statuses will appear here.</p>
             ) : (
-              <div className="space-y-2">{inbound.map((entry) => (
-                <div key={entry.id} className="rounded border p-3 text-xs">
-                  <p className="font-medium">{entry.phone || 'Unknown sender'} • {entry.inbound_keyword || 'No keyword'}</p>
-                  <p className="text-slate-700">{entry.message || 'No message body'}</p>
-                  <p className="text-slate-500">Provider payload: {entry.provider_status_payload || '—'}</p>
+              <div className="space-y-3">{inbound.map((entry) => {
+                const normalizedPhone = normalizeSmsPhone(entry.phone) || normalizeUsSmsPhone(entry.phone) || entry.phone || '';
+                const matched = knownSmsPhones.get(String(normalizedPhone)) || knownSmsPhones.get(String(entry.phone || ''));
+                return (
+                <div key={entry.id} className="rounded-lg border bg-white p-4 text-xs shadow-sm space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold text-slate-900">{normalizeSmsPhone(entry.phone) || entry.phone || 'Unknown sender'}</p>
+                    <span className="text-slate-500">{format(new Date(entry.created_date || entry.created_at || Date.now()), 'PPp')}</span>
+                  </div>
+
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <p><span className="font-semibold text-slate-700">Matched user:</span> {matched?.name || '—'}</p>
+                    <p><span className="font-semibold text-slate-700">Matched role:</span> {matched?.role || '—'}</p>
+                    <p className="md:col-span-2"><span className="font-semibold text-slate-700">Matched company:</span> {matched?.company || '—'}</p>
+                    <p className="md:col-span-2"><span className="font-semibold text-slate-700">Inbound keyword:</span> {entry.inbound_keyword || '—'}</p>
+                  </div>
+
+                  <div className="rounded border bg-slate-50 p-3">
+                    <p className="mb-1 font-semibold text-slate-700">Message</p>
+                    <pre className="whitespace-pre-wrap break-words text-slate-700">{entry.message || 'No message body'}</pre>
+                  </div>
+
+                  <div className="rounded border border-slate-200 bg-slate-50/50 p-3 text-slate-500">
+                    <p className="mb-1 font-semibold text-slate-600">Provider payload / technical details</p>
+                    <pre className="whitespace-pre-wrap break-words">{formatPayload(entry.provider_status_payload || entry.payload || entry.raw_payload || '—')}</pre>
+                  </div>
                 </div>
-              ))}</div>
+              )})}</div>
             )}
           </CardContent></Card>
         </TabsContent>
