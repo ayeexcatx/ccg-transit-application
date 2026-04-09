@@ -732,6 +732,7 @@ export default function DispatchDetailDrawer({
   const hasOwnerVisibleInternalNotes = Boolean(String(dispatch?.owner_visible_internal_notes || '').trim());
   const hasAdminOnlyInternalNotes = Boolean(String(dispatch?.admin_internal_notes || '').trim());
   const hasInternalNotes = hasOwnerVisibleInternalNotes || hasAdminOnlyInternalNotes;
+  const hasNoInternalNotes = !hasOwnerVisibleInternalNotes && !hasAdminOnlyInternalNotes;
   const currentConfirmedTruckSet = buildConfirmedTruckSetForStatus({
     confirmations,
     dispatchId: dispatch.id,
@@ -1096,10 +1097,12 @@ export default function DispatchDetailDrawer({
                   <Button
                   type="button"
                   size="sm"
-                  variant="outline"
-                  className="h-7 border-red-300 text-red-700 hover:bg-red-100/80 hover:text-red-800"
+                  variant={hasNoInternalNotes ? 'default' : 'outline'}
+                  className={hasNoInternalNotes ?
+                  'h-7 bg-red-600 px-3 text-white hover:bg-red-700' :
+                  'h-7 border-red-300 text-red-700 hover:bg-red-100/80 hover:text-red-800'}
                   onClick={() => setIsInternalNotesDialogOpen(true)}>
-                    Internal Notes
+                    {hasNoInternalNotes ? 'Add Note' : 'Internal Notes'}
                     {hasInternalNotes &&
                   <span className="ml-2 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
                         Notes Added
@@ -1109,24 +1112,28 @@ export default function DispatchDetailDrawer({
                   }
                 </div>
 
-                <div className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-2.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">Owner-Visible Internal Note</p>
-                  <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">
-                    {hasOwnerVisibleInternalNotes ? dispatch.owner_visible_internal_notes : 'No owner-visible note saved.'}
-                  </p>
-                </div>
-
-                {isAdmin &&
-                <div className="mt-3">
-                    <div className="mb-2 border-t border-dotted border-red-300" />
-                    <div className="rounded-lg bg-red-600 px-3 py-2.5 text-white">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-white">Admin Only</p>
-                      <p className="mt-1 whitespace-pre-wrap break-words text-sm text-white">
-                        {hasAdminOnlyInternalNotes ? dispatch.admin_internal_notes : 'No admin-only note saved.'}
+                {!hasNoInternalNotes &&
+              <>
+                    <div className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-2.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">Owner-Visible Internal Note</p>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">
+                        {hasOwnerVisibleInternalNotes ? dispatch.owner_visible_internal_notes : 'No owner-visible note saved.'}
                       </p>
                     </div>
-                  </div>
+
+                    {isAdmin &&
+                <div className="mt-3">
+                        <div className="mb-2 border-t border-dotted border-red-300" />
+                        <div className="rounded-lg bg-red-600 px-3 py-2.5 text-white">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-white">Admin Only</p>
+                          <p className="mt-1 whitespace-pre-wrap break-words text-sm text-white">
+                            {hasAdminOnlyInternalNotes ? dispatch.admin_internal_notes : 'No admin-only note saved.'}
+                          </p>
+                        </div>
+                      </div>
                 }
+                  </>
+              }
               </section>
             }
 
