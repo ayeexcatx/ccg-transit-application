@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,7 +67,8 @@ function getTemplateCardClasses(templateTitle) {
   if (title.includes('assignment removed sms')) return 'border-rose-300 bg-rose-50';
   if (title.includes('amendment sms') || title.includes('amended sms') || title.includes('truck reassignment sms')) return 'border-amber-300 bg-amber-50';
   if (title.includes('cancellation sms') || title.includes('cancelled sms')) return 'border-red-300 bg-red-50';
-  if (title.includes('optional informational update sms') || title.includes('broadcast / informational sms')) return 'border-orange-300 bg-orange-50';
+  if (title.includes('optional informational update sms')) return 'border-orange-300 bg-orange-50';
+  if (title.includes('broadcast / informational sms')) return 'border-slate-300 bg-slate-50';
   if (title.includes('availability updated sms')) return 'border-violet-300 bg-violet-50';
   return 'border-slate-300 bg-slate-50';
 }
@@ -134,22 +135,64 @@ export default function AdminSmsCenter() {
     onError: (error) => toast.error(error?.message || 'Unable to save SMS rules'),
   });
 
+  const companiesById = useMemo(() => new Map(companies.map((company) => [company.id, company])), [companies]);
+  const driversById = useMemo(() => new Map(drivers.map((driver) => [driver.id, driver])), [drivers]);
+  const accessCodesById = useMemo(() => new Map(accessCodes.map((code) => [code.id, code])), [accessCodes]);
+
+  const resolveOutboundLogRecipient = useCallback((entry) => {
+    if (!entry) return { role: '—', name: '—', company: '—' };
+
+    const code = accessCodesById.get(entry.recipient_access_code_id);
+    const resolvedType = String(code?.code_type || entry.recipient_type || '').toLowerCase();
+
+    if (resolvedType === 'companyowner') {
+      const company = companiesById.get(code?.company_id);
+      return {
+        role: 'Company Owner',
+        name: code?.label || code?.code || entry.recipient_name || 'Company Owner',
+        company: company?.company_name || company?.name || '—',
+      };
+    }
+
+    if (resolvedType === 'driver') {
+      const driver = driversById.get(code?.driver_id);
+      const company = companiesById.get(driver?.company_id);
+      const driverName = driver?.full_name || `${driver?.first_name || ''} ${driver?.last_name || ''}`.trim() || driver?.name;
+      return {
+        role: 'Driver',
+        name: driverName || entry.recipient_name || code?.label || code?.code || 'Driver',
+        company: company?.company_name || company?.name || '—',
+      };
+    }
+
+    if (resolvedType === 'admin') {
+      return {
+        role: 'Admin',
+        name: code?.label || code?.code || entry.recipient_name || 'Admin',
+        company: '—',
+      };
+    }
+
+    return {
+      role: entry.recipient_type || '—',
+      name: entry.recipient_name || code?.label || code?.code || '—',
+      company: '—',
+    };
+  }, [accessCodesById, companiesById, driversById]);
+
   const filteredLogs = useMemo(() => {
     return logs.filter((entry) => {
+      const resolved = resolveOutboundLogRecipient(entry);
       const statusOk = statusFilter === 'all' || String(entry.status || '').toLowerCase() === statusFilter;
-      const roleOk = roleFilter === 'all' || String(entry.recipient_type || '').toLowerCase() === roleFilter;
-      const text = `${entry.phone || ''} ${entry.recipient_name || ''} ${entry.dispatch_id || ''}`.toLowerCase();
+      const roleOk = roleFilter === 'all' || String(resolved.role || '').toLowerCase() === roleFilter;
+      const text = `${entry.phone || ''} ${resolved.name || ''} ${entry.dispatch_id || ''}`.toLowerCase();
       const searchOk = !search || text.includes(search.toLowerCase());
       const ts = new Date(entry.sent_at || entry.created_date || entry.created_at || 0).getTime();
       const startOk = !startDate || ts >= new Date(`${startDate}T00:00:00`).getTime();
       const endOk = !endDate || ts <= new Date(`${endDate}T23:59:59`).getTime();
       return statusOk && roleOk && searchOk && startOk && endOk;
     });
-  }, [logs, statusFilter, roleFilter, search, startDate, endDate]);
-
-  const companiesById = useMemo(() => new Map(companies.map((company) => [company.id, company])), [companies]);
-  const driversById = useMemo(() => new Map(drivers.map((driver) => [driver.id, driver])), [drivers]);
-  const accessCodesById = useMemo(() => new Map(accessCodes.map((code) => [code.id, code])), [accessCodes]);
+  }, [logs, statusFilter, roleFilter, search, startDate, endDate, resolveOutboundLogRecipient]);
 
   const knownSmsPhones = useMemo(() => {
     const phoneMap = new Map();
@@ -194,25 +237,6 @@ export default function AdminSmsCenter() {
 
     return phoneMap;
   }, [accessCodes, drivers, companiesById]);
-
-  const resolveLogCompanyName = (entry) => {
-    if (!entry) return '—';
-    const code = accessCodesById.get(entry.recipient_access_code_id);
-    const recipientType = String(entry.recipient_type || code?.code_type || '').toLowerCase();
-
-    if (recipientType === 'companyowner') {
-      const companyId = code?.company_id;
-      return companiesById.get(companyId)?.company_name || companiesById.get(companyId)?.name || '—';
-    }
-
-    if (recipientType === 'driver') {
-      const driverId = code?.driver_id;
-      const companyId = driversById.get(driverId)?.company_id;
-      return companiesById.get(companyId)?.company_name || companiesById.get(companyId)?.name || '—';
-    }
-
-    return '—';
-  };
 
   const templateCatalogByGroup = useMemo(() => {
     const dispatchLine = sampleDispatchDateTimeLine();
@@ -572,7 +596,9 @@ export default function AdminSmsCenter() {
               <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
             <div className="space-y-3">
-              {filteredLogs.length === 0 ? <p className="text-sm text-slate-500">No SMS logs found for current filters.</p> : filteredLogs.map((entry) => (
+              {filteredLogs.length === 0 ? <p className="text-sm text-slate-500">No SMS logs found for current filters.</p> : filteredLogs.map((entry) => {
+                const resolvedRecipient = resolveOutboundLogRecipient(entry);
+                return (
                 <div key={entry.id} className="rounded-lg border bg-white p-4 text-xs shadow-sm space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <Badge variant="outline" className={`uppercase ${getStatusClasses(entry.status)}`}>{entry.status || 'unknown'}</Badge>
@@ -580,10 +606,10 @@ export default function AdminSmsCenter() {
                   </div>
 
                   <div className="grid gap-2 md:grid-cols-2">
-                    <p><span className="font-semibold text-slate-700">Recipient role:</span> {entry.recipient_type || '—'}</p>
-                    <p><span className="font-semibold text-slate-700">Recipient name:</span> {entry.recipient_name || '—'}</p>
+                    <p><span className="font-semibold text-slate-700">Recipient role:</span> {resolvedRecipient.role}</p>
+                    <p><span className="font-semibold text-slate-700">Recipient name:</span> {resolvedRecipient.name}</p>
                     <p><span className="font-semibold text-slate-700">Phone:</span> {normalizeSmsPhone(entry.phone) || entry.phone || '—'}</p>
-                    <p><span className="font-semibold text-slate-700">Company:</span> {resolveLogCompanyName(entry)}</p>
+                    <p><span className="font-semibold text-slate-700">Company:</span> {resolvedRecipient.company}</p>
                     <p><span className="font-semibold text-slate-700">Dispatch ID:</span> {entry.dispatch_id || '—'}</p>
                     <p><span className="font-semibold text-slate-700">Provider:</span> {entry.provider || '—'}</p>
                     <p className="md:col-span-2"><span className="font-semibold text-slate-700">Provider message ID:</span> {entry.provider_message_id || '—'}</p>
@@ -597,7 +623,7 @@ export default function AdminSmsCenter() {
                   {entry.skip_reason && <div className="rounded border border-amber-200 bg-amber-50 p-2 text-amber-700"><span className="font-semibold">Skip reason:</span> {entry.skip_reason}</div>}
                   {entry.error_message && <div className="rounded border border-red-200 bg-red-50 p-2 text-red-700"><span className="font-semibold">Error:</span> {entry.error_message}</div>}
                 </div>
-              ))}
+              )})}
             </div>
           </CardContent></Card>
         </TabsContent>
