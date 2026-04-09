@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -14,8 +15,9 @@ import { format } from 'date-fns';
 import { normalizeSmsPhone } from '@/lib/sms';
 import { normalizeUsSmsPhone } from '@/lib/smsPhone';
 import { getDriverSmsState, getCompanyOwnerSmsState, getAdminSmsProductState } from '@/lib/sms';
-import { DEFAULT_SMS_RULES, getSmsRules, getSmsTemplateSettings, listSmsBroadcasts, resolveEffectiveSharedAdminAccessCode, saveSmsBroadcast, saveSmsRules, saveSmsTemplateSettings } from '@/lib/smsConfig';
+import { DEFAULT_SMS_RULES, getSmsRules, listSmsBroadcasts, resolveEffectiveSharedAdminAccessCode, saveSmsBroadcast, saveSmsRules } from '@/lib/smsConfig';
 import { SMS_WELCOME_MESSAGE } from '@/lib/smsIntro';
+import { formatDispatchDateTimeLine } from '@/components/notifications/dispatchDateTimeFormat';
 import { useSession } from '@/components/session/SessionContext';
 import { getEffectiveView } from '@/components/session/workspaceUtils';
 
@@ -35,8 +37,24 @@ const RULE_META = [
   ['informational_broadcast_sms', 'Informational / broadcast SMS'],
 ];
 
-function templatePreview(title, body, footer) {
-  return { title, body: `${body}${footer ? `\n\n${footer}` : ''}` };
+const TEMPLATE_GROUP_ORDER = ['Company Owner', 'Driver', 'Admin', 'General'];
+
+function createTemplatePreview({
+  group,
+  title,
+  body,
+  editable = false,
+  description = '',
+}) {
+  return { group, title, body, editable, description };
+}
+
+function sampleDispatchDateTimeLine() {
+  return formatDispatchDateTimeLine({ date: '2026-04-14', start_time: '05:00:00' }, 'at') || 'TUE 04-14-2026 at 5:00 AM';
+}
+
+function sampleOwnerDispatchDateShiftLine() {
+  return 'TUE 04-14-2026 ▪ DAY SHIFT';
 }
 
 export default function AdminSmsCenter() {
@@ -59,7 +77,6 @@ export default function AdminSmsCenter() {
   });
 
   const { data: smsRules = DEFAULT_SMS_RULES } = useQuery({ queryKey: ['sms-rules'], queryFn: getSmsRules, enabled: isAdmin });
-  const { data: templateSettings = { support_footer: '' } } = useQuery({ queryKey: ['sms-template-settings'], queryFn: getSmsTemplateSettings, enabled: isAdmin });
   const { data: logs = [] } = useQuery({
     queryKey: ['sms-general-logs'],
     queryFn: () => base44.entities.General.filter({ record_type: 'sms_log' }, '-created_date', 500),
@@ -84,15 +101,6 @@ export default function AdminSmsCenter() {
     onError: (error) => toast.error(error?.message || 'Unable to save SMS rules'),
   });
 
-  const templateMutation = useMutation({
-    mutationFn: saveSmsTemplateSettings,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['sms-template-settings'] });
-      toast.success('Template footer saved');
-    },
-    onError: (error) => toast.error(error?.message || 'Unable to save template settings'),
-  });
-
   const filteredLogs = useMemo(() => {
     return logs.filter((entry) => {
       const statusOk = statusFilter === 'all' || String(entry.status || '').toLowerCase() === statusFilter;
@@ -106,18 +114,153 @@ export default function AdminSmsCenter() {
     });
   }, [logs, statusFilter, roleFilter, search, startDate, endDate]);
 
-  const previews = useMemo(() => {
-    const footer = templateSettings.support_footer ? ` ${templateSettings.support_footer}` : '';
-    return [
-      templatePreview('Welcome SMS', SMS_WELCOME_MESSAGE, ''),
-      templatePreview('Opt-out confirmation SMS', 'CCG Transit: You are now opted out of SMS notifications.', ''),
-      templatePreview('Driver dispatch SMS', 'CCG Transit: Dispatch Assigned.\nApr 1, 2026 at 5:00 AM\n\nPlease open the app to view and confirm.', footer),
-      templatePreview('Company owner dispatch SMS', 'CCG Transit: Dispatch Updated.\nApr 1, 2026 at 5:00 AM\n\nPlease open the app to view and confirm.', footer),
-      templatePreview('Company owner informational update SMS', 'CCG Transit: Dispatch info updated. Please open the app for details.', footer),
-      templatePreview('Admin SMS', 'CCG Transit: Operations update available. Please open the app.', footer),
-      templatePreview('Broadcast / informational SMS', 'CCG Transit: Service update for today. Please review in app.', footer),
+  const templateCatalogByGroup = useMemo(() => {
+    const dispatchLine = sampleDispatchDateTimeLine();
+    const catalog = [
+      createTemplatePreview({
+        group: 'Company Owner',
+        title: 'Scheduled dispatch SMS',
+        body: [
+          'CCG Transit: Scheduled',
+          '(2) trucks have been scheduled for:',
+          sampleOwnerDispatchDateShiftLine(),
+          '',
+          'Details to follow.',
+          'Please open the app to view and confirm.',
+        ].join('\n'),
+        description: 'Status=Scheduled owner dispatch format generated by SMS formatter.',
+      }),
+      createTemplatePreview({
+        group: 'Company Owner',
+        title: 'Dispatch SMS',
+        body: [
+          'CCG Transit: Dispatch',
+          'You have received a new dispatch for:',
+          dispatchLine.replace(' at ', ' ▪ '),
+          '',
+          'Please open the app to view and CONFIRM.',
+        ].join('\n'),
+        description: 'Status=Dispatch owner dispatch format.',
+      }),
+      createTemplatePreview({
+        group: 'Company Owner',
+        title: 'Amendment SMS',
+        body: [
+          'CCG Transit: Amendment',
+          'Your dispatch has been amended to:',
+          dispatchLine.replace(' at ', ' ▪ '),
+          '',
+          'Please open the app to view and CONFIRM.',
+        ].join('\n'),
+        description: 'Status=Amended owner dispatch format.',
+      }),
+      createTemplatePreview({
+        group: 'Company Owner',
+        title: 'Cancellation SMS',
+        body: [
+          'CCG Transit: Cancellation',
+          'Your dispatch has been cancelled:',
+          dispatchLine.replace(' at ', ' ▪ '),
+          '',
+          'Please open the app to view and CONFIRM.',
+        ].join('\n'),
+        description: 'Status=Cancelled owner dispatch format.',
+      }),
+      createTemplatePreview({
+        group: 'Company Owner',
+        title: 'Optional informational update SMS',
+        body: [
+          'CCG Transit: Update',
+          'Your dispatch has been updated:',
+          dispatchLine.replace(' at ', ' ▪ '),
+          '',
+          'Please open the app to view and CONFIRM.',
+        ].join('\n'),
+        description: 'Informational update owner dispatch format.',
+      }),
+
+      createTemplatePreview({
+        group: 'Driver',
+        title: 'Driver dispatch assigned SMS',
+        body: `CCG Transit: Dispatch Assigned.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        description: 'Driver assignment notification SMS format.',
+      }),
+      createTemplatePreview({
+        group: 'Driver',
+        title: 'Driver dispatch amended SMS',
+        body: `CCG Transit: Dispatch Amended.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        description: 'Driver amended dispatch SMS format.',
+      }),
+      createTemplatePreview({
+        group: 'Driver',
+        title: 'Driver dispatch cancelled SMS',
+        body: `CCG Transit: Dispatch Cancelled.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        description: 'Driver cancelled dispatch SMS format.',
+      }),
+      createTemplatePreview({
+        group: 'Driver',
+        title: 'Driver dispatch assignment removed SMS',
+        body: `CCG Transit: Dispatch Removed.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        description: 'Driver removed-assignment SMS format.',
+      }),
+      createTemplatePreview({
+        group: 'Driver',
+        title: 'Driver optional informational update SMS',
+        body: `CCG Transit: Dispatch Updated.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        description: 'Driver non-status-change update SMS format (supported).',
+      }),
+
+      createTemplatePreview({
+        group: 'Admin',
+        title: 'Admin SMS (generic)',
+        body: 'CCG Transit: Operations update available. Please open the app.',
+        editable: true,
+        description: 'Generic branded admin SMS format when notification is non-dispatch.',
+      }),
+      createTemplatePreview({
+        group: 'Admin',
+        title: 'Admin dispatch all confirmed SMS',
+        body: `CCG Transit: Acme Hauling has confirmed the dispatch.\nTUE 04-14-2026 • DAY SHIFT • Dispatch\nJOB-1042 • TRK-12, TRK-44\n\nPlease open the app to view and confirm.`,
+        description: 'Admin-targeted dispatch-related notification SMS example.',
+      }),
+      createTemplatePreview({
+        group: 'Admin',
+        title: 'Admin owner availability updated SMS',
+        body: 'CCG Transit: Availability Updated.\nCompany owner for Acme Hauling updated their availability.\n\nPlease open the app to view and confirm.',
+        description: 'Admin availability update notification SMS example.',
+      }),
+      createTemplatePreview({
+        group: 'Admin',
+        title: 'Admin owner truck reassignment SMS',
+        body: `CCG Transit: Acme Hauling changed their truck.\nDispatcher updated TRK-12 to TRK-44\nTUE 04-14-2026 • DAY SHIFT\n\nPlease open the app to view and confirm.`,
+        description: 'Admin owner-truck-change notification SMS example.',
+      }),
+
+      createTemplatePreview({
+        group: 'General',
+        title: 'Welcome SMS',
+        body: SMS_WELCOME_MESSAGE,
+        editable: true,
+      }),
+      createTemplatePreview({
+        group: 'General',
+        title: 'Opt-out confirmation SMS',
+        body: 'CCG Transit: You are now opted out of SMS notifications.',
+        editable: true,
+      }),
+      createTemplatePreview({
+        group: 'General',
+        title: 'Broadcast / informational SMS',
+        body: 'CCG Transit: Service update for today. Please review in app.',
+        editable: true,
+      }),
     ];
-  }, [templateSettings.support_footer]);
+
+    return TEMPLATE_GROUP_ORDER.map((group) => ({
+      group,
+      templates: catalog.filter((template) => template.group === group),
+    })).filter((entry) => entry.templates.length > 0);
+  }, []);
 
   const broadcastMutation = useMutation({
     mutationFn: async () => {
@@ -296,16 +439,24 @@ export default function AdminSmsCenter() {
 
         <TabsContent value="templates">
           <Card><CardHeader><CardTitle className="text-base">Templates / Previews</CardTitle></CardHeader><CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Editable support footer (safe static text only)</Label>
-              <Input value={templateSettings.support_footer || ''} onChange={(e) => templateMutation.mutate({ ...templateSettings, support_footer: e.target.value })} placeholder="Support: alex@ccgnj.com" />
-              <p className="text-xs text-slate-500">Core dynamic sections are locked (brand prefix, title/category, dispatch datetime, CTA).</p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {previews.map((preview) => (
-                <div key={preview.title} className="rounded border p-3 bg-slate-50">
-                  <p className="font-medium text-sm">{preview.title}</p>
-                  <pre className="whitespace-pre-wrap text-xs mt-2 text-slate-700">{preview.body}</pre>
+            <p className="text-xs text-slate-500">Full SMS template catalog derived from current notification/SMS formatting behavior. Dispatch dynamic fields (date/time/status/truck context) are shown as representative examples and remain system-generated.</p>
+            <div className="space-y-4">
+              {templateCatalogByGroup.map((section) => (
+                <div key={section.group} className="space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-900">{section.group}</h3>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {section.templates.map((template) => (
+                      <div key={`${section.group}-${template.title}`} className="rounded border p-3 bg-slate-50">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium text-sm">{template.title}</p>
+                          <Badge variant="outline" className="text-[10px]">{template.group}</Badge>
+                          <Badge variant={template.editable ? 'default' : 'secondary'} className="text-[10px]">{template.editable ? 'Editable' : 'Locked / Dynamic'}</Badge>
+                        </div>
+                        {template.description && <p className="text-xs mt-1 text-slate-600">{template.description}</p>}
+                        <pre className="whitespace-pre-wrap text-xs mt-2 text-slate-700">{template.body}</pre>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
