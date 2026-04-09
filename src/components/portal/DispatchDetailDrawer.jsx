@@ -320,7 +320,8 @@ export default function DispatchDetailDrawer({
   const [selectedDriverByTruck, setSelectedDriverByTruck] = useState({});
   const [driverAssignmentErrors, setDriverAssignmentErrors] = useState({});
   const [isInternalNotesDialogOpen, setIsInternalNotesDialogOpen] = useState(false);
-  const [draftInternalNotes, setDraftInternalNotes] = useState('');
+  const [draftOwnerVisibleInternalNotes, setDraftOwnerVisibleInternalNotes] = useState('');
+  const [draftAdminOnlyInternalNotes, setDraftAdminOnlyInternalNotes] = useState('');
   const screenshotSectionRef = React.useRef(null);
   const queryClient = useQueryClient();
 
@@ -350,9 +351,10 @@ export default function DispatchDetailDrawer({
   }, [dispatch?.id, dispatch?.trucks_assigned]);
 
   useEffect(() => {
-    setDraftInternalNotes(dispatch?.admin_internal_notes || '');
+    setDraftOwnerVisibleInternalNotes(dispatch?.owner_visible_internal_notes || '');
+    setDraftAdminOnlyInternalNotes(dispatch?.admin_internal_notes || '');
     setIsInternalNotesDialogOpen(false);
-  }, [dispatch?.id, dispatch?.admin_internal_notes]);
+  }, [dispatch?.id, dispatch?.owner_visible_internal_notes, dispatch?.admin_internal_notes]);
 
   useEffect(() => {
     if (!truckEditMessage) return undefined;
@@ -562,31 +564,46 @@ export default function DispatchDetailDrawer({
   const handleSendDriverDispatch = async (truckNumber) => sendDriverDispatchMutation.mutateAsync(truckNumber);
   const handleCancelDriverDispatch = async (truckNumber) => cancelDriverDispatchMutation.mutateAsync(truckNumber);
   const saveInternalNotesMutation = useMutation({
-    mutationFn: async (internalNotes) => {
+    mutationFn: async ({ ownerVisibleInternalNotes, adminOnlyInternalNotes }) => {
       if (!dispatch?.id) throw new Error('Dispatch not found.');
       return base44.entities.Dispatch.update(dispatch.id, {
-        admin_internal_notes: internalNotes.trim() || null
+        owner_visible_internal_notes: ownerVisibleInternalNotes.trim() || null,
+        admin_internal_notes: adminOnlyInternalNotes.trim() || null
       });
     },
-    onSuccess: async (_, internalNotes) => {
-      const normalizedNotes = internalNotes.trim();
+    onSuccess: async (_, { ownerVisibleInternalNotes, adminOnlyInternalNotes }) => {
+      const normalizedOwnerVisibleNotes = ownerVisibleInternalNotes.trim();
+      const normalizedAdminOnlyNotes = adminOnlyInternalNotes.trim();
       queryClient.setQueryData(['dispatches-admin'], (current) => {
         if (!Array.isArray(current)) return current;
         return current.map((entry) =>
-        entry?.id === dispatch?.id ? { ...entry, admin_internal_notes: normalizedNotes } : entry
+        entry?.id === dispatch?.id ?
+        {
+          ...entry,
+          owner_visible_internal_notes: normalizedOwnerVisibleNotes,
+          admin_internal_notes: normalizedAdminOnlyNotes
+        } :
+        entry
         );
       });
       queryClient.setQueryData(['dispatch-admin-overlay-target', String(dispatch?.id || '')], (current) => {
         if (!current || current?.id !== dispatch?.id) return current;
         return {
           ...current,
-          admin_internal_notes: normalizedNotes
+          owner_visible_internal_notes: normalizedOwnerVisibleNotes,
+          admin_internal_notes: normalizedAdminOnlyNotes
         };
       });
       queryClient.setQueryData(['portal-dispatches', dispatch?.company_id], (current) => {
         if (!Array.isArray(current)) return current;
         return current.map((entry) =>
-        entry?.id === dispatch?.id ? { ...entry, admin_internal_notes: normalizedNotes } : entry
+        entry?.id === dispatch?.id ?
+        {
+          ...entry,
+          owner_visible_internal_notes: normalizedOwnerVisibleNotes,
+          admin_internal_notes: normalizedAdminOnlyNotes
+        } :
+        entry
         );
       });
       queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] });
@@ -712,7 +729,9 @@ export default function DispatchDetailDrawer({
   };
 
   const currentConfType = dispatch.status;
-  const hasInternalNotes = Boolean(String(dispatch?.admin_internal_notes || '').trim());
+  const hasOwnerVisibleInternalNotes = Boolean(String(dispatch?.owner_visible_internal_notes || '').trim());
+  const hasAdminOnlyInternalNotes = Boolean(String(dispatch?.admin_internal_notes || '').trim());
+  const hasInternalNotes = hasOwnerVisibleInternalNotes || hasAdminOnlyInternalNotes;
   const currentConfirmedTruckSet = buildConfirmedTruckSetForStatus({
     confirmations,
     dispatchId: dispatch.id,
@@ -826,7 +845,10 @@ export default function DispatchDetailDrawer({
     onConfirm(dispatch, truck, currentConfType);
   };
   const handleSaveInternalNotes = async () => {
-    await saveInternalNotesMutation.mutateAsync(draftInternalNotes);
+    await saveInternalNotesMutation.mutateAsync({
+      ownerVisibleInternalNotes: draftOwnerVisibleInternalNotes,
+      adminOnlyInternalNotes: draftAdminOnlyInternalNotes
+    });
   };
 
 
@@ -1066,10 +1088,11 @@ export default function DispatchDetailDrawer({
               isSavingTrucks={isSavingTrucks}
               onSaveTrucks={handleSaveTrucks} />
 
-            {isAdmin &&
+            {(isAdmin || isOwner && hasOwnerVisibleInternalNotes) &&
             <section className="rounded-xl border border-red-200 bg-red-50/40 px-3.5 py-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">Admin Internal Notes</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">Internal Notes</p>
+                  {isAdmin &&
                   <Button
                   type="button"
                   size="sm"
@@ -1083,14 +1106,27 @@ export default function DispatchDetailDrawer({
                       </span>
                   }
                   </Button>
+                  }
                 </div>
 
-                {hasInternalNotes &&
-              <div className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-2.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-red-700">Saved Internal Note</p>
-                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-red-700">{dispatch.admin_internal_notes}</p>
+                <div className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">Owner-Visible Internal Note</p>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">
+                    {hasOwnerVisibleInternalNotes ? dispatch.owner_visible_internal_notes : 'No owner-visible note saved.'}
+                  </p>
+                </div>
+
+                {isAdmin &&
+                <div className="mt-3">
+                    <div className="mb-2 border-t border-dotted border-red-300" />
+                    <div className="rounded-lg bg-red-600 px-3 py-2.5 text-white">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-white">Admin Only</p>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-sm text-white">
+                        {hasAdminOnlyInternalNotes ? dispatch.admin_internal_notes : 'No admin-only note saved.'}
+                      </p>
+                    </div>
                   </div>
-              }
+                }
               </section>
             }
 
@@ -1201,16 +1237,30 @@ export default function DispatchDetailDrawer({
             <DialogHeader>
               <DialogTitle>Internal Notes</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <p className="text-xs text-slate-500">
-                Admin-only notes saved on this dispatch record. These notes are hidden from company owners and drivers.
+                Use one combined internal-notes workflow with two sections: an owner-visible section (for admin + company owner) and an admin-only section. Drivers cannot view either section.
               </p>
-              <Textarea
-                value={draftInternalNotes}
-                onChange={(event) => setDraftInternalNotes(event.target.value)}
-                rows={8}
-                placeholder="Enter internal notes for dispatch operations..."
-                className="resize-y" />
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">Owner-Visible Internal Note</p>
+                <p className="text-xs text-slate-500">Visible to admin and company owner. Hidden from drivers.</p>
+                <Textarea
+                  value={draftOwnerVisibleInternalNotes}
+                  onChange={(event) => setDraftOwnerVisibleInternalNotes(event.target.value)}
+                  rows={5}
+                  placeholder="Enter internal notes visible to the company owner..."
+                  className="resize-y" />
+              </div>
+              <div className="border-t border-dotted border-red-300 pt-3 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-red-700">Admin-Only Internal Note</p>
+                <p className="text-xs text-red-600">Visible to admin only.</p>
+                <Textarea
+                  value={draftAdminOnlyInternalNotes}
+                  onChange={(event) => setDraftAdminOnlyInternalNotes(event.target.value)}
+                  rows={5}
+                  placeholder="Enter internal notes for admin only..."
+                  className="resize-y border-red-200 focus-visible:ring-red-400" />
+              </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsInternalNotesDialogOpen(false)}>
                   Cancel

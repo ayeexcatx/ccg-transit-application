@@ -151,6 +151,11 @@
       "required": false,
       "description": "Admin-only internal notes for dispatch operations"
     },
+    "owner_visible_internal_notes": {
+      "type": "string",
+      "required": false,
+      "description": "Internal notes visible to admin and company owner (hidden from drivers)"
+    },
     "additional_assignments": {
       "type": "array",
       "items": {
