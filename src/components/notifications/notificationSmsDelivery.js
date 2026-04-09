@@ -167,6 +167,7 @@ async function resolveRelatedDispatch(notification) {
 }
 
 function resolveDriverDispatchDateTimeLine(notification, dispatch) {
+  if (!dispatch) return '';
   const normalizedTrucks = [...new Set((notification?.required_trucks || []).filter(Boolean))];
   const effectiveTimes = [...new Set(normalizedTrucks.map((truckNumber) => getEffectiveTruckStartTime(dispatch, truckNumber)).filter(Boolean))];
   const driverStartTime = effectiveTimes.length === 1 ? effectiveTimes[0] : null;
