@@ -171,12 +171,20 @@ async function resolveLinkedIdentityAccessCode(linkedIdentity) {
 
     if (linkedIdentity?.user_id) {
       const userLinkedCodes = await base44.entities.AccessCode.filter(
-        { code_type: 'Admin', user_id: linkedIdentity.user_id },
+        { code_type: 'Admin', used_by_user_id: linkedIdentity.user_id },
         '-created_date',
         20,
       );
       const activeUserLinkedAdminCode = (userLinkedCodes || []).find((accessCode) => isActiveSupportedCode(accessCode));
       if (activeUserLinkedAdminCode) return activeUserLinkedAdminCode;
+
+      const legacyUserLinkedCodes = await base44.entities.AccessCode.filter(
+        { code_type: 'Admin', user_id: linkedIdentity.user_id },
+        '-created_date',
+        20,
+      );
+      const legacyLinkedAdminCode = (legacyUserLinkedCodes || []).find((accessCode) => isActiveSupportedCode(accessCode));
+      if (legacyLinkedAdminCode) return legacyLinkedAdminCode;
     }
     return null;
   }
@@ -184,6 +192,9 @@ async function resolveLinkedIdentityAccessCode(linkedIdentity) {
   const candidates = [];
 
   if (linkedIdentity.user_id) {
+    candidates.push(
+      base44.entities.AccessCode.filter({ used_by_user_id: linkedIdentity.user_id }, '-created_date', 20),
+    );
     candidates.push(
       base44.entities.AccessCode.filter({ user_id: linkedIdentity.user_id }, '-created_date', 20),
     );
@@ -208,6 +219,76 @@ async function resolveLinkedIdentityAccessCode(linkedIdentity) {
   }
 
   return null;
+}
+
+async function backfillAccessCodeUsageForLinkedIdentity(linkedIdentity) {
+  const userId = linkedIdentity?.user_id;
+  if (!userId) return;
+
+  const codeType = normalizeAppRoleToAccessCodeType(linkedIdentity?.app_role);
+  if (!SUPPORTED_CODE_TYPES.has(codeType)) return;
+
+  const nowIso = new Date().toISOString();
+
+  const claimIfUnused = async (accessCode) => {
+    if (!isActiveSupportedCode(accessCode)) return false;
+    if (accessCode.used_by_user_id) return false;
+    await base44.entities.AccessCode.update(accessCode.id, {
+      user_id: userId,
+      used_by_user_id: userId,
+      used_at: nowIso,
+      usage_status: 'Used',
+    });
+    return true;
+  };
+
+  if (codeType === 'Admin') {
+    const linkedAdminAccessCodeId = linkedIdentity?.linked_admin_access_code_id || null;
+    if (linkedAdminAccessCodeId) {
+      const linkedAdminAccessCode = await resolveStoredAccessCodeById(linkedAdminAccessCodeId);
+      if (linkedAdminAccessCode?.code_type === 'Admin') {
+        await claimIfUnused(linkedAdminAccessCode);
+      }
+      return;
+    }
+    return;
+  }
+
+  if (codeType === 'Driver' && linkedIdentity?.driver_id) {
+    const driverCodes = await base44.entities.AccessCode.filter(
+      { code_type: 'Driver', driver_id: linkedIdentity.driver_id },
+      '-created_date',
+      20,
+    );
+    const activeDriverCode = (driverCodes || []).find((accessCode) => isActiveSupportedCode(accessCode));
+    if (activeDriverCode) {
+      await claimIfUnused(activeDriverCode);
+    }
+    return;
+  }
+
+  if (codeType === 'CompanyOwner' && linkedIdentity?.company_id) {
+    const ownerCodes = await base44.entities.AccessCode.filter(
+      { code_type: 'CompanyOwner', company_id: linkedIdentity.company_id },
+      '-created_date',
+      20,
+    );
+    const activeOwnerCodes = (ownerCodes || []).filter((accessCode) => isActiveSupportedCode(accessCode));
+    if (activeOwnerCodes.length !== 1) return;
+
+    const usersForCompanyOwnerRole = await base44.entities.User.filter(
+      { app_role: 'CompanyOwner', company_id: linkedIdentity.company_id },
+      '-created_date',
+      20,
+    );
+    const activeLinkedUsers = (usersForCompanyOwnerRole || []).filter(
+      (linkedUser) => linkedUser?.id && linkedUser.onboarding_complete !== false,
+    );
+    if (activeLinkedUsers.length !== 1) return;
+    if (String(activeLinkedUsers[0].id) !== String(userId)) return;
+
+    await claimIfUnused(activeOwnerCodes[0]);
+  }
 }
 
 async function resolveStoredAccessCodeById(storedId) {
@@ -346,6 +427,7 @@ export function useAccessSession() {
       try {
         if (isAuthenticated) {
           authoritativeLinkedIdentity = await resolveAuthoritativeLinkedIdentity(currentAppIdentity);
+          await backfillAccessCodeUsageForLinkedIdentity(authoritativeLinkedIdentity);
           const linkedAdminAccessCodeId = authoritativeLinkedIdentity?.linked_admin_access_code_id || null;
 
           if (linkedAdminAccessCodeId) {
