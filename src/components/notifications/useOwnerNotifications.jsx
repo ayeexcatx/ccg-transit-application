@@ -73,6 +73,26 @@ export function useOwnerNotifications(session) {
         });
       }
 
+      const isOwnerWorkspace = isOwner && session.raw_code_type !== 'Admin';
+      if (isOwnerWorkspace && notificationScopeCompanyId) {
+        const [allAccessCodeNotifications, ownerCodes] = await Promise.all([
+          base44.entities.Notification.filter({ recipient_type: 'AccessCode' }, '-created_date', 200),
+          base44.entities.AccessCode.filter({
+            code_type: 'CompanyOwner',
+            active_flag: true,
+            company_id: notificationScopeCompanyId,
+          }, '-created_date', 500),
+        ]);
+
+        const ownerCodeIdSet = new Set((ownerCodes || []).map((code) => String(code.id)));
+        return (allAccessCodeNotifications || []).filter((notification) => {
+          const recipientId = String(notification.recipient_access_code_id || notification.recipient_id || '');
+          if (ownerCodeIdSet.has(recipientId)) return true;
+          const sessionId = String(session?.id || '');
+          return sessionId.length > 0 && recipientId === sessionId;
+        });
+      }
+
       const all = await base44.entities.Notification.filter({ recipient_type: 'AccessCode' }, '-created_date', 200);
       return all.filter((notification) => {
         const recipientAccessCodeId = String(notification?.recipient_access_code_id || '');
