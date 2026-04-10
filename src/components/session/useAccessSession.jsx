@@ -126,6 +126,15 @@ function buildLinkedUserSession({
     || fallbackSession?.company_id
     || null;
   const driverId = linkedIdentity?.driver_id || fallbackSession?.driver_id || null;
+  const linkedDisplayName =
+    (typeof fallbackSession?.label === 'string' && fallbackSession.label.trim())
+    || (typeof fallbackSession?.name === 'string' && fallbackSession.name.trim())
+    || (typeof authenticatedUser?.app_display_name === 'string' && authenticatedUser.app_display_name.trim())
+    || '';
+  const linkedCompanyName =
+    (typeof fallbackSession?.company_name === 'string' && fallbackSession.company_name.trim())
+    || (typeof authenticatedUser?.company_name === 'string' && authenticatedUser.company_name.trim())
+    || '';
   const activeViewMode = codeType === 'Admin'
     ? (workspace.activeViewMode || 'Admin')
     : codeType;
@@ -144,6 +153,12 @@ function buildLinkedUserSession({
     driver_id: driverId,
     activeViewMode,
     activeCompanyId,
+    label: linkedDisplayName,
+    name: linkedDisplayName,
+    profile_name:
+      (typeof fallbackSession?.profile_name === 'string' && fallbackSession.profile_name.trim())
+      || linkedDisplayName,
+    company_name: linkedCompanyName,
   };
 }
 

@@ -10,6 +10,7 @@ import SmsConsentDisclosure from '@/components/profile/SmsConsentDisclosure';
 
 export function CompanyOwnerProfileOverview({
   company,
+  ownerDisplayName,
   contactSummary,
   hasPendingRequest,
   onOpenEdit,
@@ -39,6 +40,10 @@ export function CompanyOwnerProfileOverview({
             <div className="rounded-lg border p-4 sm:col-span-2">
               <p className="text-xs uppercase text-slate-500">Company name</p>
               <p className="mt-1 font-medium text-slate-900">{company.name || '—'}</p>
+            </div>
+            <div className="rounded-lg border p-4 sm:col-span-2">
+              <p className="text-xs uppercase text-slate-500">Owner name</p>
+              <p className="mt-1 font-medium text-slate-900">{ownerDisplayName || '—'}</p>
             </div>
             <div className="rounded-lg border p-4 sm:col-span-2">
               <p className="text-xs uppercase text-slate-500">Address</p>
