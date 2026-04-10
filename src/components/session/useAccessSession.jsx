@@ -325,9 +325,12 @@ async function resolveAuthoritativeLinkedIdentity(currentAppIdentity) {
     return {
       ...currentAppIdentity,
       app_role: persistedUser.app_role || currentAppIdentity.app_role || null,
-      company_id: persistedUser.company_id || null,
-      driver_id: persistedUser.driver_id || null,
-      linked_admin_access_code_id: persistedUser.linked_admin_access_code_id || null,
+      company_id: persistedUser.company_id ?? currentAppIdentity.company_id ?? null,
+      driver_id: persistedUser.driver_id ?? currentAppIdentity.driver_id ?? null,
+      linked_admin_access_code_id:
+        persistedUser.linked_admin_access_code_id
+        ?? currentAppIdentity.linked_admin_access_code_id
+        ?? null,
       onboarding_complete: Boolean(
         persistedUser.onboarding_complete ?? currentAppIdentity.onboarding_complete,
       ),
