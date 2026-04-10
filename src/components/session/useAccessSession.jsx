@@ -91,8 +91,6 @@ function buildLinkedUserSession({
   const codeType = fallbackCodeType === 'Admin' ? 'Admin' : inferredCodeType;
   if (!SUPPORTED_CODE_TYPES.has(codeType)) return null;
 
-  if (codeType !== 'Admin' && !fallbackSession?.id) return null;
-
   const userProfileName = resolveProfileName(authenticatedUser);
   const userDisplayName = resolveAdminDisplayName(authenticatedUser);
 
@@ -136,7 +134,8 @@ function buildLinkedUserSession({
     : null;
 
   return {
-    ...fallbackSession,
+    ...(fallbackSession || {}),
+    id: fallbackSession?.id || null,
     user_id: linkedIdentity.user_id,
     onboarding_complete: true,
     raw_code_type: fallbackSession?.raw_code_type || codeType,
