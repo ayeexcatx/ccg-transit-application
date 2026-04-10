@@ -35,11 +35,6 @@ export default function AccessCodeLogin() {
       setLoading(false);
       return;
     }
-    if (match.used_by_user_id) {
-      setError('This access code has already been used');
-      setLoading(false);
-      return;
-    }
 
     const appRole = normalizeAccessCodeTypeToAppRole(match.code_type);
     if (!user?.id || !appRole) {
@@ -78,20 +73,7 @@ export default function AccessCodeLogin() {
 
     await base44.entities.User.update(user.id, userUpdatePayload);
 
-    const nowIso = new Date().toISOString();
-    await base44.entities.AccessCode.update(match.id, {
-      user_id: user.id,
-      used_by_user_id: user.id,
-      used_at: nowIso,
-      usage_status: 'Used',
-    });
-
-    const linkedAccessCode = {
-      ...match,
-      used_by_user_id: user.id,
-      used_at: nowIso,
-      usage_status: 'Used',
-    };
+    const linkedAccessCode = match;
 
     await checkAppState();
     login(linkedAccessCode);

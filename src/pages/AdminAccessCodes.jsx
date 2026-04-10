@@ -350,16 +350,12 @@ export default function AdminAccessCodes() {
                   <Badge variant={c.active_flag !== false ? 'default' : 'secondary'} className="text-xs">
                     {c.active_flag !== false ? 'Active' : 'Inactive'}
                   </Badge>
-                  <Badge variant={c.used_by_user_id ? 'secondary' : 'outline'} className="text-xs">
-                    {c.used_by_user_id ? 'Used' : 'Unused'}
-                  </Badge>
                   <Badge variant="outline" className="text-xs">{c.code_type}</Badge>
                 </div>
                 {c.label && <p className="text-sm text-slate-600 mt-0.5">Name: {c.label}</p>}
                 <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 flex-wrap">
                   {comp && <span>Company: {comp.name}</span>}
                   {driver && <span>Driver: {driver.driver_name || driver.id}</span>}
-                  {c.used_at && <span>Claimed: {new Date(c.used_at).toLocaleString()}</span>}
                   {c.code_type === 'Admin' && (c.allowed_trucks || []).length > 0 && (
                     <span>Trucks: {c.allowed_trucks.join(', ')}</span>
                   )}
