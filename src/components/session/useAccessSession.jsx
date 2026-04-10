@@ -144,7 +144,7 @@ function buildLinkedUserSession({
 
   return {
     ...(fallbackSession || {}),
-    id: fallbackSession?.id || null,
+    id: fallbackSession?.id || linkedIdentity?.linked_access_code_id || null,
     user_id: linkedIdentity.user_id,
     onboarding_complete: true,
     raw_code_type: fallbackSession?.raw_code_type || codeType,
@@ -440,6 +440,7 @@ export function useAccessSession() {
       const storedId = localStorage.getItem(STORAGE_ACCESS_CODE_ID);
       let restoredAccessCode = null;
       let authoritativeLinkedIdentity = currentAppIdentity;
+      let resolvedLinkedAccessCode = null;
 
       try {
         if (isAuthenticated) {
@@ -461,7 +462,8 @@ export function useAccessSession() {
             }
 
             if (!restoredAccessCode) {
-              restoredAccessCode = await resolveLinkedIdentityAccessCode(authoritativeLinkedIdentity);
+              resolvedLinkedAccessCode = await resolveLinkedIdentityAccessCode(authoritativeLinkedIdentity);
+              restoredAccessCode = resolvedLinkedAccessCode;
             }
           }
         } else if (storedId) {
@@ -520,14 +522,24 @@ export function useAccessSession() {
           setOwnerWorkspaceAllowedTrucks(null);
         }
 
-        setResolvedLinkedIdentity(authoritativeLinkedIdentity);
+        setResolvedLinkedIdentity({
+          ...authoritativeLinkedIdentity,
+          linked_access_code_id:
+            restoredAccessCode?.id
+            || resolvedLinkedAccessCode?.id
+            || authoritativeLinkedIdentity?.linked_access_code_id
+            || null,
+        });
       } catch {
         if (cancelled) return;
         localStorage.removeItem(STORAGE_ACCESS_CODE_ID);
         setAccessCode(null);
         setWorkspace({ activeViewMode: null, activeCompanyId: null });
         setOwnerWorkspaceAllowedTrucks(null);
-        setResolvedLinkedIdentity(currentAppIdentity);
+        setResolvedLinkedIdentity({
+          ...currentAppIdentity,
+          linked_access_code_id: currentAppIdentity?.linked_access_code_id || null,
+        });
       }
 
       if (cancelled) return;
