@@ -441,7 +441,29 @@ function CompanyOwnerProfile({ session }) {
   });
 
   const company = companies[0] || null;
-  const activeAccessCode = accessCodes.find((code) => code.id === session?.id) || session;
+  const activeAccessCode = useMemo(() => {
+    if (!Array.isArray(accessCodes) || accessCodes.length === 0) {
+      return session || null;
+    }
+
+    const sessionId = session?.id ? String(session.id) : '';
+    const sessionUserId = session?.user_id ? String(session.user_id) : '';
+    const fallbackBySessionId = sessionId
+      ? accessCodes.find((code) => String(code?.id || '') === sessionId)
+      : null;
+    if (fallbackBySessionId) return fallbackBySessionId;
+
+    const fallbackByLinkedUser = sessionUserId
+      ? accessCodes.find((code) => {
+        const usedBy = String(code?.used_by_user_id || '');
+        const legacyUserId = String(code?.user_id || '');
+        return usedBy === sessionUserId || legacyUserId === sessionUserId;
+      })
+      : null;
+    if (fallbackByLinkedUser) return fallbackByLinkedUser;
+
+    return accessCodes[0] || session || null;
+  }, [accessCodes, session]);
   const smsState = getCompanyOwnerSmsState({ accessCode: activeAccessCode, company });
   const smsContact = getCompanySmsContact(company);
   const ownerConsentRecorded = activeAccessCode?.sms_consent_given === true
@@ -485,6 +507,9 @@ function CompanyOwnerProfile({ session }) {
 
   const smsMutation = useMutation({
     mutationFn: async (nextOptIn) => {
+      if (!activeAccessCode?.id) {
+        throw new Error('Owner SMS settings are unavailable because no linked CompanyOwner access code was found.');
+      }
       const payload = {
         sms_enabled: nextOptIn && Boolean(smsState.target.phone),
         sms_phone: smsState.target.phone || '',
@@ -522,6 +547,16 @@ function CompanyOwnerProfile({ session }) {
     const methods = normalizeContactMethods(company).filter((method) => method?.value);
     return methods.length > 0 ? methods : [];
   }, [company]);
+  const ownerDisplayName = useMemo(
+    () => (
+      (typeof activeAccessCode?.label === 'string' && activeAccessCode.label.trim())
+      || (typeof activeAccessCode?.name === 'string' && activeAccessCode.name.trim())
+      || (typeof session?.label === 'string' && session.label.trim())
+      || (typeof session?.name === 'string' && session.name.trim())
+      || ''
+    ),
+    [activeAccessCode, session],
+  );
 
   if (!company) return <div className="text-sm text-slate-500">Company profile not found.</div>;
 
@@ -529,6 +564,7 @@ function CompanyOwnerProfile({ session }) {
     <div className="space-y-6">
       <CompanyOwnerProfileOverview
         company={company}
+        ownerDisplayName={ownerDisplayName}
         contactSummary={contactSummary}
         hasPendingRequest={hasPendingRequest}
         onOpenEdit={() => setEditOpen(true)}
