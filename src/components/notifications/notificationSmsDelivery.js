@@ -74,12 +74,12 @@ function formatOwnerDispatchDateShiftLine(dispatch) {
   const normalizedShift = String(dispatch?.shift_time || '').trim().toUpperCase();
   const shiftText = normalizedShift.includes('NIGHT') ? 'NIGHT SHIFT' : 'DAY SHIFT';
 
-  return `${dateText} ▪ ${shiftText}`;
+  return `${dateText} ${shiftText}`;
 }
 
 function formatOwnerDispatchDateTimeLine(dispatch) {
-  const dateTimeLine = formatDispatchDateTimeLine(dispatch, '▪');
-  return dateTimeLine.replace(/\s+▪\s+/g, ' ▪ ');
+  const dateTimeLine = formatDispatchDateTimeLine(dispatch, 'at');
+  return dateTimeLine.replace(/\s+at\s+/g, ' at ');
 }
 
 function buildCompanyOwnerDispatchSmsMessage(notification, dispatch) {

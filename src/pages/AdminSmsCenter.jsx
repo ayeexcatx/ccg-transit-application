@@ -54,7 +54,7 @@ function sampleDispatchDateTimeLine() {
 }
 
 function sampleOwnerDispatchDateShiftLine() {
-  return 'TUE 04-14-2026 ▪ DAY SHIFT';
+  return 'TUE 04-14-2026 DAY SHIFT';
 }
 
 function getTemplateCardClasses(templateTitle) {
@@ -260,7 +260,7 @@ export default function AdminSmsCenter() {
         body: [
           'CCG Transit: Dispatch',
           'You have received a new dispatch for:',
-          dispatchLine.replace(' at ', ' ▪ '),
+          dispatchLine,
           '',
           'Please open the app to view and CONFIRM.',
         ].join('\n'),
@@ -272,7 +272,7 @@ export default function AdminSmsCenter() {
         body: [
           'CCG Transit: Amendment',
           'Your dispatch has been amended to:',
-          dispatchLine.replace(' at ', ' ▪ '),
+          dispatchLine,
           '',
           'Please open the app to view and CONFIRM.',
         ].join('\n'),
@@ -284,7 +284,7 @@ export default function AdminSmsCenter() {
         body: [
           'CCG Transit: Cancellation',
           'Your dispatch has been cancelled:',
-          dispatchLine.replace(' at ', ' ▪ '),
+          dispatchLine,
           '',
           'Please open the app to view and CONFIRM.',
         ].join('\n'),
@@ -296,7 +296,7 @@ export default function AdminSmsCenter() {
         body: [
           'CCG Transit: Update',
           'Your dispatch has been updated:',
-          dispatchLine.replace(' at ', ' ▪ '),
+          dispatchLine,
           '',
           'Please open the app to view and CONFIRM.',
         ].join('\n'),
@@ -344,7 +344,7 @@ export default function AdminSmsCenter() {
       createTemplatePreview({
         group: 'Admin',
         title: 'Admin dispatch all confirmed SMS',
-        body: `CCG Transit: Acme Hauling has confirmed the dispatch.\nTUE 04-14-2026 • DAY SHIFT • Dispatch\nJOB-1042 • TRK-12, TRK-44\n\nPlease open the app to view and confirm.`,
+        body: `CCG Transit: Acme Hauling has confirmed the dispatch.\nTUE 04-14-2026 at 7:00 AM\nJOB-1042 | TRK-12, TRK-44\n\nPlease open the app to view and confirm.`,
         description: 'Admin-targeted dispatch-related notification SMS example.',
       }),
       createTemplatePreview({
@@ -356,7 +356,7 @@ export default function AdminSmsCenter() {
       createTemplatePreview({
         group: 'Admin',
         title: 'Admin owner truck reassignment SMS',
-        body: `CCG Transit: Acme Hauling changed their truck.\nDispatcher updated TRK-12 to TRK-44\nTUE 04-14-2026 • DAY SHIFT\n\nPlease open the app to view and confirm.`,
+        body: `CCG Transit: Acme Hauling changed their truck.\nDispatcher updated TRK-12 to TRK-44\nTUE 04-14-2026 DAY SHIFT\n\nPlease open the app to view and confirm.`,
         description: 'Admin owner-truck-change notification SMS example.',
       }),
 
