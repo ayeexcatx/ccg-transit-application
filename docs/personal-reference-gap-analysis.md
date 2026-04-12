@@ -24,7 +24,7 @@ Personal baseline is treated as owner-intent reference and compared separately a
 ## Overall alignment between personal reference baseline and official baselines
 Overall alignment is **good at the core behavior level** (roles, owner vs driver visibility model, driver seen model, admin confirmations coverage, and high-level notification behavior).
 
-There are still **targeted content conflicts/stale sections** inside the personal reference document due to legacy text and uneven section updates.
+After this clarification pass, there are **no major behavior conflicts** remaining between personal reference intent and official baseline behavior. Remaining items are owner-review wording confirmations rather than logic conflicts.
 
 ---
 
@@ -37,38 +37,31 @@ There are still **targeted content conflicts/stale sections** inside the persona
 
 ---
 
-## Items missing from personal reference baseline (relative to official baselines)
-1. Personal baseline does not consistently document the modern access/session restore/linking sequence with enough precision (restore compatibility checks, linked-identity fallback order, shared-admin linkage behavior).
-2. Personal baseline does not consistently capture owner notification effective-read mechanics based on required-vs-confirmed trucks.
-3. Personal baseline does not consistently call out the current dedupe-critical notification key behavior in the same explicit way as official baselines.
+## Items previously missing, now clarified in this pass
+1. Access/session/linking intent now explicitly documents:
+   - normal admin linking by admin access code claim,
+   - one-time-use first-linking rule across roles,
+   - backup Base44 app-owner/admin-capable account behavior.
+2. Owner Action Needed/pending logic now explicitly documents pending-until-all-current-trucks-confirmed behavior and clear conditions (all confirmed, dispatch deleted, or unconfirmed trucks removed).
+3. Admin SMS wording now distinguishes configuration-ready behavior from current operational reality (admin SMS toggle currently off; admin SMS mirrors admin in-app categories when enabled, not normal owner/driver dispatch flow).
+4. Admin SMS Center and Driver Protocol page details were added/clarified in baseline-oriented form.
 
 ---
 
-## Items conflicting with personal reference baseline
-1. **Stale Truck-role references remain in multiple sections**
-   - Personal baseline still includes sections listing Truck role as if present in active Access Code admin flows.
-   - This conflicts with official/current behavior where Truck login is deprecated/blocked.
-
-2. **Admin SMS wording remains over-broad in some sections**
-   - Personal baseline still frames admin SMS as active operational recipient behavior in places.
-   - Official baseline/current implementation treats admin SMS as configurable/shared-profile infrastructure, but not the primary dispatch notification workflow path in current operations docs.
-
-3. **Internal section inconsistency around visibility wording**
-   - Personal baseline contains both updated company-scoped owner visibility language and some older assignment-style/legacy phrasing in deep sections, which can create ambiguity for refactor audits.
+## Remaining owner-review items (post-clarification)
+1. Confirm owner acceptance of the new explicit wording for:
+   - backup app-owner/admin-capable account behavior, and
+   - one-time-use access-code linking intent.
+2. Confirm owner acceptance of the compact SMS Center tab/rules summary and Driver Protocol summary additions as sufficient (or request expanded detail in a follow-up docs-only pass).
 
 ---
 
-## Recommended additions to the personal reference baseline
-1. Add a short dedicated section summarizing **access-code/session/linking restore order** (login claim, restore compatibility checks, linked-identity resolution, workspace persistence).
-2. Add explicit subsection for **owner notification action-needed logic** (required trucks, confirmation matching, effective-read vs stored `read_flag`).
-3. Remove or quarantine remaining Truck-role operational text into a clearly marked historical appendix.
-4. Normalize admin SMS wording so it distinguishes:
-   - shared admin SMS profile/rules configuration behavior, vs
-   - current dispatch notification recipient workflows.
-5. Add one concise cross-link table mapping personal sections to official baseline files to reduce drift in future updates.
+## Recommended future follow-up (optional)
+1. Create a dedicated access/session/linking baseline document (already recommended in the audit) and cross-link from personal baseline.
+2. Continue trimming deep historical Truck-role wording where still present outside clearly-marked historical context.
 
 ---
 
 ## Whether any unresolved owner-review issues remain
-- **No major unresolved owner-intent conflicts** were identified.
-- **Minor editorial owner review is still recommended** to approve removal/rewording of remaining legacy Truck/admin-SMS phrasing in the personal reference document.
+- **No major unresolved owner-intent conflicts remain after this pass.**
+- **Minor owner wording review remains** for the newly added clarification blocks (access-linking nuance, admin SMS nuance, and concise SMS Center/Driver Protocol summaries).

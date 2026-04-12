@@ -80,16 +80,14 @@ The previously high-risk areas requested for spot verification are mostly aligne
 ---
 
 ## Areas partially covered / stale in official docs
-1. **Admin page list inconsistency in one official baseline file**
-   - `behavior-preservation-baseline` admin-only page list omits `AdminSmsCenter` and `AdminDriverProtocol`, while code and other docs include them.
-   - This is a documentation mismatch (minor, but concrete).
+1. **Resolved in clarification cleanup pass (2026-04-12 addendum)**
+   - Admin page list inconsistency in `behavior-preservation-baseline` (`AdminSmsCenter`, `AdminDriverProtocol`) was corrected.
 
-2. **Notification SMS composition details are partially stale in `notifications-behavior-baseline`**
-   - Current code has richer branch behavior (owner status-specific templates and dispatch-linked formatting paths).
-   - Existing baseline section still reads as mostly generic title+datetime composition.
+2. **Resolved in clarification cleanup pass (2026-04-12 addendum)**
+   - Notification SMS composition wording in `notifications-behavior-baseline` now reflects richer branching and owner-approved time behavior.
 
-3. **Portal baseline has one stale phrasing around owner list filtering**
-   - One section still mentions owner list filtering as allowed-truck-driven (legacy framing), while current implementation is company-scoped at list level with truck logic in action/detail contexts.
+3. **Resolved in clarification cleanup pass (2026-04-12 addendum)**
+   - Portal baseline owner-visibility phrasing now consistently reflects company-scoped owner dispatch list visibility with truck-detail/action context.
 
 ---
 
@@ -105,9 +103,7 @@ However, baseline maintainability would improve by splitting one overloaded conc
 - **None identified** in this pass.
 
 ### Minor/documentary mismatches
-1. Admin page list omission (`AdminSmsCenter`, `AdminDriverProtocol`) in one baseline file section.
-2. SMS composition details in `notifications-behavior-baseline` lag current implementation detail.
-3. One stale owner list visibility phrasing in `portal-dispatch-drawer-behavior-baseline` conflicts with current company-scoped list behavior.
+1. Previously identified minor doc drifts from this audit are now addressed in the focused clarification cleanup pass.
 
 ---
 
@@ -132,10 +128,10 @@ Suggested scope:
 
 ## Needs manual verification / preserved testing notes
 Preserved (still applicable):
-- Backend-side role enforcement beyond client route guards and query filters.
+- Backend-side role enforcement beyond client route guards and query filters (future Base44 role-level security-field hardening remains recommended).
 - Runtime/browser variability for install prompt and long-session refresh prompts.
 - End-to-end production validation for SMS provider behavior and policy toggles.
-- Any server-side policy/SLA expectations not encoded in client logic (confirmations/escalation semantics).
+- Any server-side policy/SLA expectations not encoded in client logic (confirmations/escalation semantics). Clarification: current Admin Confirmations behavior is primarily an admin review log/record surface; automatic reminder/escalation logic is not expected as current client behavior.
 
 No existing “needs manual verification” categories were removed in this audit unless they were clearly obsolete.
 
@@ -144,5 +140,5 @@ No existing “needs manual verification” categories were removed in this audi
 ## Coverage outcome / summary
 - Official baseline set is broadly aligned with current code.
 - No major behavior conflicts were found.
-- Minor documentation drift exists in a few targeted sections and should be corrected in a follow-up documentation cleanup pass.
+- Previously identified minor documentation drift in targeted sections was corrected in the focused clarification cleanup pass.
 - A dedicated access/session/auth baseline is now justified for maintainability and refactor safety.

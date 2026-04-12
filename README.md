@@ -93,6 +93,7 @@ The system is designed for real-time operational visibility between dispatch adm
 - Optional SMS delivery through SignalWire for AccessCode recipients
 - SMS delivery logging in General entity records
 2. Notifications are role-aware and filtered by recipient.
+3. Admin SMS is configuration-ready and intended to mirror admin notification categories when enabled, rather than the normal owner/driver live dispatch SMS stream.
 
 ** Announcement System **
 1. Administrators can publish operational announcements to:
@@ -127,6 +128,8 @@ The application is role-based and dynamically adjusts visibility and workflows.
 - SMS Center
 - Driver Protocol
 2. Admins control dispatch lifecycle and system configuration.
+3. SMS Center includes tabs for Overview, Notification Rules, Templates/Previews, Logs, Inbound Replies, and Broadcast/Scheduled messaging.
+4. Driver Protocol is a managed driver-facing policy page with editable/publishable versions and re-accept prompts after new publishes.
 
 ** Company Owner **
 1. Company owners manage their company's participation in dispatch operations.

@@ -6,6 +6,10 @@
 - Driver dispatch visibility is assignment-scoped.
 - Driver acknowledgement is tracked via `DriverDispatch` seen/open state (`delivery_status`, `last_seen_at`, `last_opened_at`) and not a driver confirm-receipt button.
 - Admin can review driver acknowledgement history in **Admin Confirmations → Driver Dispatch Log**.
+- Access codes are intended as one-time-use first-link credentials across roles; once claimed/linked successfully, they are permanently tied to that user/account and cannot be reused by another user.
+- Admin users are normally linked via Admin access codes (same claim flow as other roles), while Base44 app owner/account behavior also exists as a backup admin-capable path that may not rely on normal claimed access-code linkage.
+- Owner Action Needed state should mirror owner notification pending state and remain active until all currently selected trucks on a dispatch are confirmed (or the dispatch is deleted, or unconfirmed truck(s) are removed).
+- Admin SMS infrastructure/rules are prepared but currently not enabled in live operations; when enabled, admin SMS mirrors admin in-app notification categories and is not the same owner/driver live dispatch SMS flow.
 
 
 
@@ -16,6 +20,19 @@
 * Users enter a valid **access code** to link their authenticated user identity to an app role/session
 * **Mobile behavior:** A popup appears suggesting the user install the app, including instructions
 * **Desktop behavior:** No install prompt is shown
+
+### **1.1 Access-code linking intent (clarified)**
+* All role links use the same first-link claim pattern:
+  * Access code is created
+  * User signs up/logs in via Base44
+  * User enters access code in Access Code Login
+  * Successful claim links that user identity/session to the role/workspace
+* One-time-use intent:
+  * After successful first claim, the code is considered permanently linked to that user/account
+  * It is not intended to be reusable by a different user later
+* Admin-specific nuance:
+  * Standard admin users are still intended to link through Admin access codes
+  * Base44 app owner/account behavior also exists as a backup admin-capable access path and may not always appear as a normal claimed admin access-code-linked user
 
 ---
 
@@ -55,6 +72,8 @@
   * Companies
   * Access Codes
   * Notes
+  * SMS Center
+  * Driver Protocol
 * **Expected backend route names:**
   * AdminDashboard
   * AdminDispatches
@@ -65,6 +84,8 @@
   * AdminCompanies
   * AdminAccessCodes
   * AdminTemplateNotes
+  * AdminSmsCenter
+  * AdminDriverProtocol
 
 ---
 
@@ -686,9 +707,10 @@ Each card displays three main columns:
 
 ## **1\. Page Structure**
 
-* The page consists of **two sections:**
+* The page consists of **three sections:**
   * Open Confirmations
   * Confirmation History Log
+  * Driver Dispatch Log
 
 ---
 
@@ -777,6 +799,7 @@ Includes all fields from Open Confirmations:
   * Includes confirmation metadata (who \+ when)
 * Overall purpose:
   * Provides admins with visibility into whether dispatch communications have been **received and acknowledged by company owners**
+  * Acts primarily as an admin review/log record surface (not an automatic SLA reminder/escalation engine in current app behavior)
 
 # **Admin Incidents Page Baseline**
 
@@ -1435,6 +1458,64 @@ Each card includes:
   * Access management
   * Admin-level SMS configuration
 
+# **Admin SMS Center Baseline (Concise Clarification)**
+
+## **1\. Page Structure (6 tabs)**
+* Overview
+* Notification Rules
+* Templates and Previews
+* Logs
+* Inbound Replies
+* Broadcast and Scheduled Messages
+
+## **2\. Notification Rules coverage**
+* Toggle/rule categories include:
+  * Driver: dispatch assigned / updated / amended / canceled / removed
+  * Company owner dispatch status: scheduled / dispatched / amended / canceled
+  * Company owner informational updates
+  * Admin notifications eligible for SMS
+  * Welcome intro SMS
+  * Opt-out confirmation SMS
+  * Informational broadcast SMS
+* Clarification:
+  * Owner informational update SMS uses generic updated wording and does **not** include admin custom short in-app message text.
+
+## **3\. Templates / Logs / Replies / Broadcast**
+* Templates and Previews:
+  * Includes corresponding role/template previews (including admin examples such as all trucks confirmed, owner availability updated, owner truck reassignment).
+* Logs:
+  * Stores send outcomes as available (sent/failed/skipped/delivered and related status updates)
+  * Includes role, phone, dispatch ID, provider message ID, recipient name, company, date/time, and sent-message formatting.
+* Inbound Replies:
+  * Stores inbound reply log.
+* Broadcast and Scheduled Messages:
+  * Admin can send/schedule informational announcements to drivers, owners, admins, or combinations.
+
+## **4\. Current admin SMS operational clarification**
+* Infrastructure/rules are prepared so enabling the admin SMS toggle is intended to enable admin SMS notifications.
+* Current operations baseline:
+  * admin SMS toggle is currently not enabled
+  * admin does not currently receive SMS notifications
+  * admin SMS is for admin-relevant events mirroring admin in-app notifications, not normal owner/driver live dispatch SMS flow.
+
+# **Admin Driver Protocol Baseline (Concise Clarification)**
+
+## **1\. Purpose**
+* Protocol/policy text page intended for drivers.
+
+## **2\. Admin editing/publishing**
+* Admin can edit/publish content using formatting controls, including:
+  * bold
+  * underline
+  * text color
+  * larger text
+  * bullets/numbering
+  * indentation
+
+## **3\. Versioning behavior**
+* Supports version updates/re-publish.
+* When a new version is published, drivers are prompted to review and re-accept the latest version.
+
 # **Admin Template Notes Page Baseline**
 
 ---
@@ -1726,6 +1807,10 @@ Each card includes:
   * A **Confirm Receipt button is created per truck number**
 * Company owner must:
   * Confirm **each truck individually**
+* Clarified intended model:
+  * A dispatch belongs to one company
+  * All trucks on that dispatch belong to that company
+  * Action Needed/notification pending remains active while any currently selected truck on that dispatch is still unconfirmed
 
 ---
 
@@ -1759,10 +1844,13 @@ Each card includes:
 
 ### **6.5 Completion Behavior**
 
-* Notification becomes **read only when ALL trucks are confirmed**
+* Notification becomes **read only when ALL currently selected trucks are confirmed**
 * When complete:
   * Removed from **Action Needed section**
   * Marked as read in **Notification Bell**
+* Also clears when:
+  * Dispatch is deleted, or
+  * Unconfirmed truck(s) are removed from that dispatch
 
 ---
 
@@ -3484,6 +3572,10 @@ SMS is active ONLY if:
 * Controlled via:
   * Access Codes
   * Profile settings
+* Current operations clarification:
+  * Admin SMS toggle is currently not enabled for active operations.
+  * Admin SMS notifications are intended to mirror admin in-app notification categories when enabled.
+  * Admin SMS is not the same normal owner/driver live dispatch SMS flow.
 
 ---
 
