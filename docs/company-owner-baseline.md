@@ -16,7 +16,7 @@ Date reviewed: 2026-03-25.
 ### Confirmed from code
 - Greeting uses Eastern-time-based daypart logic and workspace display label.
 - Announcement Center shows active announcements filtered by target scope (All / company / access code).
-- Action Needed section is driven by unresolved notifications after visibility filtering (company-scoped + truck-scoped).
+- Action Needed section is driven by unresolved notifications after company-scoped visibility filtering, with truck-specific detail logic in drawer/notification flows.
 - Quick lists for Today and Upcoming dispatches are filtered by allowed trucks (owner) and sorted/limited.
 - Clicking actionable notifications routes into dispatch drawer context (Portal with query params).
 - See `docs/portal-dispatch-drawer-behavior-baseline.md` for detailed drawer/deep-link behavior.
@@ -90,6 +90,7 @@ Date reviewed: 2026-03-25.
 
 ### Confirmed from code
 - Notifications page uses shared notifications hook and supports mark-all-read.
+- CompanyOwner notification/SMS dispatch time uses the dispatch main/earliest start time (not suppressed for staggered truck timings).
 - Notification list is visibility-filtered by dispatch existence/scope (company-scoped + truck-scoped).
 - Owner unread state can be effectively read even when raw `read_flag` is false (effective read state from confirmation logic).
 - Clicking dispatch-related notifications navigates into dispatch context; some categories are action-marked read on click.
@@ -134,15 +135,3 @@ Date reviewed: 2026-03-25.
 
 ### Needs manual verification
 - Approval SLA/workflow assumptions (frontend supports pending flow but not process guarantees).
-
-
-## Reconciliation updates (2026-03-31)
-
-### Dispatch drawer expectations
-- Company owner top-row actions in dispatch drawer are `Back`, `Report Incident`, and `Screenshot Dispatch` (no admin edit button).
-- Owner dispatch detail rendering now supports mixed truck start-time display when staggered truck overrides produce per-truck effective times.
-- Owner flows remain Portal-hosted; this role does not use the admin in-place overlay drawer flow.
-
-### Notifications
-- Owner notification wording around dispatch time can be truck-scope-aware when the required trucks converge to one effective start time.
-- Owner can continue receiving driver-seen notifications generated from driver drawer open/removal acknowledgment flows.
