@@ -16,6 +16,7 @@ Date reviewed: 2026-03-25.
 - Today/Upcoming dispatch lists include only assigned dispatches.
 - Visible truck badges are based on assigned truck(s) per dispatch for that driver.
 - Action items come from notification stream filtered by driver visibility rules (assignment-based, not company-wide).
+- Driver notification/SMS dispatch time uses the effective start time for the assigned truck (truck override when present).
 - See `docs/portal-dispatch-drawer-behavior-baseline.md` for assignment-based dispatch visibility details.
 
 ### Present in personal baseline
@@ -82,14 +83,3 @@ Date reviewed: 2026-03-25.
 
 ### Needs manual verification
 - Whether product requirement expects hard-enforced single-truck prefill for all driver entry paths.
-
-
-## Reconciliation updates (2026-03-31)
-
-### Dispatch drawer expectations
-- Driver top-row actions in dispatch drawer are `Back` and `Report Incident` only.
-- Driver does not get screenshot or edit controls in drawer.
-- Driver assignment-facing dispatch time text/notification wording can reflect truck-scoped effective start time when uniquely resolvable.
-
-### Navigation
-- Driver notification-driven dispatch open behavior remains Portal deep-link based; admin overlay changes are intentionally admin-only.

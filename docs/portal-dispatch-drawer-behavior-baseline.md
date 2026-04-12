@@ -1,20 +1,10 @@
 # Portal page + DispatchDetailDrawer behavior baseline
 
 
-## Reconciliation addendum (2026-04-05)
-- Treat historical `allowed_trucks` owner/truck visibility language in this document as outdated where it conflicts with current code.
-- Current portal list visibility split is: owner/company workspace => company-scoped dispatch query + role filtering; driver workspace => active visible `DriverDispatch` assignment scope.
-- Driver seen badges and acknowledgement rely on assignment `last_seen_at` plus `delivery_status`, not legacy `receipt_confirmed_*` fields.
-- Truck access-code-user sections are historical and no longer represent a supported login path.
 
-_Last reviewed: 2026-03-23_
-
-This document is a conservative, workflow-specific baseline for:
-
-- `src/pages/Portal.jsx`
-- `src/components/portal/DispatchDetailDrawer.jsx`
-
-It also traces the directly related imported helpers, subcomponents, hooks, entities, notification helpers, and navigation/route behavior that materially affect this workflow.
+## Supported roles baseline
+- Current supported access-code roles are `Admin`, `CompanyOwner`, and `Driver`.
+- Any truck-user references below are historical/deprecated context only and not current intended login behavior.
 
 ## Baseline intent
 
@@ -22,7 +12,7 @@ This baseline exists so the Portal page and shared dispatch drawer can be refact
 
 - role-based visibility
 - dispatch filtering and bucketing
-- truck visibility
+- truck visibility detail behavior
 - owner confirmation logic
 - driver “seen” / acknowledgement logic
 - notifications and confirmation side effects
@@ -86,19 +76,19 @@ The drawer is **presentation-heavy but logic-coupled** because it contains:
 - owner screenshot generation logic
 - owner incident link construction
 - owner truck-edit draft workflow
-- driver receipt/seen indicators (rendered from assignment receipt state)
+- driver seen indicators (rendered from assignment delivery/seen state)
 
 ## How the shared drawer differs by role
 
 ### Company owner
-- sees only trucks from `session.allowed_trucks` that intersect the dispatch
-- can confirm receipt per visible truck
+- sees only trucks from company scope + truck detail rules that intersect the dispatch
+- can confirm truck assignment (owner confirmation workflow) per visible truck
 - can edit assigned trucks, subject to one-for-one replacement rules and allowed truck restrictions
 - can assign/remove drivers when status allows owner assignment/time-log sections
 - can add/edit time logs for visible trucks except on cancelled dispatches
 - can report incidents
 - can take screenshots
-- sees “Seen” badges when an active driver assignment for a truck has `receipt_confirmed_at`
+- sees “Seen” badges when an active driver assignment for a truck has `last_seen_at`/`last_opened_at`
 
 ### Driver
 - sees only trucks actively assigned to that driver on that dispatch
@@ -109,11 +99,6 @@ The drawer is **presentation-heavy but logic-coupled** because it contains:
 - does not get screenshot controls
 - does not get truck editing or driver assignment controls
 
-### Truck user
-- sees trucks based on `session.allowed_trucks` intersection, typically one truck for truck access codes
-- can report incidents
-- does **not** get owner confirmation, time-log editing, driver assignment, or screenshot controls inside the drawer
-- can still view the dispatch details body
 
 ### Admin
 - Portal route is normally redirected away by layout, so admin behavior here is mostly a latent/shared code path
@@ -207,7 +192,7 @@ Used for:
 - Source: `base44.entities.TimeEntry.list('-created_date', 500)`
 
 Used for:
-- history visibility logic for owners/truck users
+- history visibility logic for owners/deprecated truck-user references
 - owner time log editing
 - read-only time log display
 - archive-after-time-log completion flow
@@ -310,7 +295,7 @@ Used to disable owner selection of drivers already assigned to another dispatch 
 ## Portal- and drawer-level derived values that affect behavior
 
 ### Portal derived visibility values
-- `allowedTrucks = session.allowed_trucks || []`
+- `allowedTrucks` legacy reference (owner list visibility is company-scoped in current intended behavior)
 - `driverAssignedTrucksByDispatch`: active assignments grouped by dispatch for current driver
 - `driverDispatchIds`: set of dispatch IDs from active driver assignments
 - `filteredDispatches`
@@ -322,7 +307,7 @@ Used to disable owner selection of drivers already assigned to another dispatch 
 - `targetNotification`, `removalNotification`, `removalNotificationDispatch`
 
 ### Drawer derived role values
-- `myTrucks`: owner/truck intersection of `session.allowed_trucks` and `dispatch.trucks_assigned`
+- `myTrucks`: owner/truck intersection of company scope + truck detail rules and `dispatch.trucks_assigned`
 - `isOwner`, `isAdmin`, `isTruckUser`, `isDriverUser`
 - `driverAssignedTrucks`: driver-only active assigned trucks on this dispatch
 - `visibleTrucks`
@@ -331,7 +316,7 @@ Used to disable owner selection of drivers already assigned to another dispatch 
 - `activeAssignmentsByTruck`
   - owner/admin: from dispatch active assignments query
   - driver: from current driver’s dispatch assignments query
-- `hasTruckSeenStatus(truck)` based on assignment `receipt_confirmed_at`
+- `hasTruckSeenStatus(truck)` based on assignment `last_seen_at`/`last_opened_at`
 - `assignedDriverNameByTruck`
 - `eligibleDriverNameById`
 - `companyHasDrivers`
@@ -348,7 +333,7 @@ Used to disable owner selection of drivers already assigned to another dispatch 
 **Important nuance:**
 - owner confirmation section does **not** use `showOwnerAssignmentsAndTimeLogs`
 - owner driver assignment and owner time-log sections **do** use it
-- therefore, owner can still confirm receipt for visible trucks even when owner assignment/time-log sections are hidden (for example, scheduled dispatches)
+- therefore, owner can still confirm truck assignment (owner confirmation workflow) for visible trucks even when owner assignment/time-log sections are hidden (for example, scheduled dispatches)
 
 This appears intentional in current code and must remain unchanged unless explicitly redesigned.
 
@@ -358,26 +343,26 @@ This appears intentional in current code and must remain unchanged unless explic
 
 ## Summary matrix
 
-| Behavior | Admin | CompanyOwner | Driver | Truck user |
-|---|---|---|---|---|
-| Can normally access Portal route | No, redirected by layout | Yes | Yes | Yes |
-| Dispatches visible in Portal list | N/A in normal flow | Dispatches with at least one allowed truck | Dispatches with active assignment to that driver | Dispatches with at least one allowed truck |
-| Trucks visible in drawer | All assigned trucks if drawer rendered as admin | Intersection of dispatch trucks and allowed trucks | Active assigned trucks for that driver on that dispatch | Intersection of dispatch trucks and allowed trucks |
-| Confirm receipt | No | Yes, per visible truck | No | No |
-| Add/edit time entries | No, read-only only | Yes for visible trucks when status allows and not cancelled | No, read-only only | No |
-| Report incident | Not from Portal drawer in normal flow | Yes | Yes | Yes |
-| Assign/remove drivers | No | Yes when status allows and there are eligible drivers | No | No |
-| Edit truck assignments | No | Yes | No | No |
-| Take screenshot | No | Yes | No | No |
-| Mark seen / acknowledge | N/A here | Owner gets notification resolution indirectly, but no explicit seen action | Yes, on open/removal modal flow | No |
-| Activity log visible | Yes, if drawer rendered | No | No | No |
+| Behavior | Admin | CompanyOwner | Driver |
+|---|---|---|---|
+| Can normally access Portal route | No, redirected by layout | Yes | Yes |
+| Dispatches visible in Portal list | N/A in normal flow | Company-scoped dispatches, with truck-scoped detail behavior in cards/drawer/actions | Dispatches with active assignment to that driver |
+| Trucks visible in drawer | All assigned trucks if drawer rendered as admin | Owner-visible trucks from company-scoped dispatch context | Active assigned trucks for that driver on that dispatch |
+| Confirm receipt | No | Yes, per visible truck | No |
+| Add/edit time entries | No, read-only only | Yes for visible trucks when status allows and not cancelled | No, read-only only |
+| Report incident | Not from Portal drawer in normal flow | Yes | Yes |
+| Assign/remove drivers | No | Yes when status allows and there are eligible drivers | No |
+| Edit truck assignments | No | Yes | No |
+| Take screenshot | No | Yes | No |
+| Mark seen / acknowledge | N/A here | Owner gets notification resolution indirectly, but no explicit seen action | Yes, on open/removal modal flow |
+| Activity log visible | Yes, if drawer rendered | No | No |
 
 ## Admin behavior
 
 ### What dispatches they can see
 - In normal app flow, admins are redirected away from Portal/Home to `AdminDashboard` by `Layout.jsx`.
 - Therefore admin Portal list behavior is not part of the normal user-facing route.
-- If Portal were forced to render for admin, `filteredDispatches` would use the non-driver branch and rely on `allowedTrucks`. That is a latent path, but **needs manual verification** because normal routing prevents it.
+- If Portal were forced to render for admin, behavior is a latent path and **needs manual verification** because normal routing prevents it.
 
 **Enforced by:**
 - Portal access restriction: **route guard / layout redirect**
@@ -385,13 +370,13 @@ This appears intentional in current code and must remain unchanged unless explic
 
 ### What trucks they can see
 - In drawer admin mode, time logs and confirmation history use `dispatch.trucks_assigned` directly.
-- Admin truck badges in the main info section are also shown via the `(isAdmin || isOwner)` branch and `visibleTrucks`; however `visibleTrucks` for admin resolves to `myTrucks`, not all trucks, because admin is not driver and `myTrucks` is based on `allowed_trucks`.
+- Admin truck badges in the main info section are also shown via the `(isAdmin || isOwner)` branch and `visibleTrucks`; this latent admin-on-portal path remains needs-manual-verification behavior.
 - This is inconsistent with admin-only lower sections, but largely irrelevant because Portal is redirected.
 
 **Status:** needs manual verification if anyone intentionally renders Portal drawer with admin session.
 
 ### Confirm / time entries / incidents / assignments / screenshots / seen
-- Confirm receipt: hidden
+- Confirm truck confirmation action: hidden
 - Time logs: read-only section shown if assigned trucks exist
 - Report incident: not exposed from the Portal drawer admin branches
 - Assign/remove drivers: hidden
@@ -408,9 +393,9 @@ This appears intentional in current code and must remain unchanged unless explic
 ## Company owner behavior
 
 ### What dispatches they can see
-- Portal loads company dispatches, then filters to dispatches where `dispatch.trucks_assigned` intersects `session.allowed_trucks`.
+- Portal loads company dispatches, then filters to dispatches where `dispatch.trucks_assigned` intersects company scope + truck detail rules.
 - Dispatch visibility is **not** based on driver assignments.
-- If a dispatch has no trucks intersecting `allowed_trucks`, owner does not see it.
+- Owner list visibility is company-scoped; truck filtering is applied in truck-detail and action contexts.
 
 **Enforced by:**
 - Route access: **layout/nav allows owner**
@@ -422,7 +407,7 @@ This appears intentional in current code and must remain unchanged unless explic
 - then keep only dispatches containing at least one allowed truck
 
 ### What trucks they can see
-- `myTrucks = session.allowed_trucks ∩ dispatch.trucks_assigned`
+- `myTrucks` reflects owner-visible truck detail context for the dispatch.
 - most owner actions operate only on `myTrucks`
 - owner can still edit the full truck assignment set using allowed truck options, but initial visible chips/confirm/time-log controls are scoped to `myTrucks`
 
@@ -479,7 +464,7 @@ Additional same-shift conflict prevention is enforced client-side by:
 ### Whether they can edit truck assignments
 Yes.
 - owner-only “Edit Trucks” button
-- can only choose from `session.allowed_trucks`
+- can only choose from company scope + truck detail rules
 - must keep exact original truck count
 - supports one-for-one replacement
 - multiple conflicting swaps in one save are blocked
@@ -493,7 +478,7 @@ Yes.
 ### Whether they can acknowledge/mark seen
 No explicit owner acknowledgement action exists in drawer.
 Owner-related seen behavior is indirect:
-- owner sees “Seen” badge per truck when active driver assignment has `receipt_confirmed_at`
+- owner sees “Seen” badge per truck when active driver assignment has `last_seen_at`/`last_opened_at`
 - owner notifications may be resolved as read after confirmations are complete
 - driver seen events generate owner notifications through backend/entity calls
 
@@ -507,7 +492,7 @@ Depending on dispatch status and data presence, owner can see:
 - cancellation/amendment reason banner
 - assignment details / additional assignments
 - box notes / general notes
-- confirm receipt section
+- confirm truck assignment (owner confirmation workflow) section
 - driver assignments section (status-gated)
 - time log section (status-gated and not cancelled)
 
@@ -570,7 +555,7 @@ Yes, indirectly and automatically.
 When a driver opens a dispatch in Portal:
 - `Portal.handleDispatchOpen` calls `markDriverDispatchSeenAsync({ dispatch, notificationId })`
 - all matching unread `driver_dispatch_update` notifications for that dispatch are marked read
-- all active unseen assignments for that dispatch are updated with receipt-confirmation fields
+- all active unseen assignments for that dispatch are updated with delivery/seen lifecycle fields (`delivery_status`, `last_seen_at`, `last_opened_at`)
 - owner “driver seen” notifications may be created
 
 When a driver deep-links to a removed assignment notification:
@@ -589,60 +574,17 @@ When a driver deep-links to a removed assignment notification:
 - no admin activity log
 
 ### Intentionally disabled or hidden driver actions
-- no confirm receipt
+- no confirm truck assignment (owner confirmation workflow)
 - no screenshot
 - no truck editing
 - no driver assignment changes
 - no time log section (editable or read-only)
 
-## Truck user behavior
-
-### What dispatches they can see
-- same Portal list rule as owner/non-driver branch: dispatch must contain at least one `allowed_trucks` value
-
-### What trucks they can see
-- intersection of `session.allowed_trucks` and `dispatch.trucks_assigned`
-- in card summary, truck user explicitly shows only `myTrucks[0]`
-- in drawer main truck section, visible trucks are `myTrucks`
-
-**Needs manual verification:** whether truck users are always provisioned with exactly one allowed truck. Client code seems to assume that in some views but does not strictly enforce single-truck allowed lists here.
-
-### Whether they can confirm
-No.
-
-### Whether they can add time entries
-No.
-
-### Whether they can report incidents
-Yes.
-
-### Whether they can assign/remove drivers
-No.
-
-### Whether they can edit truck assignments
-No.
-
-### Whether they can take screenshots
-No.
-
-### Whether they can acknowledge/mark seen
-No explicit truck-user acknowledgement flow exists in Portal/drawer.
-
-### What drawer sections truck users can see
-- incident button
-- details body
-- visible truck chips
-- notes / assignment details / cancellation banner
-- no confirm/time-log/assignment/screenshot/admin sections
-
----
-
-# D. Filters / grouping / bucket rules
 
 ## Portal dispatch filtering rules
 
 ### Non-driver users (owner / truck; latent admin path if rendered)
-- keep dispatches where any assigned truck is in `session.allowed_trucks`
+- keep dispatches where any assigned truck is in company scope + truck detail rules
 - no extra status filter applied at this stage
 
 ### Driver users
@@ -677,7 +619,7 @@ For `historyDispatches`, after bucket is `history`:
 - filters time entries for this dispatch and those trucks
 - requires `areAllAssignedTrucksTimeComplete({ trucks_assigned: trucks }, dispatchEntries)`
 
-So for owner/truck users, an unarchived historical dispatch appears in History only when **all of that user’s visible trucks** have complete time logs.
+So for owners (historical truck-user references are deprecated), an unarchived historical dispatch appears in History only when **all of that user’s visible trucks** have complete time logs.
 
 This is a subtle behavior and should remain identical.
 
@@ -688,14 +630,13 @@ Driver list visibility is based on active assignments only:
 - drawer-level driver-visible trucks also filter to active assignments
 - removed/inactive assignments stop making a truck/dispatch visible to the driver
 
-## `allowed_trucks` impact on owner/truck visibility
+## Company-scoped owner visibility and truck-detail behavior
 
-`allowed_trucks` is used to determine:
-- which dispatches owners/truck users can see on Portal
-- which trucks owners/truck users see on cards/drawers
-- which trucks owner notifications care about (`required_trucks` reconciliation functions)
-- whether an owner can save truck edits to a new truck set
-- which owner codes receive seen/confirmation notifications
+Owner dispatch visibility is company-scoped at list level. Truck-specific logic is still enforced for:
+- card/drawer truck detail rendering
+- owner confirmation required-truck logic (`required_trucks` reconciliation)
+- owner truck-edit save constraints
+- owner seen/confirmation notification targeting
 
 ## Archived / cancelled / scheduled status effects on visibility
 
@@ -809,10 +750,10 @@ This implicit confirmation preservation/carry-forward behavior is extremely frag
 5. deduplicate using `pendingDriverSeenKeysRef`
 6. mark unread matching notifications read
 7. update unseen assignments with receipt fields:
-   - `receipt_confirmed_flag: true`
-   - `receipt_confirmed_at`
-   - `receipt_confirmed_by_driver_id`
-   - `receipt_confirmed_by_name`
+   - `delivery_status: seen`
+   - `last_seen_at`/`last_opened_at`
+   - `last_seen_at` / `last_opened_at`
+   - seen actor context (driver identity metadata)
 8. call `notifyOwnerDriverSeen(...)`
 9. invalidate notifications, portal dispatches, and assignment queries
 
@@ -898,7 +839,7 @@ Entry point: owner-only “Edit Trucks” button.
 Local behavior:
 - toggles `isEditingTrucks`
 - draft is initialized from current `dispatch.trucks_assigned`
-- only trucks from `session.allowed_trucks` are selectable
+- only trucks from company scope + truck detail rules are selectable
 - checkbox additions are disabled once draft count reaches required count
 - save requires exact original truck count
 
@@ -907,7 +848,7 @@ Mutation path: `Portal.updateOwnerTrucksMutation`
 Common validation:
 - dispatch id required
 - at least one truck required
-- all trucks must belong to owner `allowed_trucks`
+- all trucks must belong to owner company truck scope rules
 - truck count must remain identical to original count
 - if no changes, return `{ updated: false }`
 
@@ -1027,9 +968,9 @@ If dispatch exists in raw dispatch list but is not in `filteredDispatches`, the 
 3. Hook loads matching active assignments + matching driver dispatch notifications.
 4. Hook derives seen-kind (`assigned`, `amended`, `cancelled`, or `removed`-style logic depending on path).
 5. Hook marks unread driver dispatch notifications read.
-6. Hook updates unseen active assignment rows with receipt-confirmation metadata.
+6. Hook updates unseen active assignment rows with delivery/seen metadata (`delivery_status`, `last_seen_at`, `last_opened_at`).
 7. Hook calls `notifyOwnerDriverSeen(...)`.
-8. Owner seen notifications are created per owner access code whose `allowed_trucks` intersect the driver’s active assigned trucks.
+8. Owner seen notifications are created per owner access code in company scope with driver-assignment truck overlap in notification logic.
 9. Notifications and assignment queries are invalidated.
 10. Drawer UI can now show per-truck **Seen** badges for owner/admin views.
 
@@ -1275,7 +1216,7 @@ Any extraction that treats confirmations as independent from truck edits could c
 ## 4. Driver seen tracking is not just notification read-state
 Driver acknowledgement updates both:
 - notifications (`read_flag`)
-- assignment receipt fields (`receipt_confirmed_*`)
+- assignment receipt fields (`delivery_status` + `last_seen_at`/`last_opened_at`)
 - owner seen notifications
 
 Risk:
@@ -1401,11 +1342,9 @@ Use this checklist after any refactor.
 - [ ] Admin visiting `Portal` is redirected away to `AdminDashboard`.
 - [ ] Company owner can access `Portal` normally.
 - [ ] Driver can access `Portal` normally.
-- [ ] Truck user can access `Portal` normally.
 
 ## Dispatch list visibility
 - [ ] Owner only sees dispatches containing at least one allowed truck.
-- [ ] Truck user only sees dispatches containing at least one allowed truck.
 - [ ] Driver only sees dispatches with an active driver assignment.
 - [ ] Cancelled dispatches still remain in date-based buckets unless archived.
 - [ ] Archived dispatches always appear in History.
@@ -1482,13 +1421,13 @@ Use this checklist after any refactor.
 
 ## 1. Must-remain-identical behaviors
 
-- Portal list filtering must stay **assignment-driven for drivers** and **allowed-truck-driven for owners/truck users**.
-- Owner visible trucks must remain `allowed_trucks ∩ dispatch.trucks_assigned`.
+- Portal list filtering must stay **assignment-driven for drivers** and **allowed-truck-driven for owners/deprecated truck-user references**.
+- Owner dispatch visibility must remain company-scoped; truck-specific behavior stays in drawer/action logic.
 - Driver visible trucks in drawer must remain based on active driver assignments for that dispatch.
 - Owner confirm buttons must remain available per visible truck and use current dispatch status as confirmation type.
 - Owner assignment/time-log sections must remain status-gated by `canCompanyOwnerViewAssignmentsAndTimeLogs`, while the owner confirmation section remains separately gated.
 - Driver dispatch opening must continue to mark both notifications and assignment receipt fields as seen.
-- Owner Seen badges must continue to depend on assignment `receipt_confirmed_at`.
+- Owner Seen badges must continue to depend on assignment `last_seen_at`/`last_opened_at`.
 - Owner truck-edit flow must keep exact truck-count preservation and allowed-truck restriction.
 - Owner truck-edit flow must keep implicit confirmation deletion/creation and notification reconciliation behavior.
 - Time-entry saves must preserve actor metadata behavior and auto-archive rules.
@@ -1530,7 +1469,7 @@ Use this checklist after any refactor.
 
 - Whether backend/entity rules independently enforce company/user scoping beyond the client filters shown here.
 - Whether Portal drawer is ever intentionally rendered for admin in production despite layout redirect.
-- Whether truck access codes are guaranteed to have exactly one `allowed_trucks` entry.
+- Whether any historical truck-access data remains in production datasets (deprecated role).
 - Whether any external listener depends on `window.__dispatchDetailDrawerOpen` or the `dispatch-detail-drawer-state` event beyond tutorials.
 - Whether Incidents page consumes every query param generated here exactly as assumed; this file pair only proves that those params are sent.
 - Whether owner/admin notification UX elsewhere depends on ordering or exact message text beyond what is visible in current helper code.
@@ -1539,7 +1478,6 @@ Use this checklist after any refactor.
 
 ---
 
-## Reconciliation update (2026-03-31)
 
 ### Admin drawer action row (shared `DispatchDetailDrawer` top bar)
 - Admin top row now exposes three action buttons to the right of **Back**: **Edit**, **Report Incident**, and **Screenshot**.

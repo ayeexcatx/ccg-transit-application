@@ -202,7 +202,7 @@ This baseline treats repository code as source of truth and compares it against 
 ## 8) Admin Confirmations
 
 ### Confirmed from code
-- Page is split into **Open Confirmations** and **Confirmation History** sections.
+- Page is split into **Open Confirmations**, **Confirmation History**, and **Driver Dispatch Log** views for acknowledgement/seen history review.
 - Open rows are computed from unresolved owner notifications + missing truck confirmations (not a raw dispatch-status list).
 - Open section shows company, dispatch date, status/type, truck, client, job number, reference, notification timestamp, and a computed pending-age field.
 - History section is sourced from completed `Confirmation` records and shows company/date/truck/client/job/reference plus `Confirmed At` and `Confirmed By`.
@@ -229,7 +229,7 @@ This baseline treats repository code as source of truth and compares it against 
 
 ### Confirmed from code
 - Admin pages use a shared sticky header with logo/title, workspace identity line, notification bell, profile menu trigger, and logout action.
-- Admin nav tabs are explicitly rendered as: Dashboard, Dispatches, Availability, Confirmations, Incidents, Announcements, Companies, Access Codes, Notes.
+- Admin nav tabs are explicitly rendered as: Dashboard, Dispatches, Availability, Confirmations, Incidents, Announcements, Companies, Access Codes, Notes, SMS Center, Driver Protocol.
 - Pending badges for company profile requests and driver requests are attached to Companies and Access Codes nav items.
 - See `docs/behavior-preservation-baseline.md` (App shell / header section) for cross-role shell behavior.
 
@@ -245,9 +245,3 @@ This baseline treats repository code as source of truth and compares it against 
 
 ### Needs manual verification
 - Responsive behavior details across breakpoints for very long company/workspace labels.
-
-
-### Reconciliation updates (2026-03-31)
-- Admin dispatch detail can now open in-place from Confirmations, Incidents, Notifications, and the global notification bell through `AdminDispatchDrawerContext`.
-- The shared drawer Back button remains labeled `Back`, but in overlay entry paths it closes the drawer and leaves the admin on the same page context.
-- Shared admin drawer top-row actions now include `Edit`, `Report Incident`, and `Screenshot`.

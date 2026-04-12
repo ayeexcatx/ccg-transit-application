@@ -4,7 +4,8 @@
 CCG Dispatch Hub is a dispatch management system built for CCG Transit using Base44 and React. It supports daily dispatch operations across administrators, company owners, and drivers.
 
 The repository contains the frontend application code synchronized with Base44 through GitHub.
-Base44 entities and backend configuration are managed in Base44, with repository snapshots available under `base44/entities` for reference and versioned review.
+Base44 entities and backend configuration are managed in the live Base44 backend/dashboard and are **not** automatically synced from backend to GitHub.
+Manually maintained entity snapshots intended to mirror live entities are kept in this repo under `base44/entities` and in the Base44 project under `CopyOfEntities`.
 
 View and Edit  your app on [Base44.com](http://Base44.com) 
 
@@ -137,7 +138,7 @@ The application is role-based and dynamically adjusts visibility and workflows.
 - Notifications
 - Incidents
 
-** Driver User **
+** Driver **
 1. Driver users have a limited interface showing dispatches assigned to them.
 2. Accessible pages include:
 - Home
@@ -273,19 +274,20 @@ Checks AppConfig runtime version updates and prompts active users to reload when
 ** Dispatch Creation **
 1. Admin creates a dispatch
 2. Dispatch is assigned to one or more trucks
-3. Truck users receive the dispatch in their portal
-4. Trucks confirm assignment
+3. Company owners review and confirm required truck assignments
+4. Assigned drivers receive dispatch/removal/update notifications
 5. Drivers perform work
 6. Time entries are logged
 7. Dispatch is archived once complete
 
 ** Dispatch Confirmation **
-Truck users confirm assignments through the dispatch portal.
+Company owners confirm dispatch assignments through the dispatch portal.
 Confirmations are tracked in the Confirmation entity.
+Drivers do not create Confirmation records; driver acknowledgement is tracked in `DriverDispatch` (`delivery_status`, `last_seen_at`, `last_opened_at`).
 
 
 ** Time Entry Logging **
-Drivers or truck users log operational time entries tied to dispatches.
+Drivers and company owners log operational time entries tied to dispatches (role- and workflow-dependent).
 Entries are stored in the TimeEntry entity.
 
 ** Incident Reporting **
@@ -358,7 +360,7 @@ If Base44 appears stuck syncing:
 ** Missing Entities **
 If the app throws entity errors:
 Ensure all required entities exist in Base44.
-GitHub does not contain entity definitions.
+GitHub does not contain the live entity source of truth; snapshots here are manually maintained mirrors.
 ---------------------------------------------------------------------
 
 # Future Improvements #
@@ -397,15 +399,9 @@ Key systems stabilized:
 
 ---------------------------------------------------------------------
 
-## Recent Behavior Reconciliation (2026-03-31)
+## Current Behavior Notes (2026-04-12)
 
-- **Shared dispatch drawer actions now differ by role:**
-  - Admin top action row includes **Back**, **Edit**, **Report Incident**, and **Screenshot**.
-  - Company Owner top action row includes **Back**, **Report Incident**, and **Screenshot Dispatch**.
-  - Driver top action row includes **Back** and **Report Incident** only.
-- **Admin in-place drawer overlay is enabled** from admin entry points (Notifications page, notification bell, Confirmations, Incidents) using `AdminDispatchDrawerContext`; admins no longer need to route through `AdminDispatches` first to open dispatch detail from those pages.
-- **Back button semantics in admin overlay:** label stays **Back**, but it closes the overlay and keeps the admin on the same underlying page.
-- **Staggered truck times/details are supported** through optional `Dispatch.truck_overrides` (`start_time`, `start_location`, `instructions`, `notes`), with effective per-truck fallback to base dispatch fields.
-- **Live Board start-time precedence** for each truck line is: truck override start time -> earliest assignment start time for that truck -> dispatch `start_time`.
-- **Notification/SMS start-time wording is truck-aware:** when a notification target truck scope resolves to one effective start time, that time is injected; when multiple times exist, wording intentionally avoids presenting a single misleading time.
-- **Drive/HTML dispatch records are truck-aware** and reflect effective truck override values in per-truck records where those fields differ from base dispatch values.
+- Admin in-place dispatch drawer overlay is available from Confirmations, Incidents, Notifications, and Notification Bell via `AdminDispatchDrawerContext`.
+- Dispatch supports truck-specific override fields (`truck_overrides`) and per-truck effective values in drawer, notifications, and Drive HTML records.
+- CompanyOwner notification/SMS dispatch time uses the dispatch main/earliest start time.
+- Driver notification/SMS dispatch time uses the assigned truck's effective start time when truck overrides apply.

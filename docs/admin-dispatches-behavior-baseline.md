@@ -1,13 +1,12 @@
 # AdminDispatches.jsx behavior baseline
 
 
-## Reconciliation updates (2026-04-05)
-- Where this baseline references assignment receipt-confirmed field resets, align with current driver-assignment delivery/seen model (`delivery_status`, `last_seen_at`, `last_opened_at`).
 
 ## Scope and intent
 This baseline documents the current page-level behavior of `src/pages/AdminDispatches.jsx` and the directly coupled workflow it drives so the page can be refactored later without changing behavior. It covers the admin dispatch list, live board, dispatch create/edit/copy/delete/archive flows, edit locking, notification-triggering behavior, Google Drive sync hooks, drawer preview behavior, and the directly related form/drawer components and helpers that the page depends on.
 
 ## 1) Purpose of the page
+- Admin follow-up on driver acknowledgement history is reviewed on **Admin Confirmations -> Driver Dispatch Log** (cross-page behavior).
 - `AdminDispatches` is the admin-only dispatch operations page.
 - It serves four major purposes at once:
   1. browse dispatches by date bucket (`Live Dispatch Board`, `Today`, `Upcoming`, `History`),
@@ -285,7 +284,7 @@ Primary entity mutation:
 
 Potential follow-up mutations:
 - deactivate removed-truck `DriverDispatch` rows.
-- reset `receipt_confirmed_*` fields on active driver assignments when status changes into `Amended` or `Cancelled`.
+- update driver assignment delivery/seen lifecycle fields when status changes into `Amended` or `Cancelled` (driver acknowledgement is tracked via `delivery_status`, `last_seen_at`, `last_opened_at`).
 - update notification records via `reconcileOwnerNotificationsForDispatch()`.
 - create/update driver notifications via `notifyDriversForDispatchEdit()`.
 - update Drive sync metadata on success/failure.
@@ -337,7 +336,7 @@ Against `LiveDispatchBoardRequest`:
 4. `Dispatch.update()` runs with appended activity entry and lock cleared.
 5. previous active driver assignments are read.
 6. removed trucks cause matching active driver assignments to be deactivated via `clearRemovedTruckDriverAssignments()`.
-7. if status became `Amended` or `Cancelled`, active driver assignments have receipt-confirmation fields reset.
+7. if status became `Amended` or `Cancelled`, active driver assignments have delivery/seen acknowledgement lifecycle state reset/re-based for the new status.
 8. owner notifications are reconciled.
 9. driver notifications are created/updated through `notifyDriversForDispatchEdit()`.
 10. Drive HTML sync runs; failure writes error metadata and shows warning toast.
@@ -352,7 +351,7 @@ Amendment is an edit whose resulting status is `Amended`.
 Sequence differences from generic edit:
 - `DispatchForm` requires `canceled_reason` as amendment reason.
 - if prior status was not already `Amended`, amendment history records a change summary for location/time/instructions/trucks differences.
-- `AdminDispatches` resets active driver assignment receipt-confirmation fields.
+- `AdminDispatches` resets active driver assignment delivery/seen lifecycle fields (`delivery_status`, `last_seen_at`, `last_opened_at`).
 - `notifyDriversForDispatchEdit()` sends amended notifications to assigned drivers.
 - `DispatchForm.finalizeSubmit()` treats it as a status change and calls `notifyDispatchChange()` for owners.
 
@@ -361,7 +360,7 @@ Cancellation is an edit whose resulting status is `Cancelled`.
 Sequence differences from generic edit:
 - `DispatchForm` requires `canceled_reason` as cancellation reason.
 - admin activity log action becomes `cancelled_dispatch` instead of generic update.
-- `AdminDispatches` resets active driver assignment receipt-confirmation fields.
+- `AdminDispatches` resets active driver assignment delivery/seen lifecycle fields (`delivery_status`, `last_seen_at`, `last_opened_at`).
 - `notifyDriversForDispatchEdit()` sends cancelled notifications to assigned drivers.
 - `DispatchForm.finalizeSubmit()` treats it as a status change and calls `notifyDispatchChange()` for owners.
 - cancelled dispatches remain on live list tabs by date, but are excluded from the live board.
@@ -547,7 +546,7 @@ Effects of that admin drawer mode:
 - [ ] removed trucks still deactivate active driver assignments.
 - [ ] added trucks without status change still expand owner notification required trucks.
 - [ ] optional informational update prompt still appears only for edits with no status change and no added trucks.
-- [ ] amended/cancelled status changes still reset driver receipt-confirmation fields.
+- [ ] amended/cancelled status changes still reset driver delivery/seen lifecycle fields (`delivery_status`, `last_seen_at`, `last_opened_at`).
 - [ ] assigned drivers still receive the correct updated/amended/cancelled notifications.
 - [ ] Drive sync still runs on create/edit and writes failure metadata on failure.
 
@@ -582,7 +581,7 @@ Effects of that admin drawer mode:
 5. Copy flow field resets.
 6. Activity-log entry precedence/order when editing.
 7. Removed-truck driver assignment deactivation and resulting driver notifications.
-8. Driver receipt-confirmation reset on Amended/Cancelled status changes.
+8. Driver seen/open lifecycle reset on Amended/Cancelled status changes.
 9. Notification branching between status changes, added trucks, and optional informational updates.
 10. Drive sync timing and failure behavior for create/edit/archive.
 11. Live board inclusion/exclusion rules, grouping, default status value, and requested-slot placeholder behavior.
@@ -618,15 +617,3 @@ Effects of that admin drawer mode:
 - whether admin drawer confirmation/time-entry UI renders actionable controls that now no-op because empty handlers are passed.
 - whether deleting a dispatch should also clean up time entries, driver assignments, and live-board request rows.
 - whether duplicate owner-notification reconciliation calls are intentionally required.
-
-
-## Reconciliation update (2026-03-31)
-
-- Admin dispatch detail access is now split between:
-  1. `AdminDispatches.jsx` inline preview drawer (existing behavior), and
-  2. global admin overlay drawer (`AdminDispatchDrawerContext`) invoked from Notifications/Bell/Confirmations/Incidents.
-- For admin overlay entry points, dispatch detail opens without navigating to `AdminDispatches`.
-- Admin top action row in shared drawer includes `Edit`, `Report Incident`, and `Screenshot`.
-- Admin `Edit` from overlay closes overlay and routes to `AdminDispatches` with `state.editDispatchId`.
-- Documentation references that previously implied all admin deep-link entry paths must navigate to `AdminDispatches` should be treated as superseded by overlay behavior.
-- Live-board truck start-time derivation should be interpreted with this precedence: truck override `start_time`, then assignment-derived truck start time, then base dispatch `start_time`.

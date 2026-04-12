@@ -1,17 +1,14 @@
 # **App Baseline – Global Access & Admin Dashboard**
 
+**Owner-approved clarifications integrated (2026-04-12):**
+- Current supported access-code roles are `Admin`, `CompanyOwner`, and `Driver` (truck user is deprecated/historical, not current intended behavior).
+- Owner dispatch visibility is company-scoped, with truck-specific detail logic in drawer/notification/per-truck flows.
+- Driver dispatch visibility is assignment-scoped.
+- Driver acknowledgement is tracked via `DriverDispatch` seen/open state (`delivery_status`, `last_seen_at`, `last_opened_at`) and not a driver confirm-receipt button.
+- Admin can review driver acknowledgement history in **Admin Confirmations → Driver Dispatch Log**.
 
-## Reconciliation updates (2026-04-05)
-- Driver acknowledgement/seen behavior should be interpreted via `DriverDispatch.delivery_status` and seen/open timestamps (`last_seen_at`, `last_opened_at`), not legacy receipt-confirmed fields.
-- Historical truck-user role assumptions are deprecated; supported access-code roles are Admin, CompanyOwner, and Driver.
-- Owner dispatch visibility should be treated as company-scoped with truck-level actions in dispatch detail flows.
 
----
 
-## Change log (2026-03-28)
-- **Added:** Clarified authenticated Base44 sign-in as the gate before access-code linking.
-- **Removed:** Outdated wording that implied access code by itself is the full authentication step.
-- **Edited:** Login/landing wording in app entry and company-owner login sections to match current linking flow.
 
 ## **1\. Application Entry (Login Page)**
 
@@ -37,7 +34,7 @@
     * Admin → always “CCG Transit”
     * Company Owner → their company name
     * Driver → their assigned company
-  * Line 2: Workspace identity label (usually user name). For Admin view this is shown as `Name (Admin)`; company owner/driver/truck views show role-specific identity labels without exposing internal workspace fields.
+  * Line 2: Workspace identity label (usually user name). For Admin view this is shown as `Name (Admin)`; company owner/driver views show role-specific identity labels without exposing internal workspace fields.
   * Note: added after code-backed review (2026-03-24).
 * **Right side:**
   * Notification bell
@@ -1420,7 +1417,7 @@ Each card includes:
 
 ## **6\. Role Behavior Notes**
 
-* Truck role:
+* Truck role (deprecated historical reference; not a supported current access-code role):
   * Currently exists
   * Planned for future removal
 * Admin role:
@@ -3227,7 +3224,7 @@ Three indicators:
 
 ## **12\. Deprecated Role Note**
 
-* Truck user role:
+* Truck user role (deprecated historical reference):
   * Exists partially in system
   * Incomplete implementation
   * Planned for full removal
@@ -3380,7 +3377,7 @@ Three indicators:
 * Notifications Page:
   * Mirror of notification bell
 * Action Needed Section:
-  * Only notifications requiring action (confirm receipt)
+  * Only notifications requiring owner action (truck confirmation)
 
 ---
 
@@ -3566,21 +3563,10 @@ SMS is active ONLY if:
 
 ## **10\. Deprecated / Future Removal**
 
-* Truck user role:
+* Truck user role (deprecated historical reference):
   * Exists partially
   * Will be removed
 * Final roles:
   * Admin
   * Company Owner
   * Driver
-
-
-## Reconciliation addendum (2026-03-31)
-
-- Admin dispatch detail behavior now includes in-place overlay opening from Notifications, Notification Bell, Confirmations, and Incidents pages (no mandatory intermediate Admin Dispatches navigation for these entry paths).
-- In those admin overlay paths, the drawer **Back** control closes the overlay and keeps the current page visible.
-- Shared dispatch drawer admin top-row actions are now explicitly: **Edit**, **Report Incident**, **Screenshot**.
-- Dispatch records support optional per-truck staggered overrides (`truck_overrides`) for start time, location, instructions, and notes, with effective fallback to base dispatch values when no override exists.
-- Live-board truck start-time display resolves in precedence order: truck override -> truck assignment-derived time -> base dispatch start time.
-- Drive-synced per-truck HTML render now reflects effective truck override values where present.
-- Driver/owner notification and SMS datetime wording now uses truck-scoped effective start-time logic when it resolves to a single time value.

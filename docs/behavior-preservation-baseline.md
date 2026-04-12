@@ -1,26 +1,14 @@
 # Behavior Preservation Baseline
 
 
-## Reconciliation updates (2026-04-05)
-- Truck access-code logins remain unsupported; any historical truck-user capability references are deprecated and should not be used as current behavior.
-- Driver assignment acknowledgement now relies on `DriverDispatch.delivery_status` plus `last_seen_at` / `last_opened_at`, not legacy `receipt_confirmed_*` fields.
-- Owner portal visibility should be treated as company-scoped at list level with assignment/truck detail resolution inside drawer and notification logic.
-
-Generated from repository code review on 2026-03-23. This document is intentionally conservative: when behavior was not explicit in code, it is labeled **likely inferred from code** or **needs manual verification**.
 
 ## Legend
 - **Confirmed from code** — directly supported by current repository code.
 - **Likely inferred from code** — strongly suggested by the implementation, but not guaranteed without runtime validation.
 - **Needs manual verification** — unclear, environment-dependent, or not fully provable from static review alone.
 
-**((NOTE))** `Truck` were originally added to be a user, but will eventually be removed as a user, leaving only 3 remaining user types: `Admin`, `CompanyOwner`, `Driver`.
+**Note:** `Truck` is a deprecated historical role reference and is not a current supported access-code role.
 
-## Change log (2026-03-28)
-- **Added:** Clarified authenticated Base44 sign-in + access-code linking flow and explicit truck-code login rejection.
-- **Removed:** Outdated truck-user baseline table/route assumptions that no longer match supported login behavior.
-- **Edited:** Owner truck/notification scoping language to align with company truck truth (`Company.trucks`) in current flows.
-
----
 
 ## A. App-Level Core Rules
 
@@ -33,11 +21,11 @@ Generated from repository code review on 2026-03-23. This document is intentiona
 - **Confirmed from code:** `Incidents` is visible in both admin and portal-style navigation and is accessible to all role types, with role-specific filtering inside the page.
 - **Removed as outdated:** Truck-user-specific route assumptions are no longer part of current supported login behavior.
 
-### Admin / company owner / driver / truck differences
+### Admin / company owner / driver differences
 - **Confirmed from code:** Admins can manage dispatches, companies, access codes, announcements, template notes, availability, confirmations, and incident records.
 - **Confirmed from code:** Company owners can view company-facing dispatches, edit their company availability, manage drivers, update trucks on existing dispatches from the drawer, manage their SMS preference, request access codes, and submit company profile changes for admin approval.
 - **Confirmed from code:** Drivers can only see dispatches tied to their active `DriverDispatch` records, can mark dispatch/removal notifications as seen, can manage their own SMS opt-in, and can view/add incident updates to incidents they can access.
-- **Confirmed from code:** Truck users can view dispatches filtered by their allowed trucks, confirm truck-level dispatch statuses, log time, and create/view incidents within their truck scope.
+- **Deprecated/historical:** Truck-user workflow references are retained only for legacy context and are not current intended behavior.
 - **Confirmed from code:** Driver management UI is company-owner only, and truck / driver assignment controls in the dispatch drawer are primarily admin / owner capabilities.
 
 ### Access-code session behavior
@@ -59,7 +47,7 @@ Generated from repository code review on 2026-03-23. This document is intentiona
 - **Confirmed from code:** A persistent shared header is rendered on all routed pages except `AccessCodeLogin`; it contains logo + title on the left and role/workspace identity on a second line.
 - **Confirmed from code:** Header identity uses role icon + `getWorkspaceDisplayLabel(...)` output (for example admin/company workspace labels), and shows a workspace picker only when multiple workspace options are available.
 - **Confirmed from code:** Header actions always include logout; notification bell and profile menu are shown for `Admin`, `CompanyOwner`, and `Driver` only.
-- **Confirmed from code:** Admin navigation tabs in the header include `Dashboard`, `Dispatches`, `Availability`, `Confirmations`, `Incidents`, `Announcements`, `Companies`, `Access Codes`, and `Notes`.
+- **Confirmed from code:** Admin navigation tabs in the header include `Dashboard`, `Dispatches`, `Availability`, `Confirmations`, `Incidents`, `Announcements`, `Companies`, `Access Codes`, `Notes`, `SMS Center`, and `Driver Protocol`.
 - **Confirmed from code:** `InstallPromptBanner` is mounted app-wide (including login route) but suppresses itself in standalone mode and desktop-class environments; mobile/tablet eligible clients can see install guidance or prompt controls.
 - **Needs manual verification:** Exact timing/frequency of install-prompt display across browsers and repeated visits.
 
@@ -67,7 +55,7 @@ Generated from repository code review on 2026-03-23. This document is intentiona
 - **Confirmed from code:** Dispatch statuses used by the app are `Scheduled`, `Dispatch`, `Amended`, and `Cancelled`.
 - **Confirmed from code:** Creating or editing a dispatch can trigger owner notifications, driver notifications, edit-lock changes, admin activity-log entries, and Google Drive HTML sync.
 - **Confirmed from code:** Truck removals from a dispatch automatically deactivate related active `DriverDispatch` records for those removed trucks and notify affected drivers.
-- **Confirmed from code:** Changing a dispatch status to `Amended` or `Cancelled` resets driver assignment receipt-confirmation fields (`receipt_confirmed_*`) on active driver assignments for that dispatch.
+- **Confirmed from code:** Changing a dispatch status to `Amended` or `Cancelled` updates driver assignment delivery/seen state expectations (`delivery_status`, `last_seen_at`, `last_opened_at`) through notification/open workflows.
 - **Confirmed from code:** Dispatches can be archived manually by admins or automatically when all assigned trucks have complete time logs on or before the dispatch date; archive reasons are recorded.
 - **Confirmed from code:** Archived dispatches can be unarchived by admins; unarchiving clears archive metadata and clears the “finalized” Drive-sync marker.
 - **Likely inferred from code:** Archived dispatches remain readable in the UI but are treated differently for history / sync finalization.
@@ -89,7 +77,7 @@ Generated from repository code review on 2026-03-23. This document is intentiona
 - **Likely inferred from code:** Truck confirmations are the key preservation mechanism behind owner action badges and the admin confirmations page.
 
 ### Incident reporting behavior
-- **Confirmed from code:** Incident reports can be created by Admin, CompanyOwner, and Truck users from the Incidents page UI; Driver users do not get the Incidents-page “Create Incident” button.
+- **Confirmed from code:** Incident reports can be created by Admin and CompanyOwner from the Incidents page UI; Driver users do not get the Incidents-page “Create Incident” button (drivers can still use drawer-driven incident entry).
 - **Confirmed from code:** Drivers can still initiate incident creation from `DispatchDetailDrawer` via the in-drawer **Report Incident** action, which navigates to `Incidents?create=1&fromDispatch=1&dispatchId=...` and includes dispatch/company context.
 - **Confirmed from code:** In drawer-initiated incident creation, dispatch/company context is prefilled and truck prefill is conditional; truck is auto-prefilled only when a single clear truck can be resolved for the current session/dispatch.
 - **Confirmed from code:** An incident can optionally link to a dispatch and always stores truck number, incident type, summary, reporter metadata, and timestamps.
@@ -166,20 +154,20 @@ Generated from repository code review on 2026-03-23. This document is intentiona
 ### Amending a dispatch
 - **Confirmed from code:** Setting status to `Amended` requires an amendment reason in `canceled_reason`.
 - **Confirmed from code:** On first transition into `Amended`, the form appends an `amendment_history` entry when location/time/instructions/trucks changed.
-- **Confirmed from code:** Saving an amended dispatch resets all active driver assignment receipt-confirmation fields on that dispatch.
+- **Confirmed from code:** Saving an amended dispatch re-bases active driver assignment seen/open lifecycle state for that dispatch.
 - **Confirmed from code:** Owners receive a new status notification and drivers receive amended-dispatch notifications.
 
 ### Cancelling a dispatch
 - **Confirmed from code:** Setting status to `Cancelled` requires a cancellation reason in `canceled_reason`.
 - **Confirmed from code:** Admin activity logging uses a specific `cancelled_dispatch` action when the new status is cancelled.
-- **Confirmed from code:** Saving a cancelled dispatch resets active driver assignment receipt-confirmation fields.
+- **Confirmed from code:** Saving a cancelled dispatch re-bases active driver assignment seen/open lifecycle state.
 - **Confirmed from code:** Owners receive cancelled status notifications and assigned drivers receive cancelled-dispatch notifications.
 - **Likely inferred from code:** Cancelled dispatches still remain visible historically, rather than being deleted automatically.
 
 ### Assigning a driver
 - **Confirmed from code:** Driver assignment happens in the dispatch detail drawer per truck.
 - **Confirmed from code:** A driver cannot be assigned if they already have an active assignment on another same-company, same-date, same-shift dispatch whose status is not `Cancelled`.
-- **Confirmed from code:** Assigning or replacing a driver creates/updates a `DriverDispatch` record with `receipt_confirmed_*` fields reset to false/null.
+- **Confirmed from code:** Assigning or replacing a driver creates/updates a `DriverDispatch` record with delivery/seen fields initialized for the assignment lifecycle (`delivery_status`, `last_seen_at`, `last_opened_at`).
 - **Confirmed from code:** Assignment changes append dispatch activity-log entries and send driver assignment notifications.
 - **Confirmed from code:** After save, relevant dispatch and assignment queries are invalidated/refetched.
 
@@ -204,9 +192,9 @@ Generated from repository code review on 2026-03-23. This document is intentiona
 - **Confirmed from code:** Driver notifications are narrowed on truck-only edits so only drivers whose assigned truck list changed are notified.
 - **Likely inferred from code:** Owner notification resolution is intentionally decoupled from `read_flag` and depends on confirmation completeness.
 
-### Driver confirmation flow
+### Driver acknowledgement flow
 - **Confirmed from code:** Drivers do not create `Confirmation` records; they mark dispatch/removal notifications as seen.
-- **Confirmed from code:** Opening a dispatch as a driver triggers `markDriverDispatchSeenAsync`, which marks unread driver dispatch notifications read and stamps active assignment records with receipt-confirmed metadata.
+- **Confirmed from code:** Opening a dispatch as a driver triggers `markDriverDispatchSeenAsync`, which marks unread driver dispatch notifications read and stamps active assignment records with delivery/seen metadata.
 - **Confirmed from code:** Driver removal acknowledgements similarly mark unread removal notifications read and notify owners that the driver saw the removal; dismissing the removed-assignment modal is treated as seen.
 - **Confirmed from code:** Owners receive “driver seen” notifications keyed to dispatch/driver/version to avoid duplicates.
 - **Needs manual verification:** Whether drivers consider “opening the dispatch drawer” sufficient acknowledgment in all UX cases, since that is how code currently records it.
@@ -214,7 +202,7 @@ Generated from repository code review on 2026-03-23. This document is intentiona
 ### Incident report flow
 - **Confirmed from code:** Incidents can be created from the Incidents page or prefilled from the dispatch drawer via query params (`create=1`, `fromDispatch=1`, `dispatchId`, `companyId`, `truckNumber`).
 - **Confirmed from code:** Dispatch-linked incident creation pre-opens the create modal and prefills dispatch/company/truck where possible and allowed.
-- **Confirmed from code:** Incident visibility is role-scoped: admins see all; truck users see incidents they reported; drivers see incidents they reported or incidents tied to their assigned dispatches; owners see incidents they reported or incidents for their company trucks.
+- **Confirmed from code:** Incident visibility is role-scoped: admins see all; drivers see incidents they reported or incidents tied to their assigned dispatches; owners see incidents they reported or incidents for their company trucks.
 - **Confirmed from code:** Incident detail allows adding updates, setting restart time, marking completed, and reopening.
 - **Needs manual verification:** Whether additional back-end authorization limits exist beyond front-end filtering.
 
@@ -235,7 +223,7 @@ Generated from repository code review on 2026-03-23. This document is intentiona
 
 ### Announcements / portal visibility workflows
 - **Confirmed from code:** Home shows only active announcements, filtered by `target_type` (`All`, `Companies`, `AccessCodes`) against the current session.
-- **Confirmed from code:** Portal/Home dispatch lists are filtered differently by role: truck users by allowed trucks, drivers by active driver assignments.
+- **Confirmed from code:** Portal/Home dispatch lists are filtered differently by role: company owners by company scope (with truck detail handling in drawer/notifications), drivers by active driver assignments.
 - **Confirmed from code:** Notification, announcement, and dispatch cards route to the correct admin or portal destination depending on session role.
 - **Likely inferred from code:** Announcement priority affects visual styling and display order but not routing or access.
 
@@ -251,7 +239,7 @@ Generated from repository code review on 2026-03-23. This document is intentiona
 
 ### Additional role notes
 - **Confirmed from code:** Owner truck scope in current owner/notification flows uses company truck truth (`Company.trucks`); driver visibility remains assignment-driven.
-- **Confirmed from code:** Driver visibility depends on `DriverDispatch`, not only `allowed_trucks`.
+- **Confirmed from code:** Driver visibility depends on `DriverDispatch` assignment state, not `allowed_trucks`.
 - **Needs manual verification:** Whether any hybrid access-code patterns beyond admin↔owner switching are used in production data.
 
 ---
@@ -269,7 +257,7 @@ Generated from repository code review on 2026-03-23. This document is intentiona
 - **Risk note:** This logic is cross-cutting and reused by save, edit, assignment, and seen flows.
 
 ### Confirmation reset logic
-- **Confirmed from code:** Status changes to `Amended` or `Cancelled` reset driver assignment receipt-confirmation fields.
+- **Confirmed from code:** Status changes to `Amended` or `Cancelled` reset driver assignment delivery/seen lifecycle fields (`delivery_status`, `last_seen_at`, `last_opened_at`).
 - **Confirmed from code:** Owner confirmation resolution is derived from notifications + confirmations rather than a single source of truth field.
 - **Risk note:** It would be easy to accidentally preserve stale “seen” or “confirmed” state after edits.
 
@@ -388,11 +376,11 @@ Generated from repository code review on 2026-03-23. This document is intentiona
 3. Dispatch drawer driver-assignment and owner truck-swap logic.
 4. Session/workspace restoration and routing guards.
 5. Owner effective-read / pending-confirmation derivation.
-6. Driver receipt-confirmation reset and “seen” flows.
+6. Driver seen/open lifecycle reset and “seen” flows.
 7. Incident role-based filtering rules.
 8. SMS eligibility + send + webhook status chain.
 9. Google Drive HTML sync and finalized archive handling.
-10. Any filtering that mixes `allowed_trucks`, `company_id`, and active assignment state.
+10. Any filtering that mixes company-scoped owner visibility with assignment-scoped driver visibility.
 
 ### 3. Recommended order for creating page-level baselines next
 1. **AdminDispatches** — highest side-effect density and dispatch lifecycle risk.

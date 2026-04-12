@@ -1,22 +1,12 @@
 # Notifications behavior baseline
 
 
-## Change log (2026-04-05)
-- **Added:** Driver seen/open acknowledgment now updates `DriverDispatch.delivery_status` (`sent` -> `seen`) and timestamps (`last_seen_at`, `last_opened_at`).
-- **Removed:** Legacy `DriverDispatch.receipt_confirmed_*` wording from preservation expectations.
-- **Clarified:** Owner/driver visibility remains company-scoped (owner) vs assignment-scoped (driver), with notification filtering layered on top.
 
 ## Intent of this document
 This document captures the current notification behavior around dispatch notifications, owner confirmation notifications, driver notification read/seen flows, removal acknowledgement flows, and SMS eligibility side effects. It is intentionally conservative and written to preserve current behavior during future refactors.
 
 Whenever behavior could not be proven from repository code alone, it is marked **needs manual verification**.
 
-## Change log (2026-03-28)
-- **Added:** Clarified that owner notification truck scoping now follows company truck truth from `Company.trucks`.
-- **Removed:** Outdated wording that described owner notification scoping as `AccessCode.allowed_trucks`-driven.
-- **Edited:** Owner targeting, required-truck/read-state, expansion, reconciliation, and regression-checklist text to match current company-scoped truck logic.
-
----
 
 ## A. Purpose / scope
 
@@ -44,7 +34,7 @@ Mutation-critical responsibilities:
 - Marking individual notifications read.
 - Marking all current notifications read.
 - Marking driver dispatch notifications for a dispatch read.
-- Marking driver notifications seen when a driver opens a dispatch, including updating `DriverDispatch.receipt_confirmed_*` fields and creating owner "driver seen" notifications.
+- Marking driver notifications seen when a driver opens a dispatch, including updating `DriverDispatch.delivery_status`, `last_seen_at`, and `last_opened_at` and creating owner "driver seen" notifications.
 - Marking driver removal notifications seen when the removal modal is dismissed and creating the corresponding owner "driver seen" notification.
 
 Display/filtering responsibilities:
@@ -79,6 +69,12 @@ Display/filtering responsibilities:
 - Driver opening a dispatch in `Portal.jsx` calls `markDriverDispatchSeenAsync`.
 - Driver dismissing removed-assignment modal calls `markDriverRemovalNotificationSeenAsync`.
 - Driver notification data in bell/home/notifications pages comes from `useOwnerNotifications`.
+
+
+### Dispatch-time wording invariants (owner-approved)
+- CompanyOwner notification/SMS dispatch time always uses the dispatch main/earliest start time.
+- CompanyOwner notification/SMS time is not suppressed just because multiple staggered truck times exist.
+- Driver notification/SMS dispatch time uses the assigned truck's effective start time (truck override when present).
 
 ### Mutation-critical vs display/filtering summary
 
@@ -171,7 +167,7 @@ Owner company truck scope materially affects:
 `DriverDispatch` controls:
 - which drivers are notified,
 - which trucks are included in driver notification `required_trucks`,
-- which assignments are marked receipt-confirmed when a driver opens a dispatch,
+- which assignments are marked seen/open when a driver opens a dispatch,
 - which drivers are considered added or removed during assignment reconciliation.
 
 Only assignments with `active_flag !== false` are treated as active/current.
@@ -360,7 +356,7 @@ Triggered from `Portal.handleDispatchOpen(dispatch)` for driver sessions.
 Behavior in `markDriverDispatchSeenAsync`:
 1. Require `session.code_type === 'Driver'`, `dispatch.id`, and `session.driver_id`.
 2. Load active assignments for the driver for the dispatch from cached `driverAssignments` query data.
-3. Identify `unseenAssignments` where `receipt_confirmed_at` is falsy.
+3. Identify `unseenAssignments` where `last_seen_at/last_opened_at` is falsy.
 4. Find all matching driver notifications for that dispatch and current driver recipient.
 5. Pick `currentRelevantNotification` as:
    - explicit `notificationId` match if provided,
@@ -375,15 +371,15 @@ Behavior in `markDriverDispatchSeenAsync`:
 7. Build dedupe guard key `dispatchId:driverId:seenKind:seenVersionKey` and skip if already pending locally.
 8. If there are unread notifications, mark them all read.
 9. If there are unseen assignments, update every unseen assignment with:
-   - `receipt_confirmed_flag: true`
-   - `receipt_confirmed_at: seenAt`
-   - `receipt_confirmed_by_driver_id: session.driver_id`
-   - `receipt_confirmed_by_name`: first non-empty of session label/driver_name/name/assignment driver_name
+   - `delivery_status=seen: true`
+   - `last_seen_at/last_opened_at: seenAt`
+   - `driver_id (seen actor context): session.driver_id`
+   - `driver display label context`: first non-empty of session label/driver_name/name/assignment driver_name
 10. If assignments were updated, call `notifyOwnerDriverSeen` with matching assignments, driver identity, seen kind, and version key.
 11. Invalidate notification and assignment queries.
 
 Important consequence:
-- Owner "driver seen" notification is only created if there was at least one assignment lacking `receipt_confirmed_at`. If only unread notifications existed but all assignments were already receipt-confirmed, owner seen notification is not sent again.
+- Owner "driver seen" notification is only created if there was at least one assignment lacking `last_seen_at/last_opened_at`. If only unread notifications existed but all assignments were already seen/open, owner seen notification is not sent again.
 
 ### Driver removal-notification seen flow
 Triggered from the removal modal dismissal path in `Portal.jsx`.
@@ -403,7 +399,7 @@ Behavior in `markDriverRemovalNotificationSeenAsync`:
 6. Invalidate notification queries.
 
 Important difference from normal dispatch-open seen flow:
-- This flow does **not** update `DriverDispatch.receipt_confirmed_*` fields.
+- This flow does **not** update `DriverDispatch` assignment seen/open fields; it is notification-read-only for removal acknowledgement.
 - It always attempts owner seen notification creation after marking read, using synthetic assignments if necessary.
 
 ### Removal notifications
@@ -598,8 +594,8 @@ Every send/skip/failure attempt records a `General` entity row with `record_type
 1. Notification click or other portal navigation opens `Portal?dispatchId=...&notificationId=...`.
 2. When the dispatch drawer opens for a driver, `handleDispatchOpen` calls `markDriverDispatchSeenAsync({ dispatch, notificationId })`.
 3. Driver unread `driver_dispatch_update` notifications for that dispatch are marked read.
-4. Active assignments for that driver+dispatch that lack `receipt_confirmed_at` are updated with receipt-confirmed fields.
-5. If any assignment was newly receipt-confirmed, owner `driver_dispatch_seen` notifications are created for owners whose allowed trucks overlap the matching assignment trucks.
+4. Active assignments for that driver+dispatch that lack `last_seen_at/last_opened_at` are updated with seen/open fields.
+5. If any assignment was newly seen/open, owner `driver_dispatch_seen` notifications are created for owners whose allowed trucks overlap the matching assignment trucks.
 6. Notification and assignment queries are invalidated.
 
 ### 7. Driver removed notification dismissed -> seen flow
@@ -801,18 +797,18 @@ These functions combine business rules, side effects, dedupe, and data writes.
 - [ ] Add a new driver assignment; verify the driver receives `driver_assigned` with correct required trucks.
 - [ ] Remove a driver assignment; verify the driver receives `driver_removed` and still sees it despite no active assignment remaining.
 - [ ] Change assigned trucks for a still-assigned driver without status change; verify driver update behavior matches current edit flow and only impacted drivers are notified in truck-only edits.
-- [ ] Change status to Amended; verify assigned drivers receive amended notifications and receipt-confirmed assignment fields are reset before re-seeing.
-- [ ] Change status to Cancelled; verify assigned drivers receive cancelled notifications and receipt-confirmed assignment fields are reset before re-seeing.
+- [ ] Change status to Amended; verify assigned drivers receive amended notifications and seen/open assignment fields are reset before re-seeing.
+- [ ] Change status to Cancelled; verify assigned drivers receive cancelled notifications and seen/open assignment fields are reset before re-seeing.
 - [ ] Repeat the same driver notification condition without changing message/type; verify no duplicate unread driver notification is created.
 - [ ] Create a different driver notification for the same dispatch; verify stale unread driver dispatch update notifications are marked read.
 
 ### Driver seen/removal flows
 - [ ] Open a dispatch as a driver from a driver notification; verify unread driver notifications for that dispatch become read.
-- [ ] On first open with unseen assignment receipt fields, verify `receipt_confirmed_flag/at/by_*` fields are written.
+- [ ] On first open with unseen assignment receipt fields, verify `delivery_status=seen/at/by_*` fields are written.
 - [ ] Verify owner receives one driver-seen notification per owner per driver/dispatch/seen kind/version.
 - [ ] Re-open the same dispatch without receipt reset; verify owner does not get a duplicate driver-seen notification.
 - [ ] Dismiss a removal modal; verify unread `driver_removed` notifications become read and owner gets a removed-seen notification.
-- [ ] Verify removal dismissal does not update `DriverDispatch.receipt_confirmed_*` fields.
+- [ ] Verify removal dismissal does not update `DriverDispatch.delivery/seen fields (`delivery_status`, `last_seen_at`, `last_opened_at`)` fields.
 
 ### Admin notifications
 - [ ] Confirm trucks one by one; verify admin all-confirmed notification appears only when all currently assigned trucks are confirmed for that status.
@@ -885,7 +881,6 @@ These functions combine business rules, side effects, dedupe, and data writes.
 - Whether any external automations consume `dispatch_status_key`, `admin_group_key`, `confirmation_type`, or SMS log `General` records.
 
 
-## Reconciliation addendum (2026-03-31)
 
 ### Admin notification click/open behavior
 - Admin notification click behavior now prefers opening dispatch detail via in-place overlay (`openAdminDispatchDrawer`) from Notifications page and Notification Bell, rather than routing to `AdminDispatches?dispatchId=...`.
