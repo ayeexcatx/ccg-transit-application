@@ -47,22 +47,35 @@ async function hasWelcomeSmsAlreadySent(accessCodeId) {
   const existingLogs = await base44.entities.General.filter({
     record_type: 'sms_log',
     recipient_access_code_id: accessCodeId,
-    status: 'sent',
-    skip_reason: 'intro_sms_sent',
-  }, '-created_date', 1);
+  }, '-created_date', 25);
 
-  return Boolean(existingLogs?.length);
+  const sentStatuses = new Set(['sent', 'delivered']);
+  const normalizedWelcomeMessage = normalizeText(SMS_WELCOME_MESSAGE);
+  const hasSuccessfulWelcomeLog = (existingLogs || []).some((log) => {
+    const normalizedStatus = String(log?.status || '').trim().toLowerCase();
+    if (!sentStatuses.has(normalizedStatus)) return false;
+
+    const normalizedMessage = normalizeText(log?.message);
+    const isWelcomeMessage = normalizedMessage === normalizedWelcomeMessage;
+    const hasProviderMessageId = Boolean(normalizeText(log?.provider_message_id));
+    const legacyIntroSkipMarker = normalizeText(log?.skip_reason) === 'intro_sms_sent';
+
+    return isWelcomeMessage || hasProviderMessageId || legacyIntroSkipMarker;
+  });
+
+  return hasSuccessfulWelcomeLog;
 }
 
-async function markWelcomeSent(accessCodeId, providerMessageId = null, sentAt = null) {
+async function markWelcomeSent(accessCodeId, phone, providerMessageId = null, sentAt = null) {
   await base44.entities.AccessCode.update(accessCodeId, {
     sms_intro_sent_at: sentAt || new Date().toISOString(),
   });
 
   await createWelcomeSmsLog({
     accessCodeId,
+    phone,
     status: 'sent',
-    skipReason: 'intro_sms_sent',
+    skipReason: null,
     providerMessageId,
     sentAt: sentAt || new Date().toISOString(),
   });
@@ -142,7 +155,7 @@ export async function sendSmsWelcomeIfNeeded({ accessCodeId, consentGiven }) {
 
     const responseData = response?.data || response || {};
     const sentAt = responseData?.sentAt || new Date().toISOString();
-    await markWelcomeSent(accessCode.id, responseData?.providerMessageId || null, sentAt);
+    await markWelcomeSent(accessCode.id, phone, responseData?.providerMessageId || null, sentAt);
   } catch (error) {
     console.error('Failed sending welcome SMS', error);
     await logWelcomeSmsFailure({
