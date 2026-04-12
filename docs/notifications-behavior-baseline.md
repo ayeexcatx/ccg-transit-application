@@ -76,6 +76,12 @@ Display/filtering responsibilities:
 - CompanyOwner notification/SMS time is not suppressed just because multiple staggered truck times exist.
 - Driver notification/SMS dispatch time uses the assigned truck's effective start time (truck override when present).
 
+### SMS composition clarifications (current richer branching)
+- Owner status notifications/SMS are status-template based (`Scheduled` / `Dispatch` / `Amended` / `Cancelled`) and include dispatch-linked formatting context; they are not a single generic title+datetime pattern.
+- Owner informational update notifications (`dispatch_update_info`) carry custom in-app admin message text, but owner informational **SMS** uses generic update wording (does not include the admin custom short message body).
+- Driver dispatch notifications/SMS branch by notification type (`driver_assigned`, `driver_updated`, `driver_amended`, `driver_cancelled`, `driver_removed`) with assigned-truck timing context.
+- Admin SMS (when enabled) follows admin-notification categories; it is not the same live owner/driver dispatch SMS stream.
+
 ### Mutation-critical vs display/filtering summary
 
 #### Mutation-critical
@@ -283,6 +289,12 @@ Owner unread counts and list highlighting do **not** use raw `read_flag` alone f
 
 Implication:
 - An owner status notification can display as effectively read even if the stored database `read_flag` is still false, as soon as no pending trucks remain in the current client view.
+
+#### Owner Action Needed / pending-clear conditions
+For a dispatch scoped to one company, owner action-needed state remains pending while any currently selected truck on that dispatch is still unconfirmed for the active status. It clears only when one of these occurs:
+- all currently selected trucks are confirmed for that status, or
+- the dispatch is deleted, or
+- unconfirmed truck(s) are removed from that dispatch.
 
 ### 7. `required_trucks` expansion/reconciliation behavior
 

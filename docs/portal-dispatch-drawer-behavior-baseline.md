@@ -300,7 +300,7 @@ Used to disable owner selection of drivers already assigned to another dispatch 
 - `driverDispatchIds`: set of dispatch IDs from active driver assignments
 - `filteredDispatches`
   - driver: only dispatches in `driverDispatchIds`
-  - non-driver: only dispatches with at least one truck in `allowedTrucks`
+  - non-driver (owner path): company-scoped dispatch list; truck filters apply in drawer/detail/action context rather than list-level removal
 - `upcomingDispatches`, `todayDispatches`, `historyDispatches`
 - `currentOpenDispatch`
 - `dispatchNotFound`
@@ -404,7 +404,7 @@ This appears intentional in current code and must remain unchanged unless explic
 
 ### How dispatches are filtered
 - company-scoped query by `session.company_id`
-- then keep only dispatches containing at least one allowed truck
+- owner list remains company-scoped; `myTrucks` and related truck-detail/action logic control which truck chips, confirmations, and truck-level actions are shown
 
 ### What trucks they can see
 - `myTrucks` reflects owner-visible truck detail context for the dispatch.

@@ -14,7 +14,7 @@
 
 ### Role-based visibility and access
 - **Confirmed from code:** The app supports `Admin`, `CompanyOwner`, and `Driver` access-code sessions. `Truck` access-code login is blocked in `AccessCodeLogin` with “This access code type is no longer supported.” `available_views` / `linked_company_ids` extend admin workspaces.
-- **Confirmed from code:** Admin-only pages are `AdminDashboard`, `AdminCompanies`, `AdminConfirmations`, `AdminAccessCodes`, `AdminDispatches`, `AdminTemplateNotes`, `AdminAnnouncements`, and `AdminAvailability`. Non-admin sessions attempting those pages are redirected away.
+- **Confirmed from code:** Admin-only pages are `AdminDashboard`, `AdminCompanies`, `AdminConfirmations`, `AdminAccessCodes`, `AdminDispatches`, `AdminTemplateNotes`, `AdminAnnouncements`, `AdminAvailability`, `AdminSmsCenter`, and `AdminDriverProtocol`. Non-admin sessions attempting those pages are redirected away.
 - **Confirmed from code:** Company-owner-only pages are `Availability` and `Drivers`. Non-owner sessions are redirected away.
 - **Confirmed from code:** `Profile` and `Notifications` are available only to `Admin`, `CompanyOwner`, and `Driver`.
 - **Confirmed from code:** `Portal` / `Home` are the main non-admin workspace pages; admins are redirected from those routes to `AdminDashboard`.
@@ -89,7 +89,7 @@
 - **Confirmed from code:** SMS delivery is attempted only for `Notification.recipient_type === 'AccessCode'`; non-access-code recipients are skipped and logged.
 - **Confirmed from code:** Company-owner SMS requires both an opted-in owner access code and a valid SMS-designated company phone contact.
 - **Confirmed from code:** Driver SMS requires three conditions simultaneously: owner enabled on the driver record, driver opted in, and a valid driver phone.
-- **Confirmed from code:** Truck/admin access codes use their own `sms_enabled` and `sms_phone` directly, though admin profile copy says admin SMS is not enabled yet in current behavior.
+- **Confirmed from code:** Admin access codes can store `sms_enabled` and `sms_phone` directly, but current operational baseline keeps admin SMS toggle off by default and treats admin SMS as admin-notification mirroring (not normal owner/driver live dispatch SMS flow).
 - **Confirmed from code:** SMS send attempts are logged to `General` records as `sms_log` with statuses such as `skipped`, `sent`, `failed`, and webhook-updated delivery states.
 - **Confirmed from code:** SMS provider integration is SignalWire, with a status webhook that updates the matching `General` log by `provider_message_id`.
 - **Likely inferred from code:** Company owners and drivers are the primary intended SMS recipients for notification flows; admin SMS preference is stored for future support rather than active app behavior.

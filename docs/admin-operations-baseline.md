@@ -11,6 +11,8 @@ This baseline treats repository code as source of truth and compares it against 
 - Admin Companies
 - Admin Access Codes
 - Admin Template Notes
+- Admin SMS Center
+- Admin Driver Protocol
 - Admin Profile
 - Admin Confirmations
 
@@ -221,7 +223,7 @@ This baseline treats repository code as source of truth and compares it against 
 - None currently confirmed.
 
 ### Needs manual verification
-- Expected SLA/alerting policy for long-pending confirmations (UI shows age; escalation policy is not encoded in inspected code).
+- Expected SLA/alerting policy for long-pending confirmations (UI shows age); current behavior treats Admin Confirmations primarily as an admin review log/record surface, and automatic reminder/escalation policy is not encoded in inspected client code.
 
 ---
 
@@ -245,3 +247,35 @@ This baseline treats repository code as source of truth and compares it against 
 
 ### Needs manual verification
 - Responsive behavior details across breakpoints for very long company/workspace labels.
+
+---
+
+## 10) Admin SMS Center
+
+### Confirmed from code
+- Admin SMS Center exists as a dedicated admin page with six tabs: **Overview**, **Notification Rules**, **Templates and Previews**, **Logs**, **Inbound Replies**, **Broadcast and Scheduled Messages**.
+- Notification Rules includes toggle categories spanning driver dispatch updates, owner dispatch status updates, owner informational updates, admin SMS-eligible notifications, welcome/opt-out messages, and informational broadcast behavior.
+- Templates and Previews includes role/template previews (including admin-relevant examples such as all-trucks-confirmed and owner workflow updates).
+- Logs stores outbound SMS attempt history and provider status lifecycle fields.
+- Inbound Replies stores inbound reply logs.
+- Broadcast and Scheduled Messages supports send-now and scheduled informational broadcasts to selected role audiences.
+
+### Baseline clarification
+- Owner informational update SMS uses generic update wording and does not inject the admin's custom in-app short message body.
+- Admin SMS is configuration-ready and mirrors admin notification categories when enabled; it is not the same normal owner/driver dispatch SMS flow.
+
+### Needs manual verification
+- Production-provider behavior across all rule combinations and toggle states (send/skip/delivery webhook timing).
+
+---
+
+## 11) Admin Driver Protocol
+
+### Confirmed from code
+- Admin Driver Protocol exists as an admin page for managing driver-facing protocol/policy content.
+- Admin can edit and publish protocol content with formatting controls (including emphasis/list/indent style controls).
+- Protocol supports version updates/republish behavior.
+- Publishing a new protocol version prompts drivers to review and re-accept the latest version.
+
+### Needs manual verification
+- Cross-device UX details for rich-text formatting and acceptance prompts in long-session scenarios.
