@@ -418,24 +418,26 @@ function CompanyOwnerProfile({ session }) {
       return session || null;
     }
 
-    const sessionId = session?.id ? String(session.id) : '';
+    const identityUserId = currentAppIdentity?.user_id ? String(currentAppIdentity.user_id) : '';
     const sessionUserId = session?.user_id ? String(session.user_id) : '';
+    const linkedUserId = identityUserId || sessionUserId;
+    const linkedCodeByUser = linkedUserId
+      ? accessCodes.find((code) => {
+        const usedByUserId = String(code?.used_by_user_id || '');
+        const legacyUserId = String(code?.user_id || '');
+        return usedByUserId === linkedUserId || legacyUserId === linkedUserId;
+      })
+      : null;
+    if (linkedCodeByUser) return linkedCodeByUser;
+
+    const sessionId = session?.id ? String(session.id) : '';
     const fallbackBySessionId = sessionId
       ? accessCodes.find((code) => String(code?.id || '') === sessionId)
       : null;
     if (fallbackBySessionId) return fallbackBySessionId;
 
-    const fallbackByLinkedUser = sessionUserId
-      ? accessCodes.find((code) => {
-        const usedBy = String(code?.used_by_user_id || '');
-        const legacyUserId = String(code?.user_id || '');
-        return usedBy === sessionUserId || legacyUserId === sessionUserId;
-      })
-      : null;
-    if (fallbackByLinkedUser) return fallbackByLinkedUser;
-
     return session || null;
-  }, [accessCodes, session]);
+  }, [accessCodes, currentAppIdentity?.user_id, session]);
   const smsState = getCompanyOwnerSmsState({ accessCode: activeAccessCode, company });
   const ownerConsentRecorded = activeAccessCode?.sms_consent_given === true
     || Boolean(activeAccessCode?.sms_consent_at)
