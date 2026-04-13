@@ -39,6 +39,18 @@
       "default": false,
       "description": "Whether notification has been read / resolved"
     },
+    "owner_read_at": {
+      "type": "string",
+      "description": "Timestamp when a company owner marked a shared owner notification as read"
+    },
+    "owner_read_by_access_code_id": {
+      "type": "string",
+      "description": "AccessCode ID of the company owner who marked a shared owner notification as read"
+    },
+    "owner_read_by_name": {
+      "type": "string",
+      "description": "Display name of the company owner who marked a shared owner notification as read"
+    },
     "notification_category": {
       "type": "string",
       "description": "Category used to distinguish notification behaviors, such as dispatch_update_info"
