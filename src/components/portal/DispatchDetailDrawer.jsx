@@ -771,8 +771,8 @@ export default function DispatchDetailDrawer({
   }, {});
 
   const companyHasDrivers = companyDrivers.length > 0;
-  const companyTruckCount = Array.isArray(ownerCompanyRecord?.trucks) ? ownerCompanyRecord.trucks.length : (dispatch?.trucks_assigned || []).length;
-  const canUseOwnerInformationalAssignments = isOwner && (companyTruckCount > 1 || companyHasDrivers);
+  const ownerCount = ownerAccessCodes.length;
+  const canUseOwnerInformationalAssignments = isOwner && (ownerCount > 1 || companyHasDrivers);
   const ownerOptions = canUseOwnerInformationalAssignments
     ? ownerAccessCodes.map((ownerCode) => ({
       id: ownerCode.id,
@@ -786,6 +786,14 @@ export default function DispatchDetailDrawer({
     if (!isOwner) return assignedDriverNameByTruck[truckNumber] || 'Unassigned';
 
     const selectedDriverId = selectedDriverByTruck[truckNumber];
+    const selectedOwnerId = parseOwnerSelectionValue(selectedDriverId);
+    if (selectedOwnerId) {
+      const selectedOwner = ownerOptions.find((owner) => String(owner.id) === String(selectedOwnerId));
+      if (selectedOwner?.label) return `${selectedOwner.label} (Owner)`;
+      const ownerAssignment = ownerAssignmentByTruck[truckNumber];
+      if (ownerAssignment?.owner_name) return `${ownerAssignment.owner_name} (Owner)`;
+      return 'Owner (Owner)';
+    }
     if (selectedDriverId === UNASSIGNED_DRIVER_VALUE) {
       const ownerAssignment = ownerAssignmentByTruck[truckNumber];
       if (ownerAssignment?.owner_name) return `${ownerAssignment.owner_name} (Owner)`;
