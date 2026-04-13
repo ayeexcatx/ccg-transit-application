@@ -228,8 +228,24 @@ async function resolveLinkedIdentityAccessCode(linkedIdentity) {
 
   for (const query of candidates) {
     const results = await query;
-    const valid = (results || []).find((accessCode) => isActiveSupportedCode(accessCode) && accessCode.code_type === codeType);
-    if (valid) return valid;
+    const validCodes = (results || []).filter(
+      (accessCode) => isActiveSupportedCode(accessCode) && accessCode.code_type === codeType,
+    );
+    if (validCodes.length === 0) continue;
+
+    if (codeType === 'CompanyOwner' && linkedIdentity?.user_id) {
+      const identityUserId = String(linkedIdentity.user_id);
+      const explicitlyLinkedCode = validCodes.find((accessCode) => (
+        String(accessCode.used_by_user_id || '') === identityUserId
+        || String(accessCode.user_id || '') === identityUserId
+      ));
+      if (explicitlyLinkedCode) return explicitlyLinkedCode;
+
+      if (validCodes.length === 1) return validCodes[0];
+      continue;
+    }
+
+    return validCodes[0];
   }
 
   return null;
@@ -353,6 +369,14 @@ function isAccessCodeCompatibleWithLinkedIdentity(accessCode, linkedIdentity) {
   }
 
   if (codeType === 'CompanyOwner') {
+    const identityUserId = linkedIdentity?.user_id ? String(linkedIdentity.user_id) : '';
+    const claimedByUserId = String(accessCode.used_by_user_id || '');
+    const legacyUserId = String(accessCode.user_id || '');
+
+    if (identityUserId && (claimedByUserId || legacyUserId)) {
+      return claimedByUserId === identityUserId || legacyUserId === identityUserId;
+    }
+
     if (linkedIdentity.company_id) {
       return String(accessCode.company_id || '') === String(linkedIdentity.company_id);
     }
