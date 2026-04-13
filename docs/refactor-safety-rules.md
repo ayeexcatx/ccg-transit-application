@@ -88,6 +88,7 @@
 
 ## Baseline extraction note
 If any behavior seems ambiguous during implementation, defer to:
+- `docs/access-session-linking-baseline.md`
 - `docs/notifications-behavior-baseline.md`
 - `docs/admin-dispatches-behavior-baseline.md`
 - `docs/portal-dispatch-drawer-behavior-baseline.md`

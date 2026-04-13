@@ -263,6 +263,7 @@
 
 ### Access / session logic
 - **Confirmed from code:** Local-storage restoration, workspace normalization, and effective session rewriting are tightly coupled.
+- **Confirmed from code:** Detailed preservation requirements for this area are maintained in `docs/access-session-linking-baseline.md`.
 - **Risk note:** Refactoring session shape or routing guards could accidentally change who lands on which page or which company context they see.
 
 ### Cross-role filtering
