@@ -1,6 +1,7 @@
 # Company Owner Baseline (Code-Backed)
 
 Date reviewed: 2026-03-25.
+Updated: 2026-04-13.
 
 ## Covered areas
 - Company Owner Home
@@ -120,6 +121,14 @@ Date reviewed: 2026-03-25.
 - Contact methods are typed; one can be designated for SMS.
 - Effective SMS enabled for owner is tied to both access-code opt-in and valid SMS-designated company contact.
 - Related owner access codes are synchronized when company SMS contact changes.
+
+### 2026-04-13 approved behavior update
+- Multiple owner access codes for the same company share one company workspace (dispatches, availability, company-level operations state).
+- Owner SMS settings now come from each owner’s personal profile fields on their own access code (`label`, `sms_phone`, `sms_enabled`) instead of shared company contact SMS selection.
+- Shared company contacts remain business-profile data and no longer drive owner SMS routing.
+- Owner dispatch assignment area supports informational owner assignment options (`Name (Owner)`) when company has multiple trucks or at least one added driver.
+- Informational owner assignment is display-only and does not trigger driver-dispatch side effects.
+- Owner Home now includes a recent company activity section sourced from company-scoped dispatch activity and related owner activity records.
 
 ### Present in personal baseline
 - Profile editing and admin approval flow.

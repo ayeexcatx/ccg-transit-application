@@ -19,6 +19,8 @@ export default function DispatchDriverConfirmationSection({
   getEntryActorLabel,
   dispatch,
   eligibleDrivers,
+  ownerOptions,
+  canUseOwnerInformationalAssignments,
   selectedDriverByTruck,
   handleDriverSelection,
   assignDriverMutation,
@@ -51,6 +53,8 @@ export default function DispatchDriverConfirmationSection({
       {isOwner && showOwnerAssignmentsAndTimeLogs && (dispatch.trucks_assigned || []).length > 0 && (
         <DispatchDriverAssignmentsSection
           eligibleDrivers={eligibleDrivers}
+          ownerOptions={ownerOptions}
+          canUseOwnerInformationalAssignments={canUseOwnerInformationalAssignments}
           trucksAssigned={dispatch.trucks_assigned || []}
           selectedDriverByTruck={selectedDriverByTruck}
           unassignedDriverValue={unassignedDriverValue}

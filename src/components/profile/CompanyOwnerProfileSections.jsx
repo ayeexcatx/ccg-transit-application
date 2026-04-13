@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { BellRing, Building2 } from 'lucide-react';
@@ -74,28 +75,70 @@ export function CompanyOwnerProfileOverview({
 
 export function CompanyOwnerSmsCard({
   smsState,
-  smsContact,
   smsPending,
+  ownerProfile,
+  onUpdateOwnerProfile,
   onToggle,
 }) {
+  const [draftName, setDraftName] = useState(ownerProfile?.label || ownerProfile?.name || '');
+  const [draftPhone, setDraftPhone] = useState(formatPhoneNumber(ownerProfile?.sms_phone || ''));
+  const [savingProfile, setSavingProfile] = useState(false);
+  const ownerName = ownerProfile?.label || ownerProfile?.name || '';
+  useEffect(() => {
+    setDraftName(ownerName);
+    setDraftPhone(formatPhoneNumber(ownerProfile?.sms_phone || ''));
+  }, [ownerName, ownerProfile?.sms_phone]);
+
+  const saveProfile = async () => {
+    if (!onUpdateOwnerProfile) return;
+    setSavingProfile(true);
+    try {
+      await onUpdateOwnerProfile({ label: draftName, sms_phone: draftPhone });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
   return (
     <Card>
       <CardContent className="p-6 space-y-4">
         <div className="flex items-center gap-2"><BellRing className="h-4 w-4 text-slate-500" /><h3 className="text-lg font-semibold text-slate-900">Your SMS notifications</h3></div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs text-slate-500">Personal display name</Label>
+            <Input
+              value={draftName}
+              onChange={(event) => setDraftName(event.target.value)}
+              placeholder="Your display name"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-slate-500">Personal phone for SMS</Label>
+            <Input
+              value={draftPhone}
+              onChange={(event) => setDraftPhone(formatPhoneNumber(event.target.value))}
+              placeholder="(555) 123-4567"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <Button type="button" variant="outline" size="sm" disabled={savingProfile} onClick={saveProfile}>
+            {savingProfile ? 'Saving…' : 'Save Personal Profile'}
+          </Button>
+        </div>
         <div className="flex items-center justify-between rounded-lg border p-4 gap-4">
           <div>
             <Label className="text-base">Receive SMS notifications</Label>
-            <p className="text-sm text-slate-500">You receive SMS only when you opt in here and a valid SMS contact is selected on the company profile.</p>
+            <p className="text-sm text-slate-500">SMS delivery for owners uses your personal profile phone number and opt-in.</p>
           </div>
           <Switch checked={smsState.optedIn} disabled={smsPending || !smsState.target.phone} onCheckedChange={onToggle} />
         </div>
         <SmsConsentDisclosure />
         <div className="grid sm:grid-cols-3 gap-3 text-sm">
-          <div className="rounded-lg bg-slate-50 p-3 border"><p className="text-slate-500">Use for SMS</p><p className="font-medium text-slate-900">{smsState.target.method ? `${smsState.target.method.type}: ${smsState.target.method.value}` : 'No phone selected'}</p></div>
-          <div className="rounded-lg bg-slate-50 p-3 border"><p className="text-slate-500">Number used for SMS</p><p className="font-medium text-slate-900">{smsContact.phone ? formatPhoneNumber(smsContact.phone) : 'No phone selected'}</p></div>
+          <div className="rounded-lg bg-slate-50 p-3 border"><p className="text-slate-500">Personal profile</p><p className="font-medium text-slate-900">{ownerName || 'No name set'}</p></div>
+          <div className="rounded-lg bg-slate-50 p-3 border"><p className="text-slate-500">Number used for SMS</p><p className="font-medium text-slate-900">{smsState.target.phone ? formatPhoneNumber(smsState.target.phone) : 'No phone selected'}</p></div>
           <div className="rounded-lg bg-slate-50 p-3 border"><p className="text-slate-500">SMS active</p><p className={`font-medium ${smsState.effective ? 'text-emerald-700' : 'text-slate-900'}`}>{smsState.effective ? 'Yes' : 'No'}</p></div>
         </div>
-        {!smsState.target.phone && <p className="text-sm text-red-600">Select a valid phone contact for SMS on this profile before opting in.</p>}
+        {!smsState.target.phone && <p className="text-sm text-red-600">Enter a valid personal phone number before opting in.</p>}
       </CardContent>
     </Card>
   );

@@ -46,6 +46,7 @@ import {
   getTimeEntryCompositeKey,
   pickPreferredTimeEntry,
 } from '@/lib/timeLogs';
+import { appendDispatchActivityEntries } from '@/lib/dispatchActivity';
 
 function getSessionActorMetadata(session) {
   const actorName = session?.label || session?.name || session?.driver_name || session?.code || '';
@@ -327,6 +328,14 @@ export default function Portal() {
       confirmed_by_name: actorMetadata.actorName || undefined,
       confirmed_by_type: actorMetadata.actorType || undefined,
     });
+      await appendDispatchActivityEntries(dispatch.id, [{
+        timestamp: new Date().toISOString(),
+        actor_type: 'CompanyOwner',
+        actor_id: session?.id,
+        actor_name: actorMetadata.actorName || 'Company Owner',
+        action: 'owner_confirmed_dispatch_truck',
+        message: `${actorMetadata.actorName || 'Company Owner'} confirmed Truck ${truck} for ${confType}`,
+      }]);
 
       const companyName = companyMap[dispatch.company_id];
       notifyTruckConfirmation(dispatch, truck, companyName);

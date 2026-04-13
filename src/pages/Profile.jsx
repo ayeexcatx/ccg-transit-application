@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { BellRing, Shield, UserRound } from 'lucide-react';
-import { buildCompanyProfileRequestPayload, formatPhoneNumber, getAdminSmsProductState, getCompanyOwnerSmsState, getCompanySmsContact, getDriverSmsState, hasUsSmsPhone, normalizeContactMethods, normalizeSmsPhone, PHONE_CONTACT_TYPES } from '@/lib/sms';
+import { buildCompanyProfileRequestPayload, formatPhoneNumber, getAdminSmsProductState, getCompanyOwnerSmsState, getDriverSmsState, hasUsSmsPhone, normalizeContactMethods, normalizeSmsPhone, PHONE_CONTACT_TYPES } from '@/lib/sms';
 import { buildSmsConsentFields } from '@/lib/smsConsent';
 import { sendSmsWelcomeIfNeeded } from '@/lib/smsIntro';
 import DriverProfileSmsCard from '@/components/profile/DriverProfileSmsCard';
@@ -52,21 +52,7 @@ async function syncDriverAccessCode(driver, nextOptIn = null, existingAccessCode
   await base44.entities.AccessCode.update(driver.access_code_id, payload);
 }
 
-async function syncOwnerAccessCodes(company, accessCodeId = null, accessCodeSmsEnabled = null) {
-  const codes = await base44.entities.AccessCode.filter({ company_id: company.id, code_type: 'CompanyOwner' }, '-created_date', 200);
-  const { phone } = getCompanySmsContact(company);
-  await Promise.all((codes || []).map((code) => {
-    const nextEnabled = code.id === accessCodeId && typeof accessCodeSmsEnabled === 'boolean'
-      ? accessCodeSmsEnabled
-      : code.sms_enabled === true;
-    return base44.entities.AccessCode.update(code.id, {
-      sms_phone: phone || '',
-      sms_enabled: nextEnabled && Boolean(phone),
-    });
-  }));
-}
-
-function ContactMethodEditor({ methods, setMethods, smsIndex, setSmsIndex, readOnly = false }) {
+function ContactMethodEditor({ methods, setMethods, readOnly = false }) {
   const updateMethod = (index, key, nextValue) => {
     setMethods((prev) => prev.map((method, i) => {
       if (i !== index) return method;
@@ -88,7 +74,6 @@ function ContactMethodEditor({ methods, setMethods, smsIndex, setSmsIndex, readO
     <div className="space-y-2">
       {methods.map((method, index) => {
         const isPhoneType = PHONE_CONTACT_TYPES.includes(method.type);
-        const canUseForSms = isPhoneType && hasUsSmsPhone(normalizeSmsPhone(method.value));
         return (
           <div key={`contact-method-${index}`} className="rounded-lg border border-slate-200 p-3 bg-white space-y-2">
     <div className="flex items-center justify-between gap-3">
@@ -105,18 +90,6 @@ function ContactMethodEditor({ methods, setMethods, smsIndex, setSmsIndex, readO
               </Select>
               <Input value={method.value} readOnly={readOnly} placeholder={isPhoneType ? '(555) 123-4567' : 'Enter value'} onChange={(e) => updateMethod(index, 'value', e.target.value)} />
             </div>
-            <div className="flex justify-end">
-              <label className={`flex items-center gap-2 text-xs ${readOnly ? 'text-slate-400' : 'text-slate-600'}`}>
-                <input type="radio" disabled={readOnly || !canUseForSms} checked={smsIndex === index} onChange={() => setSmsIndex(index)} />
-                Use for SMS
-              </label>
-            </div>
-            {smsIndex === index && (
-              <p className="text-xs text-emerald-700">This contact is used for company owner SMS notifications.</p>
-            )}
-            {!canUseForSms && smsIndex === index && (
-              <p className="text-xs text-red-600">Enter a valid phone number for the selected SMS contact.</p>
-            )}
           </div>
         );
       })}
@@ -426,7 +399,6 @@ function CompanyOwnerProfile({ session }) {
     address: '',
     contact_methods: [{ name: '', type: 'Office', value: '' }]
   });
-  const [smsIndex, setSmsIndex] = useState(0);
 
   const { data: companies = [] } = useQuery({
     queryKey: ['owner-profile-company', profileCompanyId],
@@ -465,7 +437,6 @@ function CompanyOwnerProfile({ session }) {
     return accessCodes[0] || session || null;
   }, [accessCodes, session]);
   const smsState = getCompanyOwnerSmsState({ accessCode: activeAccessCode, company });
-  const smsContact = getCompanySmsContact(company);
   const ownerConsentRecorded = activeAccessCode?.sms_consent_given === true
     || Boolean(activeAccessCode?.sms_consent_at)
     || Boolean(activeAccessCode?.sms_consent_method);
@@ -479,7 +450,6 @@ function CompanyOwnerProfile({ session }) {
       additional_contact_name: company.additional_contact_name || '',
       contact_methods: normalizeContactMethods(company),
     });
-    setSmsIndex(Number.isInteger(company.sms_contact_method_index) ? company.sms_contact_method_index : 0);
   }, [company]);
 
   const profileRequestMutation = useMutation({
@@ -490,9 +460,7 @@ function CompanyOwnerProfile({ session }) {
           ...requestPayload,
           requested_by_access_code_id: session.id,
         },
-        sms_contact_method_index: smsIndex,
       });
-      await syncOwnerAccessCodes(updatedCompany);
       return updatedCompany;
     },
     onSuccess: () => {
@@ -510,9 +478,13 @@ function CompanyOwnerProfile({ session }) {
       if (!activeAccessCode?.id) {
         throw new Error('Owner SMS settings are unavailable because no linked CompanyOwner access code was found.');
       }
+      const ownerPhone = normalizeSmsPhone(activeAccessCode?.sms_phone || '');
+      if (nextOptIn && !hasUsSmsPhone(ownerPhone)) {
+        throw new Error('Enter a valid personal phone number below before enabling SMS.');
+      }
       const payload = {
-        sms_enabled: nextOptIn && Boolean(smsState.target.phone),
-        sms_phone: smsState.target.phone || '',
+        sms_enabled: nextOptIn,
+        sms_phone: ownerPhone || '',
       };
       if (nextOptIn) {
         Object.assign(payload, buildSmsConsentFields(activeAccessCode));
@@ -526,7 +498,7 @@ function CompanyOwnerProfile({ session }) {
         });
       } else {
         await sendProfileSmsConfirmation(
-          smsState.target.phone,
+          normalizeSmsPhone(activeAccessCode?.sms_phone || ''),
           'CCG Transit: You are now opted out of SMS notifications.'
         );
       }
@@ -572,8 +544,15 @@ function CompanyOwnerProfile({ session }) {
 
       <CompanyOwnerSmsCard
         smsState={smsState}
-        smsContact={smsContact}
         smsPending={smsMutation.isPending}
+        ownerProfile={activeAccessCode}
+        onUpdateOwnerProfile={async (updates) => {
+          if (!activeAccessCode?.id) return;
+          await base44.entities.AccessCode.update(activeAccessCode.id, updates);
+          queryClient.invalidateQueries({ queryKey: ['owner-profile-access-codes', profileCompanyId] });
+          queryClient.invalidateQueries({ queryKey: ['access-codes'] });
+          toast.success('Personal owner profile updated');
+        }}
         onToggle={(checked) => smsMutation.mutate(checked)}
       />
 
@@ -588,8 +567,8 @@ function CompanyOwnerProfile({ session }) {
             <div><Label>Address</Label><Textarea rows={3} value={form.address} onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))} /></div>
             <div>
               <Label>Contact info</Label>
-              <p className="text-xs text-slate-500 mb-2">Select which phone contact should be used for company owner SMS.</p>
-              <ContactMethodEditor methods={form.contact_methods} setMethods={(updater) => setForm((prev) => ({ ...prev, contact_methods: typeof updater === 'function' ? updater(prev.contact_methods) : updater }))} smsIndex={smsIndex} setSmsIndex={setSmsIndex} />
+              <p className="text-xs text-slate-500 mb-2">Shared business contacts for company profile purposes.</p>
+              <ContactMethodEditor methods={form.contact_methods} setMethods={(updater) => setForm((prev) => ({ ...prev, contact_methods: typeof updater === 'function' ? updater(prev.contact_methods) : updater }))} />
               <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setForm((prev) => ({ ...prev, contact_methods: [...prev.contact_methods, { name: '', type: 'Office', value: '' }] }))}>Add Contact</Button>
             </div>
           </div>

@@ -13,6 +13,8 @@ const STATUS_LABELS = {
 
 export default function DispatchDriverAssignmentsSection({
   eligibleDrivers,
+  ownerOptions = [],
+  canUseOwnerInformationalAssignments = false,
   trucksAssigned,
   selectedDriverByTruck,
   unassignedDriverValue,
@@ -47,6 +49,11 @@ export default function DispatchDriverAssignmentsSection({
         </span>
         <span className="block">Please read all of the information on the driver’s page before assigning drivers.</span>
       </p>
+      {canUseOwnerInformationalAssignments && ownerOptions.length > 0 && (
+        <p className="text-xs text-slate-500">
+          Owner options are informational labels only and do not trigger driver notifications.
+        </p>
+      )}
       {eligibleDrivers.length === 0 && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2">
           Create and activate a driver access code first.
@@ -74,6 +81,11 @@ export default function DispatchDriverAssignmentsSection({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={unassignedDriverValue}>No driver assigned</SelectItem>
+                    {canUseOwnerInformationalAssignments && ownerOptions.map((owner) => (
+                      <SelectItem key={`owner-${owner.id}`} value={`__owner__:${owner.id}`}>
+                        {owner.label} (Owner)
+                      </SelectItem>
+                    ))}
                     {eligibleDrivers.map((driver) => {
                       const isCurrentTruckSelection = selectedDriverByTruck[truckNumber] === driver.id;
                       const hasConflict = Boolean(conflictingDriverAssignmentsById[driver.id]) && !isCurrentTruckSelection;
