@@ -55,9 +55,9 @@ export default function DispatchDrawerTemplateNotesSection({ boxNotes, generalNo
                 className={`rounded-md border p-2 md:p-2.5 ${getNoteColumnClass(n.displayWidth, false, NOTE_DISPLAY_WIDTH)}`}
                 style={{ borderColor: n.border_color, color: n.text_color }}
               >
-                {n.title && <p className="text-xs font-semibold leading-snug mb-0.5">{n.title}</p>}
+                {n.title && <p className="text-[9px] font-semibold leading-snug mb-0.5">{n.title}</p>}
                 <p
-                  className="text-xs leading-snug"
+                  className="text-[9px] leading-snug"
                   dangerouslySetInnerHTML={{ __html: renderSimpleMarkupToHtml(n.box_content || n.note_text) }}
                 />
               </div>
@@ -73,10 +73,10 @@ export default function DispatchDrawerTemplateNotesSection({ boxNotes, generalNo
               key={n.id}
               className={`rounded-md border border-slate-200 bg-white/90 p-2 md:p-2.5 ${getNoteColumnClass(n.displayWidth, shouldSpanWide, NOTE_DISPLAY_WIDTH)}`}
             >
-              {n.title && <p className="text-xs text-slate-700 font-semibold leading-snug mb-0.5">{n.title}</p>}
+              {n.title && <p className="text-[9px] text-slate-700 font-semibold leading-snug mb-0.5">{n.title}</p>}
               <ul className="mt-0.5 space-y-0 list-disc ml-3.5">
                 {bullets.map((line, idx) => (
-                  <li key={`${n.id}-${idx}`} className="text-xs text-slate-600 leading-snug">{line}</li>
+                  <li key={`${n.id}-${idx}`} className="text-[9px] text-slate-600 leading-snug">{line}</li>
                 ))}
               </ul>
             </div>
