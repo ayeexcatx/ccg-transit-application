@@ -1090,7 +1090,9 @@ export default function DispatchDetailDrawer({
               onSaveTrucks={handleSaveTrucks} />
 
             {(isAdmin || isOwner && hasOwnerVisibleInternalNotes) &&
-            <section className="rounded-xl border border-red-200 bg-red-50/40 px-3.5 py-3">
+            <section
+              className="rounded-xl border border-red-200 bg-red-50/40 px-3.5 py-3"
+              data-screenshot-exclude="true">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">Internal Notes</p>
                   {isAdmin &&
