@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -25,6 +25,29 @@ function getDriverNotificationSeenKind(notification, dispatch = null) {
   if (normalizedStatus === 'amended') return 'amended';
   if (normalizedStatus === 'cancelled' || normalizedStatus === 'canceled') return 'cancelled';
   return 'assigned';
+}
+
+function buildSharedOwnerNotificationEventKey(notification) {
+  const category = String(notification?.notification_category || 'uncategorized').toLowerCase();
+  const dispatchId = String(notification?.related_dispatch_id || 'none');
+  const notificationType = String(notification?.notification_type || 'none').toLowerCase();
+  const recipientType = String(notification?.recipient_type || '').toLowerCase();
+  const companyId = String(notification?.recipient_company_id || 'none');
+  const requiredTrucks = Array.isArray(notification?.required_trucks)
+    ? [...notification.required_trucks].filter(Boolean).map(String).sort().join(',')
+    : '';
+  const dispatchStatusKey = String(notification?.dispatch_status_key || '').trim();
+  const normalizedDispatchStatusKey = dispatchStatusKey
+    ? dispatchStatusKey.replace(/:[^:]+$/, '')
+    : '';
+  const message = String(notification?.message || '').trim().toLowerCase();
+  const title = String(notification?.title || '').trim().toLowerCase();
+
+  if (recipientType !== 'accesscode') {
+    return `${recipientType}:${category}:${dispatchId}:${notificationType}:${normalizedDispatchStatusKey}:${requiredTrucks}:${message}:${title}`;
+  }
+
+  return `owner:${companyId}:${category}:${dispatchId}:${notificationType}:${normalizedDispatchStatusKey}:${requiredTrucks}:${message}:${title}`;
 }
 
 export function useOwnerNotifications(session) {
@@ -143,9 +166,41 @@ export function useOwnerNotifications(session) {
     }))
     .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
 
+  const notificationsForDisplay = useMemo(() => {
+    if (!isOwner) return notifications;
+
+    const dedupedByEvent = new Map();
+    notifications.forEach((notification) => {
+      const eventKey = buildSharedOwnerNotificationEventKey(notification);
+      const current = dedupedByEvent.get(eventKey);
+      if (!current) {
+        dedupedByEvent.set(eventKey, notification);
+        return;
+      }
+
+      const currentRead = current.read_flag === true;
+      const nextRead = notification.read_flag === true;
+      if (currentRead && !nextRead) {
+        dedupedByEvent.set(eventKey, notification);
+        return;
+      }
+
+      if (currentRead === nextRead) {
+        const currentCreatedAt = new Date(current.created_date || 0).getTime();
+        const nextCreatedAt = new Date(notification.created_date || 0).getTime();
+        if (nextCreatedAt > currentCreatedAt) {
+          dedupedByEvent.set(eventKey, notification);
+        }
+      }
+    });
+
+    return [...dedupedByEvent.values()]
+      .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+  }, [isOwner, notifications]);
+
   const ownerScopeTrucks = Array.isArray(ownerCompany?.trucks) ? ownerCompany.trucks : [];
 
-  const notificationsWithStatus = notifications.map((notification) => ({
+  const notificationsWithStatus = notificationsForDisplay.map((notification) => ({
     ...notification,
     effectiveReadFlag: getNotificationEffectiveReadFlag({
       session,
@@ -169,14 +224,25 @@ export function useOwnerNotifications(session) {
 
   const markReadMutation = useMutation({
     mutationFn: async (id) => {
-      const target = notifications.find((notification) => String(notification.id) === String(id));
+      const target = notificationsForDisplay.find((notification) => String(notification.id) === String(id));
       if (!target) return null;
+
+      const sharedOwnerEventKey = isOwner ? buildSharedOwnerNotificationEventKey(target) : null;
+      const relatedSharedEntries = sharedOwnerEventKey
+        ? notifications.filter((entry) => buildSharedOwnerNotificationEventKey(entry) === sharedOwnerEventKey)
+        : [];
 
       const isSharedOwnerRead = isOwner
         && String(target.notification_category || '').toLowerCase() === 'driver_dispatch_seen'
         && String(target.recipient_type || '').toLowerCase() === 'accesscode';
 
       if (!isSharedOwnerRead) {
+        if (relatedSharedEntries.length > 1) {
+          await Promise.all(relatedSharedEntries
+            .filter((entry) => entry.read_flag !== true)
+            .map((entry) => base44.entities.Notification.update(entry.id, { read_flag: true })));
+          return true;
+        }
         return base44.entities.Notification.update(id, { read_flag: true });
       }
 
@@ -233,7 +299,7 @@ export function useOwnerNotifications(session) {
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      const unread = notifications.filter(n => !n.read_flag);
+      const unread = notificationsForDisplay.filter((n) => !n.effectiveReadFlag);
       await Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { read_flag: true })));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
