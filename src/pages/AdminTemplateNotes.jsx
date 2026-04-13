@@ -14,6 +14,7 @@ import { StickyNote, Box, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Type } from 
 import {
   NOTE_DISPLAY_SCOPE,
   NOTE_DISPLAY_WIDTH,
+  NOTE_TEXT_SIZE,
   NOTE_TYPES,
   normalizeJobNumbers,
   normalizeTemplateNote,
@@ -31,6 +32,7 @@ const DEFAULT_FORM = {
   active_flag: true,
   priority: 0,
   displayWidth: NOTE_DISPLAY_WIDTH.AUTO,
+  textSize: NOTE_TEXT_SIZE.DEFAULT,
   displayScope: NOTE_DISPLAY_SCOPE.ALL,
   jobNumbersInput: '',
 };
@@ -83,6 +85,7 @@ export default function AdminTemplateNotes() {
       active_flag: note.active_flag !== false,
       priority: note.priority || 0,
       displayWidth: note.displayWidth || NOTE_DISPLAY_WIDTH.AUTO,
+      textSize: note.textSize || NOTE_TEXT_SIZE.DEFAULT,
       displayScope: note.displayScope || NOTE_DISPLAY_SCOPE.ALL,
       jobNumbersInput: (note.job_numbers || []).join(', '),
     });
@@ -136,6 +139,7 @@ export default function AdminTemplateNotes() {
 
   const saveForm = () => {
     const displayWidth = form.displayWidth || NOTE_DISPLAY_WIDTH.AUTO;
+    const textSize = form.textSize || NOTE_TEXT_SIZE.DEFAULT;
     const displayScope = form.displayScope || NOTE_DISPLAY_SCOPE.ALL;
     const job_numbers = normalizeJobNumbers(form.jobNumbersInput);
     const basePayload = {
@@ -149,6 +153,8 @@ export default function AdminTemplateNotes() {
       display_width: displayWidth,
       displayScope,
       display_scope: displayScope,
+      textSize,
+      text_size: textSize,
       jobNumbers: job_numbers,
       job_numbers,
     };
@@ -236,6 +242,7 @@ export default function AdminTemplateNotes() {
                           </Badge>
                           <Badge variant="outline" className="text-xs">Priority: {n.priority || 0}</Badge>
                           <Badge variant="outline" className="text-xs">Width: {n.displayWidth}</Badge>
+                          <Badge variant="outline" className="text-xs">Text: {n.textSize}</Badge>
                           <Badge variant="outline" className="text-xs">Scope: {n.displayScope}</Badge>
                         </div>
                       </div>
@@ -392,8 +399,26 @@ export default function AdminTemplateNotes() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NOTE_DISPLAY_WIDTH.AUTO}>Auto</SelectItem>
+                  <SelectItem value={NOTE_DISPLAY_WIDTH.QUARTER}>Quarter</SelectItem>
                   <SelectItem value={NOTE_DISPLAY_WIDTH.HALF}>Half</SelectItem>
                   <SelectItem value={NOTE_DISPLAY_WIDTH.FULL}>Full</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Text Size</Label>
+              <Select
+                value={form.textSize}
+                onValueChange={v => setForm(prev => ({ ...prev, textSize: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NOTE_TEXT_SIZE.SMALL}>Small</SelectItem>
+                  <SelectItem value={NOTE_TEXT_SIZE.DEFAULT}>Default</SelectItem>
+                  <SelectItem value={NOTE_TEXT_SIZE.LARGE}>Large</SelectItem>
                 </SelectContent>
               </Select>
             </div>

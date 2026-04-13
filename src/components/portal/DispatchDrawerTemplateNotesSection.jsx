@@ -1,5 +1,5 @@
 import React from 'react';
-import { NOTE_TYPES, renderSimpleMarkupToHtml } from '@/lib/templateNotes';
+import { NOTE_TEXT_SIZE, NOTE_TYPES, renderSimpleMarkupToHtml } from '@/lib/templateNotes';
 
 function getGeneralNoteLayout(note) {
   const bullets = note.bullet_lines?.length > 0
@@ -28,9 +28,16 @@ function getGeneralNoteLayout(note) {
 }
 
 function getNoteColumnClass(displayWidth, autoShouldSpanWide = false, NOTE_DISPLAY_WIDTH) {
-  if (displayWidth === NOTE_DISPLAY_WIDTH.FULL) return 'col-span-2';
-  if (displayWidth === NOTE_DISPLAY_WIDTH.HALF) return 'col-span-1';
+  if (displayWidth === NOTE_DISPLAY_WIDTH.FULL) return 'col-span-2 lg:col-span-4';
+  if (displayWidth === NOTE_DISPLAY_WIDTH.HALF) return 'col-span-1 lg:col-span-2';
+  if (displayWidth === NOTE_DISPLAY_WIDTH.QUARTER) return 'col-span-1 lg:col-span-1';
   return autoShouldSpanWide ? 'col-span-2 lg:col-span-2' : 'col-span-2 lg:col-span-1';
+}
+
+function getTextSizeClass(textSize) {
+  if (textSize === NOTE_TEXT_SIZE.SMALL) return 'text-[8px]';
+  if (textSize === NOTE_TEXT_SIZE.LARGE) return 'text-[11px]';
+  return 'text-[9px]';
 }
 
 export default function DispatchDrawerTemplateNotesSection({ boxNotes, generalNotes, NOTE_DISPLAY_WIDTH }) {
@@ -47,6 +54,7 @@ export default function DispatchDrawerTemplateNotesSection({ boxNotes, generalNo
       <div className="grid grid-cols-2 gap-1 md:gap-1.5 lg:grid-cols-4">
         {unifiedNotes.map((n) => {
           const isBoxNote = n.note_type === NOTE_TYPES.BOX;
+          const textSizeClass = getTextSizeClass(n.textSize);
 
           if (isBoxNote) {
             return (
@@ -55,9 +63,9 @@ export default function DispatchDrawerTemplateNotesSection({ boxNotes, generalNo
                 className={`rounded-md border p-2 md:p-2.5 ${getNoteColumnClass(n.displayWidth, false, NOTE_DISPLAY_WIDTH)}`}
                 style={{ borderColor: n.border_color, color: n.text_color }}
               >
-                {n.title && <p className="text-[9px] font-semibold leading-snug mb-0.5">{n.title}</p>}
+                {n.title && <p className={`${textSizeClass} font-semibold leading-snug mb-0.5`}>{n.title}</p>}
                 <p
-                  className="text-[9px] leading-snug"
+                  className={`${textSizeClass} leading-snug`}
                   dangerouslySetInnerHTML={{ __html: renderSimpleMarkupToHtml(n.box_content || n.note_text) }}
                 />
               </div>
@@ -73,10 +81,10 @@ export default function DispatchDrawerTemplateNotesSection({ boxNotes, generalNo
               key={n.id}
               className={`rounded-md border border-slate-200 bg-white/90 p-2 md:p-2.5 ${getNoteColumnClass(n.displayWidth, shouldSpanWide, NOTE_DISPLAY_WIDTH)}`}
             >
-              {n.title && <p className="text-[9px] text-slate-700 font-semibold leading-snug mb-0.5">{n.title}</p>}
+              {n.title && <p className={`${textSizeClass} text-slate-700 font-semibold leading-snug mb-0.5`}>{n.title}</p>}
               <ul className="mt-0.5 space-y-0 list-disc ml-3.5">
                 {bullets.map((line, idx) => (
-                  <li key={`${n.id}-${idx}`} className="text-[9px] text-slate-600 leading-snug">{line}</li>
+                  <li key={`${n.id}-${idx}`} className={`${textSizeClass} text-slate-600 leading-snug`}>{line}</li>
                 ))}
               </ul>
             </div>

@@ -5,8 +5,15 @@ export const NOTE_TYPES = {
 
 export const NOTE_DISPLAY_WIDTH = {
   AUTO: 'auto',
+  QUARTER: 'quarter',
   HALF: 'half',
   FULL: 'full',
+};
+
+export const NOTE_TEXT_SIZE = {
+  SMALL: 'small',
+  DEFAULT: 'default',
+  LARGE: 'large',
 };
 
 export const NOTE_DISPLAY_SCOPE = {
@@ -30,6 +37,10 @@ export const normalizeTemplateNote = (note = {}) => {
   const displayScope = Object.values(NOTE_DISPLAY_SCOPE).includes(rawDisplayScope)
     ? rawDisplayScope
     : NOTE_DISPLAY_SCOPE.ALL;
+  const rawTextSize = note.textSize ?? note.text_size;
+  const textSize = Object.values(NOTE_TEXT_SIZE).includes(rawTextSize)
+    ? rawTextSize
+    : NOTE_TEXT_SIZE.DEFAULT;
   const rawJobNumbers = note.jobNumbers ?? note.job_numbers;
   const job_numbers = normalizeJobNumbers(rawJobNumbers);
 
@@ -59,6 +70,8 @@ export const normalizeTemplateNote = (note = {}) => {
     display_width: displayWidth,
     displayScope,
     display_scope: displayScope,
+    textSize,
+    text_size: textSize,
     jobNumbers: job_numbers,
     job_numbers,
   };
