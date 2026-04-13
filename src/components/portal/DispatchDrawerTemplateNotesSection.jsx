@@ -51,7 +51,7 @@ export default function DispatchDrawerTemplateNotesSection({ boxNotes, generalNo
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-100">General Notes</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-.5 md:gap-1.5 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-.5 md:gap-.5 lg:grid-cols-4">
         {unifiedNotes.map((n) => {
           const isBoxNote = n.note_type === NOTE_TYPES.BOX;
           const textSizeClass = getTextSizeClass(n.textSize);
