@@ -31,6 +31,8 @@ export default function DispatchDriverAssignmentsSection({
   dispatchStatus,
 }) {
   if (trucksAssigned.length === 0 || !shouldShowDriverAssignmentControls) return null;
+  const hasOwnerChoices = canUseOwnerInformationalAssignments && ownerOptions.length > 0;
+  const hasSelectableAssignees = eligibleDrivers.length > 0 || hasOwnerChoices;
   const normalizedDispatchStatus = String(dispatchStatus || '').trim().toLowerCase();
   const isDispatchCanceled = normalizedDispatchStatus === 'cancelled' || normalizedDispatchStatus === 'canceled';
 
@@ -49,12 +51,12 @@ export default function DispatchDriverAssignmentsSection({
         </span>
         <span className="block">Please read all of the information on the driver’s page before assigning drivers.</span>
       </p>
-      {canUseOwnerInformationalAssignments && ownerOptions.length > 0 && (
+      {hasOwnerChoices && (
         <p className="text-xs text-slate-500">
           Owner options are informational labels only and do not trigger driver notifications.
         </p>
       )}
-      {eligibleDrivers.length === 0 && (
+      {eligibleDrivers.length === 0 && !hasOwnerChoices && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2">
           Create and activate a driver access code first.
         </p>
@@ -69,7 +71,7 @@ export default function DispatchDriverAssignmentsSection({
         return (
           <div key={`driver-${truckNumber}`} className="grid grid-cols-[70px,1fr] items-start gap-2 border-t pt-2 first:border-t-0 first:pt-0">
             <span className="text-xs font-mono text-slate-600">{truckNumber}</span>
-            {eligibleDrivers.length > 0 ? (
+            {hasSelectableAssignees ? (
               <div className="space-y-1">
                 <Select
                   value={selectedDriverByTruck[truckNumber] || unassignedDriverValue}
@@ -81,7 +83,7 @@ export default function DispatchDriverAssignmentsSection({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={unassignedDriverValue}>No driver assigned</SelectItem>
-                    {canUseOwnerInformationalAssignments && ownerOptions.map((owner) => (
+                    {hasOwnerChoices && ownerOptions.map((owner) => (
                       <SelectItem key={`owner-${owner.id}`} value={`__owner__:${owner.id}`}>
                         {owner.label} (Owner)
                       </SelectItem>
