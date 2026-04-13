@@ -434,7 +434,7 @@ function CompanyOwnerProfile({ session }) {
       : null;
     if (fallbackByLinkedUser) return fallbackByLinkedUser;
 
-    return accessCodes[0] || session || null;
+    return session || null;
   }, [accessCodes, session]);
   const smsState = getCompanyOwnerSmsState({ accessCode: activeAccessCode, company });
   const ownerConsentRecorded = activeAccessCode?.sms_consent_given === true

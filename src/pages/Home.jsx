@@ -237,6 +237,16 @@ export default function Home() {
     },
     enabled: isOwner && !!ownerWorkspaceCompanyId,
   });
+  const { data: ownerAccessCodes = [] } = useQuery({
+    queryKey: ['home-owner-access-codes', ownerWorkspaceCompanyId],
+    queryFn: () => base44.entities.AccessCode.filter({
+      code_type: 'CompanyOwner',
+      company_id: ownerWorkspaceCompanyId,
+      active_flag: true,
+    }, '-created_date', 500),
+    enabled: isOwner && !!ownerWorkspaceCompanyId,
+  });
+  const hasMultipleOwners = ownerAccessCodes.length > 1;
   const ownerScopeTrucks = Array.isArray(ownerCompany?.trucks) ? ownerCompany.trucks : [];
   const { data: ownerAvailabilityDefaults = [] } = useQuery({
     queryKey: ['home-owner-availability-defaults', ownerWorkspaceCompanyId],
@@ -524,7 +534,7 @@ export default function Home() {
         />
       )}
 
-      {isOwner && (
+      {isOwner && hasMultipleOwners && (
         <section>
           <Card className={homeSectionCardClass}>
             <div className={`${homeSectionHeaderClass} bg-slate-700`}>

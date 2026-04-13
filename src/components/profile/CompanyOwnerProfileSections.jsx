@@ -83,17 +83,21 @@ export function CompanyOwnerSmsCard({
   const [draftName, setDraftName] = useState(ownerProfile?.label || ownerProfile?.name || '');
   const [draftPhone, setDraftPhone] = useState(formatPhoneNumber(ownerProfile?.sms_phone || ''));
   const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
   const ownerName = ownerProfile?.label || ownerProfile?.name || '';
   useEffect(() => {
     setDraftName(ownerName);
     setDraftPhone(formatPhoneNumber(ownerProfile?.sms_phone || ''));
+    setProfileSaved(false);
   }, [ownerName, ownerProfile?.sms_phone]);
 
   const saveProfile = async () => {
     if (!onUpdateOwnerProfile) return;
     setSavingProfile(true);
+    setProfileSaved(false);
     try {
       await onUpdateOwnerProfile({ label: draftName, sms_phone: draftPhone });
+      setProfileSaved(true);
     } finally {
       setSavingProfile(false);
     }
@@ -104,7 +108,7 @@ export function CompanyOwnerSmsCard({
         <div className="flex items-center gap-2"><BellRing className="h-4 w-4 text-slate-500" /><h3 className="text-lg font-semibold text-slate-900">Your SMS notifications</h3></div>
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
-            <Label className="text-xs text-slate-500">Personal display name</Label>
+            <Label className="text-xs text-slate-500">Name</Label>
             <Input
               value={draftName}
               onChange={(event) => setDraftName(event.target.value)}
@@ -112,7 +116,7 @@ export function CompanyOwnerSmsCard({
             />
           </div>
           <div>
-            <Label className="text-xs text-slate-500">Personal phone for SMS</Label>
+            <Label className="text-xs text-slate-500">Phone for SMS</Label>
             <Input
               value={draftPhone}
               onChange={(event) => setDraftPhone(formatPhoneNumber(event.target.value))}
@@ -120,6 +124,11 @@ export function CompanyOwnerSmsCard({
             />
           </div>
         </div>
+        {profileSaved && (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            Personal profile saved.
+          </div>
+        )}
         <div className="flex justify-end">
           <Button type="button" variant="outline" size="sm" disabled={savingProfile} onClick={saveProfile}>
             {savingProfile ? 'Saving…' : 'Save Personal Profile'}
