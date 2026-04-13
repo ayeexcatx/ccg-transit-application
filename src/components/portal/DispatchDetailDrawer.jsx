@@ -29,6 +29,7 @@ import { getVisibleTrucksForDispatch } from '@/lib/dispatchVisibility';
 import { getActiveCompanyId, getEffectiveView } from '@/components/session/workspaceUtils';
 import { buildConfirmedTruckSetForStatus } from '@/components/notifications/confirmationStateHelpers';
 import { deactivateDriverAssignment, sendDriverAssignment, upsertDriverAssignment } from '@/services/driverAssignmentMutationService';
+import { appendDispatchActivityEntries, getSessionActorName } from '@/lib/dispatchActivity';
 import { resolveCompanyOwnerCompanyId, resolveDriverIdentity } from '@/services/currentAppIdentityService';
 import { listDriverDispatchesForDriver } from '@/lib/driverDispatch';
 
@@ -36,17 +37,24 @@ const UNASSIGNED_DRIVER_VALUE = '__unassigned__';
 const DRIVER_SHIFT_CONFLICT_MESSAGE = 'That driver is already assigned on a different dispatch for the same shift. Please remove the driver from that assignment or select a different driver.';
 let openDispatchDrawerCount = 0;
 
-function getActivityActorName(session) {
-  const candidates = [
-  session?.label,
-  session?.access_code_label,
-  session?.name,
-  session?.access_code_name];
+const OWNER_ASSIGNMENT_PREFIX = '__owner__:';
 
-
-  const resolved = candidates.find((value) => String(value || '').trim());
-  return resolved ? String(resolved).trim() : 'Company Owner';
+function normalizeOwnerAssignmentMap(value) {
+  if (!value || typeof value !== 'object') return {};
+  return value;
 }
+
+function buildOwnerSelectionValue(ownerId) {
+  return `${OWNER_ASSIGNMENT_PREFIX}${ownerId}`;
+}
+
+function parseOwnerSelectionValue(value) {
+  const normalized = String(value || '');
+  if (!normalized.startsWith(OWNER_ASSIGNMENT_PREFIX)) return null;
+  return normalized.slice(OWNER_ASSIGNMENT_PREFIX.length) || null;
+}
+
+
 
 function buildDriverAssignmentActivityEntries({ session, truckNumber, previousAssignment, nextAssignment }) {
   if (session?.code_type !== 'CompanyOwner') return [];
@@ -55,7 +63,7 @@ function buildDriverAssignmentActivityEntries({ session, truckNumber, previousAs
   const nextDriverId = nextAssignment?.driver_id || null;
   if (previousDriverId === nextDriverId) return [];
 
-  const actorName = getActivityActorName(session);
+  const actorName = getSessionActorName(session);
   const timestamp = new Date().toISOString();
   const previousDriverName = previousAssignment?.driver_name || 'Unknown driver';
   const nextDriverName = nextAssignment?.driver_name || 'Unknown driver';
@@ -90,23 +98,6 @@ function buildDriverAssignmentActivityEntries({ session, truckNumber, previousAs
     action: 'owner_changed_driver',
     message: `${actorName} changed driver from ${previousDriverName} to ${nextDriverName} on Truck ${truckNumber}`
   }];
-}
-
-async function appendDispatchActivityEntries(dispatch, entries = []) {
-  if (!dispatch?.id || !Array.isArray(entries) || entries.length === 0) return;
-
-  try {
-    const latestDispatch = await base44.entities.Dispatch.filter({ id: dispatch.id }, '-created_date', 1);
-    const currentLog = Array.isArray(latestDispatch?.[0]?.admin_activity_log) ?
-    latestDispatch[0].admin_activity_log :
-    Array.isArray(dispatch.admin_activity_log) ? dispatch.admin_activity_log : [];
-
-    await base44.entities.Dispatch.update(dispatch.id, {
-      admin_activity_log: [...entries, ...currentLog]
-    });
-  } catch (error) {
-    console.error('Failed to append dispatch activity entries for driver assignment changes:', error);
-  }
 }
 
 function announceDispatchDrawerState() {
@@ -393,6 +384,16 @@ export default function DispatchDetailDrawer({
     enabled: open && isOwner && !!ownerCompanyId
   });
 
+  const { data: ownerAccessCodes = [] } = useQuery({
+    queryKey: ['owner-access-codes', dispatch?.company_id],
+    queryFn: () => base44.entities.AccessCode.filter({
+      company_id: dispatch.company_id,
+      code_type: 'CompanyOwner',
+      active_flag: true,
+    }, '-created_date', 500),
+    enabled: open && isOwner && !!dispatch?.company_id,
+  });
+
   const { data: companyDrivers = [] } = useQuery({
     queryKey: ['drivers', dispatch?.company_id],
     queryFn: () => base44.entities.Driver.filter({ company_id: dispatch.company_id }, '-driver_name', 500),
@@ -421,17 +422,20 @@ export default function DispatchDetailDrawer({
     enabled: open && isDriverUser && !!dispatch?.id && !!driverIdentity
   });
 
+  const ownerAssignmentByTruck = useMemo(() => normalizeOwnerAssignmentMap(dispatch?.owner_assignment_by_truck), [dispatch?.owner_assignment_by_truck]);
+
   useEffect(() => {
     if (!isOwner || !dispatch?.id) return;
 
     const next = {};
     (dispatch.trucks_assigned || []).forEach((truckNumber) => {
       const assignment = driverAssignments.find((entry) => entry.truck_number === truckNumber && entry.active_flag !== false);
-      next[truckNumber] = assignment?.driver_id || UNASSIGNED_DRIVER_VALUE;
+      const ownerAssignment = ownerAssignmentByTruck[truckNumber];
+      next[truckNumber] = assignment?.driver_id || (ownerAssignment?.owner_access_code_id ? buildOwnerSelectionValue(ownerAssignment.owner_access_code_id) : UNASSIGNED_DRIVER_VALUE);
     });
     setSelectedDriverByTruck(next);
     setDriverAssignmentErrors({});
-  }, [isOwner, dispatch?.id, dispatch?.trucks_assigned, driverAssignments]);
+  }, [isOwner, dispatch?.id, dispatch?.trucks_assigned, driverAssignments, ownerAssignmentByTruck]);
 
   const { data: conflictingDriverAssignmentsById = {} } = useQuery({
     queryKey: ['driver-shift-conflicts', dispatch?.id, dispatch?.company_id, dispatch?.date, dispatch?.shift_time],
@@ -518,7 +522,7 @@ export default function DispatchDetailDrawer({
           previousAssignment,
           nextAssignment
         }),
-        appendActivityEntries: appendDispatchActivityEntries
+        appendActivityEntries: (_dispatch, entries) => appendDispatchActivityEntries(dispatch.id, entries)
       });
 
       return savedAssignment;
@@ -622,24 +626,80 @@ export default function DispatchDetailDrawer({
     setSelectedDriverByTruck((prev) => ({ ...prev, [truckNumber]: driverId }));
     setDriverAssignmentErrors((prev) => ({ ...prev, [truckNumber]: null }));
 
+    const ownerSelectionId = parseOwnerSelectionValue(driverId);
+    const actorName = getSessionActorName(session);
+    const timestamp = new Date().toISOString();
+
+    const persistOwnerAssignment = async (ownerCode) => {
+      const nextMap = { ...ownerAssignmentByTruck };
+      nextMap[truckNumber] = {
+        owner_access_code_id: ownerCode.id,
+        owner_name: ownerCode.label || ownerCode.name || ownerCode.code || 'Owner',
+        updated_at: timestamp,
+        updated_by_owner_access_code_id: session?.id || null,
+      };
+      await base44.entities.Dispatch.update(dispatch.id, { owner_assignment_by_truck: nextMap });
+      await appendDispatchActivityEntries(dispatch.id, [{
+        timestamp,
+        actor_type: 'CompanyOwner',
+        actor_id: session?.id,
+        actor_name: actorName,
+        action: 'owner_selected_owner_assignment',
+        message: `${actorName} selected ${nextMap[truckNumber].owner_name} (Owner) for Truck ${truckNumber}`,
+      }]);
+      queryClient.invalidateQueries({ queryKey: ['portal-dispatches', dispatch?.company_id] });
+      queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['dispatch-admin-overlay-target', String(dispatch?.id || '')] });
+      queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', dispatch?.id] });
+    };
+
     if (driverId === UNASSIGNED_DRIVER_VALUE) {
-      const { removed } = await deactivateDriverAssignment({
+      await deactivateDriverAssignment({
         dispatch,
         driverAssignments,
         truckNumber,
-        session
+        session,
+        suppressDriverNotification: true,
       });
-      if (!removed) return;
+      const nextMap = { ...ownerAssignmentByTruck };
+      delete nextMap[truckNumber];
+      await base44.entities.Dispatch.update(dispatch.id, { owner_assignment_by_truck: nextMap });
       await refetchDriverAssignments();
       queryClient.invalidateQueries({ queryKey: ['portal-dispatches', dispatch?.company_id] });
       queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] });
       queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', dispatch?.id] });
-      toast.success('Driver assignment removed.');
+      toast.success('Assignment cleared.');
+      return;
+    }
+
+    if (ownerSelectionId) {
+      const selectedOwner = ownerAccessCodes.find((entry) => String(entry.id) === String(ownerSelectionId));
+      if (!selectedOwner) {
+        setSelectedDriverByTruck((prev) => ({ ...prev, [truckNumber]: previousDriverId }));
+        toast.error('Selected owner was not found.');
+        return;
+      }
+
+      await deactivateDriverAssignment({
+        dispatch,
+        driverAssignments,
+        truckNumber,
+        session,
+        suppressDriverNotification: true,
+      });
+      await persistOwnerAssignment(selectedOwner);
+      await refetchDriverAssignments();
+      toast.success('Owner assignment updated.');
       return;
     }
 
     try {
       await assignDriverMutation.mutateAsync({ truckNumber, driverId });
+      if (ownerAssignmentByTruck[truckNumber]) {
+        const nextMap = { ...ownerAssignmentByTruck };
+        delete nextMap[truckNumber];
+        await base44.entities.Dispatch.update(dispatch.id, { owner_assignment_by_truck: nextMap });
+      }
     } catch (error) {
       setSelectedDriverByTruck((prev) => ({ ...prev, [truckNumber]: previousDriverId }));
       if (error?.message === DRIVER_SHIFT_CONFLICT_MESSAGE) {
@@ -711,7 +771,15 @@ export default function DispatchDetailDrawer({
   }, {});
 
   const companyHasDrivers = companyDrivers.length > 0;
-  const shouldShowDriverAssignmentControls = !isOwner || companyHasDrivers;
+  const companyTruckCount = Array.isArray(ownerCompanyRecord?.trucks) ? ownerCompanyRecord.trucks.length : (dispatch?.trucks_assigned || []).length;
+  const canUseOwnerInformationalAssignments = isOwner && (companyTruckCount > 1 || companyHasDrivers);
+  const ownerOptions = canUseOwnerInformationalAssignments
+    ? ownerAccessCodes.map((ownerCode) => ({
+      id: ownerCode.id,
+      label: ownerCode.label || ownerCode.name || ownerCode.code || 'Owner',
+    }))
+    : [];
+  const shouldShowDriverAssignmentControls = !isOwner || companyHasDrivers || canUseOwnerInformationalAssignments;
   const shouldShowUnassignedDriverLabel = shouldShowDriverAssignmentControls;
 
   const getTruckDriverSummaryLabel = (truckNumber) => {
@@ -719,6 +787,8 @@ export default function DispatchDetailDrawer({
 
     const selectedDriverId = selectedDriverByTruck[truckNumber];
     if (selectedDriverId === UNASSIGNED_DRIVER_VALUE) {
+      const ownerAssignment = ownerAssignmentByTruck[truckNumber];
+      if (ownerAssignment?.owner_name) return `${ownerAssignment.owner_name} (Owner)`;
       return shouldShowUnassignedDriverLabel ? 'No driver assigned' : null;
     }
     if (selectedDriverId && eligibleDriverNameById[selectedDriverId]) {
@@ -1192,6 +1262,8 @@ export default function DispatchDetailDrawer({
                     getEntryActorLabel={getEntryActorLabel}
                     dispatch={dispatch}
                     eligibleDrivers={eligibleDrivers}
+                    ownerOptions={ownerOptions}
+                    canUseOwnerInformationalAssignments={canUseOwnerInformationalAssignments}
                     selectedDriverByTruck={selectedDriverByTruck}
                     handleDriverSelection={handleDriverSelection}
                     assignDriverMutation={assignDriverMutation}

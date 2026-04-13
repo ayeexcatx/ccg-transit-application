@@ -78,12 +78,17 @@ export function getDriverSmsState(driver) {
 }
 
 export function getCompanyOwnerSmsState({ accessCode, company }) {
-  const target = getCompanySmsContact(company);
-  const state = getCompanyOwnerEffectiveSmsState({ accessCode, normalizedPhone: target.phone });
+  void company;
+  const normalizedPhone = normalizeSmsPhone(accessCode?.sms_phone || '');
+  const target = {
+    method: null,
+    phone: normalizedPhone,
+  };
+  const state = getCompanyOwnerEffectiveSmsState({ accessCode, normalizedPhone });
 
   return {
     ...state,
-    normalizedPhone: target.phone,
+    normalizedPhone,
     target,
   };
 }

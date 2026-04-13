@@ -16,6 +16,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import ActionNeededSection from '@/components/notifications/ActionNeededSection';
 import AvailabilityRequestPrompt from '@/components/availability/AvailabilityRequestPrompt';
 import { getNotificationTruckBadges } from '@/components/notifications/notificationTruckDisplay';
+import { formatNotificationTime } from '@/components/notifications/notificationTimeFormat';
 import { useOwnerNotifications } from '../components/notifications/useOwnerNotifications';
 import { useConfirmationsQuery } from '../components/notifications/useConfirmationsQuery';
 import { getEffectiveView, getWorkspaceDisplayLabel } from '../components/session/workspaceUtils';
@@ -391,6 +392,48 @@ export default function Home() {
   }, [notifications, filteredDispatches, session?.code_type, confirmations, ownerScopeTrucks]);
   const actionItems = actionItemsSource.slice(0, 8);
   const actionNeededCount = actionItemsSource.length;
+  const recentCompanyActivity = useMemo(() => {
+    if (!isOwner) return [];
+    const events = [];
+
+    filteredDispatches.forEach((dispatch) => {
+      const jobLabel = dispatch?.job_number ? `Job #${dispatch.job_number}` : `Dispatch ${dispatch.id}`;
+      (dispatch?.admin_activity_log || []).forEach((entry) => {
+        if (!entry?.timestamp || !entry?.message) return;
+        events.push({
+          id: `log-${dispatch.id}-${entry.timestamp}-${entry.action || 'event'}`,
+          timestamp: entry.timestamp,
+          message: entry.message,
+          context: jobLabel,
+        });
+      });
+    });
+
+    confirmations.forEach((confirmation) => {
+      if (!confirmation?.confirmed_at || !confirmation?.confirmed_by_name) return;
+      events.push({
+        id: `confirmation-${confirmation.id}`,
+        timestamp: confirmation.confirmed_at,
+        message: `${confirmation.confirmed_by_name} confirmed Truck ${confirmation.truck_number} (${confirmation.confirmation_type})`,
+        context: 'Dispatch confirmation',
+      });
+    });
+
+    notifications
+      .filter((notification) => ['owner_availability_updated', 'driver_dispatch_seen'].includes(notification.notification_category))
+      .forEach((notification) => {
+        events.push({
+          id: `notification-${notification.id}`,
+          timestamp: notification.created_date,
+          message: notification.message || notification.title,
+          context: notification.notification_category === 'owner_availability_updated' ? 'Availability' : 'Driver acknowledgement',
+        });
+      });
+
+    return events
+      .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
+      .slice(0, 8);
+  }, [isOwner, filteredDispatches, confirmations, notifications]);
 
   const handleNotificationClick = async (n) => {
     if (!session) return;
@@ -479,6 +522,26 @@ export default function Home() {
           getVisibleTrucksForNotification={getVisibleTrucksForNotification}
           onNotificationClick={handleNotificationClick}
         />
+      )}
+
+      {isOwner && (
+        <section>
+          <Card className={homeSectionCardClass}>
+            <div className={`${homeSectionHeaderClass} bg-slate-700`}>
+              <h3 className="text-sm font-semibold text-white">Recent Company Activity</h3>
+            </div>
+            <CardContent className="p-3 space-y-2">
+              {recentCompanyActivity.length === 0 ? (
+                <p className="text-sm text-slate-400">No recent company activity yet.</p>
+              ) : recentCompanyActivity.map((activity) => (
+                <div key={activity.id} className="rounded-lg border border-slate-200 px-3 py-2">
+                  <p className="text-sm text-slate-700">{activity.message}</p>
+                  <p className="text-xs text-slate-400 mt-1">{activity.context} • {formatNotificationTime(activity.timestamp, { withYear: true })}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </section>
       )}
 
       {/* Today's Dispatches */}

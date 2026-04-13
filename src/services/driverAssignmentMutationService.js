@@ -132,7 +132,7 @@ export async function sendDriverAssignment({ dispatch, driverDispatch, session }
   return saved;
 }
 
-export async function deactivateDriverAssignment({ dispatch, driverAssignments = [], truckNumber, session }) {
+export async function deactivateDriverAssignment({ dispatch, driverAssignments = [], truckNumber, session, suppressDriverNotification = false }) {
   const existingRows = driverAssignments.filter((entry) => entry.truck_number === truckNumber && entry.active_flag !== false);
   if (!existingRows.length) return { removed: false, existing: null };
 
@@ -146,7 +146,7 @@ export async function deactivateDriverAssignment({ dispatch, driverAssignments =
       updated_by_owner_id: session?.id,
     });
 
-    if (isVisibleDelivery(row) && row.driver_user_id) {
+    if (!suppressDriverNotification && isVisibleDelivery(row) && row.driver_user_id) {
       await createDriverDispatchNotification({
         dispatch,
         driverAccessCodeId: row.driver_user_id,
