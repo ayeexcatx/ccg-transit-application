@@ -222,60 +222,65 @@ export function useOwnerNotifications(session) {
     queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', driverIdentity] }),
   ]);
 
+  const markNotificationReadAcrossUnderlyingRows = async (target) => {
+    if (!target?.id) return null;
+
+    const sharedOwnerEventKey = isOwner ? buildSharedOwnerNotificationEventKey(target) : null;
+    const relatedSharedEntries = sharedOwnerEventKey
+      ? notifications.filter((entry) => buildSharedOwnerNotificationEventKey(entry) === sharedOwnerEventKey)
+      : [];
+
+    const isSharedOwnerRead = isOwner
+      && String(target.notification_category || '').toLowerCase() === 'driver_dispatch_seen'
+      && String(target.recipient_type || '').toLowerCase() === 'accesscode';
+
+    if (!isSharedOwnerRead) {
+      if (relatedSharedEntries.length > 1) {
+        await Promise.all(relatedSharedEntries
+          .filter((entry) => entry.read_flag !== true)
+          .map((entry) => base44.entities.Notification.update(entry.id, { read_flag: true })));
+        return true;
+      }
+      return base44.entities.Notification.update(target.id, { read_flag: true });
+    }
+
+    const related = await base44.entities.Notification.filter({
+      recipient_type: 'AccessCode',
+      notification_category: target.notification_category,
+      related_dispatch_id: target.related_dispatch_id || null,
+      dispatch_status_key: target.dispatch_status_key || null,
+    }, '-created_date', 500);
+    const ownerReadAt = new Date().toISOString();
+    const ownerReadByName = getSessionActorName(session);
+
+    await Promise.all((related || [])
+      .filter((entry) => entry.read_flag !== true)
+      .map((entry) => base44.entities.Notification.update(entry.id, {
+        read_flag: true,
+        owner_read_at: ownerReadAt,
+        owner_read_by_access_code_id: session?.id || null,
+        owner_read_by_name: ownerReadByName,
+      })));
+
+    if (target.related_dispatch_id) {
+      await appendDispatchActivityEntries(target.related_dispatch_id, [{
+        timestamp: ownerReadAt,
+        actor_type: 'CompanyOwner',
+        actor_id: session?.id,
+        actor_name: ownerReadByName,
+        action: 'owner_viewed_driver_seen_acknowledgement',
+        message: `${ownerReadByName} viewed a driver-seen acknowledgement`,
+      }]);
+    }
+
+    return true;
+  };
+
   const markReadMutation = useMutation({
     mutationFn: async (id) => {
       const target = notificationsForDisplay.find((notification) => String(notification.id) === String(id));
       if (!target) return null;
-
-      const sharedOwnerEventKey = isOwner ? buildSharedOwnerNotificationEventKey(target) : null;
-      const relatedSharedEntries = sharedOwnerEventKey
-        ? notifications.filter((entry) => buildSharedOwnerNotificationEventKey(entry) === sharedOwnerEventKey)
-        : [];
-
-      const isSharedOwnerRead = isOwner
-        && String(target.notification_category || '').toLowerCase() === 'driver_dispatch_seen'
-        && String(target.recipient_type || '').toLowerCase() === 'accesscode';
-
-      if (!isSharedOwnerRead) {
-        if (relatedSharedEntries.length > 1) {
-          await Promise.all(relatedSharedEntries
-            .filter((entry) => entry.read_flag !== true)
-            .map((entry) => base44.entities.Notification.update(entry.id, { read_flag: true })));
-          return true;
-        }
-        return base44.entities.Notification.update(id, { read_flag: true });
-      }
-
-      const related = await base44.entities.Notification.filter({
-        recipient_type: 'AccessCode',
-        notification_category: target.notification_category,
-        related_dispatch_id: target.related_dispatch_id || null,
-        dispatch_status_key: target.dispatch_status_key || null,
-      }, '-created_date', 500);
-      const ownerReadAt = new Date().toISOString();
-      const ownerReadByName = getSessionActorName(session);
-
-      await Promise.all((related || [])
-        .filter((entry) => entry.read_flag !== true)
-        .map((entry) => base44.entities.Notification.update(entry.id, {
-          read_flag: true,
-          owner_read_at: ownerReadAt,
-          owner_read_by_access_code_id: session?.id || null,
-          owner_read_by_name: ownerReadByName,
-        })));
-
-      if (target.related_dispatch_id) {
-        await appendDispatchActivityEntries(target.related_dispatch_id, [{
-          timestamp: ownerReadAt,
-          actor_type: 'CompanyOwner',
-          actor_id: session?.id,
-          actor_name: ownerReadByName,
-          action: 'owner_viewed_driver_seen_acknowledgement',
-          message: `${ownerReadByName} viewed a driver-seen acknowledgement`,
-        }]);
-      }
-
-      return true;
+      return markNotificationReadAcrossUnderlyingRows(target);
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey });
@@ -300,7 +305,7 @@ export function useOwnerNotifications(session) {
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
       const unread = notificationsForDisplay.filter((n) => !n.effectiveReadFlag);
-      await Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { read_flag: true })));
+      await Promise.all(unread.map((notification) => markNotificationReadAcrossUnderlyingRows(notification)));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
