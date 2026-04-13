@@ -3662,3 +3662,110 @@ SMS is active ONLY if:
   * Admin
   * Company Owner
   * Driver
+
+---
+
+## **11\. Approved Clarification Addendum (2026-04-13): Multi-Owner / Owner Personal Profile / Owner-as-Driver**
+
+### **11.1 Terms / Interpretation Rules**
+
+* **Company-level state** means operational state shared across all company-owner users for the same company (dispatches, availability, company-facing actions, and shared company profile data).
+* **Owner user** means an individual authenticated company-owner account linked to the same company workspace as other owners at that company.
+* **Owner assignment (informational)** means selecting a company-owner user in truck assignment UI strictly for owner/admin visibility context; this is not a normal driver assignment workflow.
+* **Shared notification result state** means notification completion/read resolution can apply to all owner users together, while still preserving actor attribution in logs/history.
+
+### **11.2 Multiple Company-Owner Users per Company**
+
+* A company may have more than one company-owner user.
+* All company-owner users for the same company share one company workspace and one company-level operational state.
+* Dispatches, availability, shared company profile data, and company-facing operational actions remain company-level and are not split into separate owner workspaces.
+* Logs/history should identify the exact owner user who performed each action whenever possible.
+
+### **11.3 Shared In-App Owner Notification Behavior**
+
+* Company-owner notifications remain shared in effect at the company level.
+* When a company-level notification is sent, all company-owner users for that company can see it.
+* Action-required notifications (example: new dispatch, dispatch update, similar company action) remain active for all owner users until the underlying company-level action is completed.
+* Once completed by one owner user, that related notification/action-needed state clears for all owner users.
+* Informational notifications (example: driver-seen acknowledgements) should be considered read for all owner users once one owner user opens/views the related notification context.
+* Availability-related owner notifications clear for all owner users once the related company availability action is completed.
+* Shared result state does not remove attribution: the system should still record which owner user performed read/open/action events.
+
+### **11.4 Owner SMS Is User-Specific (Not Shared Company Contact-Routed)**
+
+* Owner SMS routing no longer depends on choosing a shared company contact destination for owner notifications.
+* Shared company contact methods remain in the company profile for general business information only.
+* Each company-owner user has an individual personal phone number and an individual SMS opt-in setting.
+* The owner user personal profile phone number is the SMS destination for that owner user.
+* Owner notification SMS eligibility is evaluated per owner user:
+  * If only one owner is opted in, only that owner receives SMS.
+  * If both owners are opted in, both owners receive SMS.
+  * If neither owner is opted in, neither owner receives SMS.
+
+### **11.5 Shared Company Profile vs Personal Owner Profile**
+
+* Shared company profile remains company-level (for example: company name, address, shared company contact methods).
+* Company-owner users also have personal owner profile data for individual identity/settings.
+* Personal owner profile baseline minimum fields:
+  * Owner display name
+  * Owner phone number used for SMS
+  * Owner SMS opt-in
+* Shared company contacts are not the source of owner SMS routing.
+
+### **11.6 Owner Selection in Dispatch Truck Assignment UI**
+
+* Company-owner users may appear in the same dispatch assignment dropdown area as drivers, but only when eligibility conditions are met.
+* Owner-selection option is available only if either condition is true:
+  * Company has more than one truck, or
+  * Company has at least one added driver.
+* If a company has only one truck and no added drivers, do not require extra owner self-assignment; owner operation of that truck is implicit.
+* When owner selection is available, owner options should be clearly labeled as owner entries (example: `Ronald (Owner)`).
+* Selecting a company-owner user is informational only for owner/admin visibility.
+* If an owner user is selected for a truck:
+  * Show owner name next to truck assignment badge in the dispatch drawer.
+  * Show owner name next to the truck in admin views as well.
+* Selecting an owner user must not create normal driver workflow side effects:
+  * No separate driver notification
+  * No driver dispatch copy
+  * No driver-seen acknowledgement
+  * No driver removal/cancellation notification
+  * No separate driver login/profile requirement
+  * No additional dispatch lifecycle/state beyond showing that owner assignment
+* Regular non-owner drivers continue to work exactly as current behavior defines.
+
+### **11.7 Multi-Owner Owner-Assignment Clarification**
+
+* If a company has multiple company-owner users, any eligible owner user may appear in owner-selectable assignment options when owner selection is enabled.
+* One owner user may assign themselves or another owner user to a truck as an informational owner assignment.
+* This owner selection remains non-driver workflow behavior.
+
+### **11.8 Recent Company Activity on Company-Owner Home**
+
+* Company-owner Home includes a recent company activity section.
+* This section is a company-scoped recent activity feed visible to company-owner users for that company.
+* Feed should show recent meaningful actions performed on behalf of the shared company workspace, including actions by either owner user.
+* Purpose: keep multi-owner teams aware of recent shared-company actions/changes.
+* This feed complements notifications; it does not replace notifications.
+
+### **11.9 What Remains Unchanged**
+
+Unless a later approval explicitly changes them, the following behaviors remain unchanged:
+
+* Normal non-owner driver notification behavior
+* Normal driver assignment/removal behavior
+* Driver-specific dispatch notifications and seen acknowledgements for actual drivers
+* Company-level dispatch confirmation flow for owners
+* Availability remains company-level
+* Admin-created company profile structure remains company-level
+* Owners continue receiving company dispatch updates in the same general way currently defined
+
+### **11.10 High-Risk / Be Careful When Implementing Later**
+
+Implementation later should be especially careful around:
+
+* Notification reconciliation/read-state behavior across multiple owners
+* SMS eligibility/delivery logic per owner user
+* Owner session/access-code linking behavior in multi-owner scenarios
+* Dispatch assignment UI branching between owner options and actual drivers
+* Audit/log attribution for owner read/action events
+* Preserving all existing non-owner driver behavior unchanged
