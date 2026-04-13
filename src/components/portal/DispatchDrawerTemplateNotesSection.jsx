@@ -60,7 +60,7 @@ export default function DispatchDrawerTemplateNotesSection({ boxNotes, generalNo
             return (
               <div
                 key={n.id}
-                className={`rounded-md border p-2 md:p-2.5 ${getNoteColumnClass(n.displayWidth, false, NOTE_DISPLAY_WIDTH)}`}
+                className={`rounded-md border p-1 md:p-1 ${getNoteColumnClass(n.displayWidth, false, NOTE_DISPLAY_WIDTH)}`}
                 style={{ borderColor: n.border_color, color: n.text_color }}
               >
                 {n.title && <p className={`${textSizeClass} font-semibold leading-snug mb-0.5`}>{n.title}</p>}
