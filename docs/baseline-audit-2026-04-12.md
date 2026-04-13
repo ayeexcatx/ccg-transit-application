@@ -108,15 +108,15 @@ However, baseline maintainability would improve by splitting one overloaded conc
 ---
 
 ## Suggested new baseline docs, if any
-### Recommended (not created in this pass)
+### Completed after this audit
 **`docs/access-session-linking-baseline.md`**
 
-Why this now deserves a dedicated baseline:
+Why this now has a dedicated baseline:
 - Access-code login, one-time-use claiming, linked-identity backfill, workspace switching, and restore compatibility checks are now dense and high-risk.
 - Behavior is currently spread across large docs and session/auth files, making future refactor validation harder.
 - This area has direct impact on auth integrity and cross-role safety.
 
-Suggested scope:
+Scope now captured:
 - login/link lifecycle
 - one-time-use claim rules
 - restore and fallback resolution order

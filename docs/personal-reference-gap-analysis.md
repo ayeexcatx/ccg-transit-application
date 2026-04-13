@@ -57,7 +57,7 @@ After this clarification pass, there are **no major behavior conflicts** remaini
 ---
 
 ## Recommended future follow-up (optional)
-1. Create a dedicated access/session/linking baseline document (already recommended in the audit) and cross-link from personal baseline.
+1. Dedicated access/session/linking baseline now exists at `docs/access-session-linking-baseline.md`; keep personal baseline cross-links aligned with it for future auth/session changes.
 2. Continue trimming deep historical Truck-role wording where still present outside clearly-marked historical context.
 
 ---
