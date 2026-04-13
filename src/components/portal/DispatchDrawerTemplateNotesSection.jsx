@@ -47,11 +47,11 @@ export default function DispatchDrawerTemplateNotesSection({ boxNotes, generalNo
 
   return (
     <div data-tour="dispatch-notes" className="space-y-1">
-      <div className="rounded-md border border-slate-700/50 bg-gradient-to-r from-slate-700/85 via-slate-700/65 to-slate-700/15 px-1 py-0.5">
+      <div className="rounded-md border border-slate-700/50 bg-gradient-to-r from-slate-700/85 via-slate-700/65 to-slate-700/15 px-2 py-0.5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-100">General Notes</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-1 md:gap-1.5 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-.5 md:gap-1.5 lg:grid-cols-4">
         {unifiedNotes.map((n) => {
           const isBoxNote = n.note_type === NOTE_TYPES.BOX;
           const textSizeClass = getTextSizeClass(n.textSize);
