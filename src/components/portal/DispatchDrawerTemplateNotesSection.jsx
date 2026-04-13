@@ -30,60 +30,60 @@ function getGeneralNoteLayout(note) {
 function getNoteColumnClass(displayWidth, autoShouldSpanWide = false, NOTE_DISPLAY_WIDTH) {
   if (displayWidth === NOTE_DISPLAY_WIDTH.FULL) return 'col-span-2';
   if (displayWidth === NOTE_DISPLAY_WIDTH.HALF) return 'col-span-1';
-  return autoShouldSpanWide ? 'col-span-2 md:col-span-2' : 'col-span-2 md:col-span-1';
+  return autoShouldSpanWide ? 'col-span-2 lg:col-span-2' : 'col-span-2 lg:col-span-1';
 }
 
 export default function DispatchDrawerTemplateNotesSection({ boxNotes, generalNotes, NOTE_DISPLAY_WIDTH }) {
+  const unifiedNotes = [...boxNotes, ...generalNotes];
+
+  if (unifiedNotes.length === 0) return null;
+
   return (
-    <>
-      {boxNotes.length > 0 && (
-        <div data-tour="dispatch-notes" className="space-y-1.5">
-          <div className="rounded-md border border-slate-700/50 bg-gradient-to-r from-slate-700/85 via-slate-700/65 to-slate-700/15 px-2.5 py-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-100">Box Notes</p>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5 md:gap-2">
-            {boxNotes.map((n) => (
-              <div key={n.id} className={`rounded-lg border p-2.5 md:p-3 ${getNoteColumnClass(n.displayWidth, false, NOTE_DISPLAY_WIDTH)}`} style={{ borderColor: n.border_color, color: n.text_color }}>
+    <div data-tour="dispatch-notes" className="space-y-1">
+      <div className="rounded-md border border-slate-700/50 bg-gradient-to-r from-slate-700/85 via-slate-700/65 to-slate-700/15 px-2 py-0.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-100">General Notes</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-1 md:gap-1.5 lg:grid-cols-4">
+        {unifiedNotes.map((n) => {
+          const isBoxNote = n.note_type === NOTE_TYPES.BOX;
+
+          if (isBoxNote) {
+            return (
+              <div
+                key={n.id}
+                className={`rounded-md border p-2 md:p-2.5 ${getNoteColumnClass(n.displayWidth, false, NOTE_DISPLAY_WIDTH)}`}
+                style={{ borderColor: n.border_color, color: n.text_color }}
+              >
                 {n.title && <p className="text-sm font-semibold leading-snug mb-0.5">{n.title}</p>}
                 <p
                   className="text-sm leading-snug"
                   dangerouslySetInnerHTML={{ __html: renderSimpleMarkupToHtml(n.box_content || n.note_text) }}
                 />
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            );
+          }
 
-      {generalNotes.length > 0 && (
-        <div data-tour="dispatch-notes" className="space-y-1.5">
-          <div className="rounded-md border border-slate-700/50 bg-gradient-to-r from-slate-700/85 via-slate-700/65 to-slate-700/15 px-2.5 py-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-100">General Notes</p>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5 md:gap-2">
-            {generalNotes.map((n) => {
-              const { bullets, shouldSpanWide } = getGeneralNoteLayout(n);
+          const { bullets, shouldSpanWide } = getGeneralNoteLayout(n);
 
-              if (bullets.length === 0 && !n.title) return null;
+          if (bullets.length === 0 && !n.title) return null;
 
-              return (
-                <div
-                  key={n.id}
-                  className={`rounded-lg border border-slate-200 bg-white/90 p-2.5 md:p-3 ${getNoteColumnClass(n.displayWidth, shouldSpanWide, NOTE_DISPLAY_WIDTH)}`}
-                >
-                  {n.title && <p className="text-sm text-slate-700 font-semibold leading-snug mb-0.5">{n.title}</p>}
-                  <ul className="mt-0.5 space-y-0.5 list-disc ml-4">
-                    {bullets.map((line, idx) => (
-                      <li key={`${n.id}-${idx}`} className="text-sm text-slate-600 leading-snug">{line}</li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </>
+          return (
+            <div
+              key={n.id}
+              className={`rounded-md border border-slate-200 bg-white/90 p-2 md:p-2.5 ${getNoteColumnClass(n.displayWidth, shouldSpanWide, NOTE_DISPLAY_WIDTH)}`}
+            >
+              {n.title && <p className="text-sm text-slate-700 font-semibold leading-snug mb-0.5">{n.title}</p>}
+              <ul className="mt-0.5 space-y-0 list-disc ml-3.5">
+                {bullets.map((line, idx) => (
+                  <li key={`${n.id}-${idx}`} className="text-sm text-slate-600 leading-snug">{line}</li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
