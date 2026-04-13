@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -62,13 +62,14 @@ export function useOwnerNotifications(session) {
   const ownerWorkspaceCompanyId = resolveCompanyOwnerCompanyId({ currentAppIdentity, session });
   const notificationScopeCompanyId = isOwner ? ownerWorkspaceCompanyId : null;
 
-  const queryKey = [
+  const queryKey = useMemo(() => [
     'notifications',
     session?.id || null,
     effectiveView || null,
     session?.raw_code_type || null,
     notificationScopeCompanyId || null,
-  ];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [session?.id, effectiveView, session?.raw_code_type, notificationScopeCompanyId]);
 
   const { data: rawNotifications = [], isLoading } = useQuery({
     queryKey,
@@ -159,12 +160,14 @@ export function useOwnerNotifications(session) {
     dispatches.map((dispatch) => [normalizeVisibilityId(dispatch.id), dispatch])
   );
 
-  const notifications = rawNotifications
+  const notifications = useMemo(() => rawNotifications
     .filter((notification) => canUserSeeNotification(session, notification, {
       visibleDispatchIds: validDispatchIds,
       driverDispatchIds,
     }))
-    .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+    .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0)),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [rawNotifications, session, validDispatchIds, driverDispatchIds]);
 
   const notificationsForDisplay = useMemo(() => {
     if (!isOwner) return notifications;
@@ -215,12 +218,12 @@ export function useOwnerNotifications(session) {
 
   const unreadCount = notificationsWithStatus.filter((notification) => !notification.effectiveReadFlag).length;
 
-  const invalidateNotificationQueries = () => Promise.all([
+  const invalidateNotificationQueries = useCallback(() => Promise.all([
     queryClient.invalidateQueries({ queryKey }),
     queryClient.invalidateQueries({ queryKey: ['notifications'] }),
     queryClient.invalidateQueries({ queryKey: ['portal-dispatches', notificationScopeCompanyId] }),
     queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', driverIdentity] }),
-  ]);
+  ]), [queryClient, queryKey, notificationScopeCompanyId, driverIdentity]);
 
   const markNotificationReadAcrossUnderlyingRows = async (target) => {
     if (!target?.id) return null;
