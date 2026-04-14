@@ -79,7 +79,7 @@ export default function DispatchDrawerIdentitySection({
                       <Badge
                         data-screenshot-badge-truck="true"
                         variant="outline"
-                        className="bg-white text-slate-950 px-2.5 py-0.5 font-semibold rounded-md inline-flex items-center border transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 shrink-0 border-slate-700/80">
+                        className="inline-flex h-6 shrink-0 items-center justify-center rounded-md border border-slate-700/80 bg-white px-2.5 font-semibold leading-none text-slate-950 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                         {t}
                       </Badge>
                       <span className="min-w-0 break-words text-xs leading-relaxed text-slate-600">
