@@ -264,12 +264,12 @@ export default function AdminTemplateNotes() {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-2xl max-h-[90dvh] overflow-hidden p-0">
-          <DialogHeader className="border-b border-slate-200 px-4 py-3 sm:px-6">
+        <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-1rem)] max-w-2xl flex-col overflow-hidden p-0">
+          <DialogHeader className="shrink-0 border-b border-slate-200 px-4 py-3 sm:px-6">
             <DialogTitle>{editing ? 'Edit Template Note' : 'New Template Note'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
             <div>
               <Label>Note Type</Label>
               <Select
@@ -432,7 +432,7 @@ export default function AdminTemplateNotes() {
               <Switch checked={form.active_flag} onCheckedChange={v => setForm({ ...form, active_flag: v })} />
             </div>
           </div>
-          <div className="border-t border-slate-200 px-4 py-3 sm:px-6">
+          <div className="shrink-0 border-t border-slate-200 px-4 py-3 sm:px-6">
             <Button
               onClick={saveForm}
               disabled={saveMutation.isPending}
