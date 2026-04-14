@@ -119,13 +119,14 @@ const parseSelectedOwnerName = (message) => {
 
 const parseDriverAssignmentFromMessage = (message) => {
   const text = String(message || '').trim();
-  if (!text) return { assignee: '', truckNumber: '' };
+  if (!text) return { assignee: '', truckNumber: '', verb: 'assigned' };
 
   const assignedMatch = text.match(/assigned\s+driver\s+(.+?)\s+to Truck\s+([A-Za-z0-9-]+)/i);
   if (assignedMatch) {
     return {
       assignee: assignedMatch[1]?.trim() || '',
       truckNumber: assignedMatch[2]?.trim() || '',
+      verb: 'assigned',
     };
   }
 
@@ -134,10 +135,20 @@ const parseDriverAssignmentFromMessage = (message) => {
     return {
       assignee: changedMatch[1]?.trim() || '',
       truckNumber: changedMatch[2]?.trim() || '',
+      verb: 'assigned',
     };
   }
 
-  return { assignee: '', truckNumber: '' };
+  const removedMatch = text.match(/(?:removed|unassigned)\s+driver\s+(.+?)\s+from Truck\s+([A-Za-z0-9-]+)/i);
+  if (removedMatch) {
+    return {
+      assignee: removedMatch[1]?.trim() || '',
+      truckNumber: removedMatch[2]?.trim() || '',
+      verb: 'removed',
+    };
+  }
+
+  return { assignee: '', truckNumber: '', verb: 'assigned' };
 };
 
 const parseTruckEditFromMessage = (message) => {
@@ -612,9 +623,10 @@ export default function Home() {
         if (!activity_timestamp_ms) return;
         if (isSelfOwnerAction(actorAccessCodeId)) return;
 
-        if (action === 'owner_assigned_driver' || action === 'owner_changed_driver') {
-          const { assignee, truckNumber } = parseDriverAssignmentFromMessage(entry?.message);
+        if (action === 'owner_assigned_driver' || action === 'owner_changed_driver' || action === 'owner_removed_driver') {
+          const { assignee, truckNumber, verb } = parseDriverAssignmentFromMessage(entry?.message);
           if (!truckNumber) return;
+          const actionVerb = action === 'owner_removed_driver' ? (verb === 'removed' ? 'removed' : 'unassigned') : 'assigned';
           ownerLogCandidates.push({
             id: `owner-assignment-${dispatchId}-${entry?.timestamp}-${entryIndex}`,
             dispatchId,
@@ -622,7 +634,11 @@ export default function Home() {
             activity_timestamp_ms,
             actorName,
             action,
-            actionText: `${actorName} assigned ${assignee || 'a driver'} to Truck ${truckNumber}`,
+            actionText: actionVerb === 'removed'
+              ? `${actorName} removed ${assignee || 'a driver'} from Truck ${truckNumber}`
+              : actionVerb === 'unassigned'
+                ? `${actorName} unassigned ${assignee || 'a driver'} from Truck ${truckNumber}`
+                : `${actorName} assigned ${assignee || 'a driver'} to Truck ${truckNumber}`,
             details: buildDispatchContextPieces(dispatch),
             dedupeClusterKey: `${dispatchId}:${actorName.toLowerCase()}:${action}:${truckNumber}:${activity_timestamp_ms}`,
           });
