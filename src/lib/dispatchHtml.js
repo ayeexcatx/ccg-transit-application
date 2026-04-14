@@ -36,6 +36,15 @@ const formatTimestamp = (value) => {
   return format(parsed, 'MM-dd-yyyy h:mm a');
 };
 
+const getStatusBadgeClass = (status) => {
+  const normalized = String(status ?? '').trim().toLowerCase();
+  if (normalized === 'scheduled') return 'status-scheduled';
+  if (normalized === 'dispatch') return 'status-dispatch';
+  if (normalized === 'amended') return 'status-amended';
+  if (normalized === 'cancelled') return 'status-cancelled';
+  return '';
+};
+
 const renderAssignmentTable = (assignment, title) => `
   <section class="section">
     <h3>${escapeHtml(title)}</h3>
@@ -132,7 +141,14 @@ export const buildDispatchHtml = ({
     const right = new Date(b?.assigned_datetime || b?.updated_date || b?.created_date || 0).getTime();
     return right - left;
   })[0];
-  const selectedDriverName = selectedDriverEntry?.driver_name || dispatch?.driver_name || '—';
+  const ownerAssignmentByTruck = (dispatch?.owner_assignment_by_truck && typeof dispatch.owner_assignment_by_truck === 'object')
+    ? dispatch.owner_assignment_by_truck
+    : {};
+  const ownerAssignedName = truckNumber ? ownerAssignmentByTruck?.[truckNumber] : null;
+  const selectedDriverName = selectedDriverEntry?.driver_name || ownerAssignedName || dispatch?.driver_name || '—';
+  const statusBadgeClass = getStatusBadgeClass(dispatch?.status);
+  const amendmentHistory = Array.isArray(dispatch?.amendment_history) ? dispatch.amendment_history : [];
+  const hasInternalNotes = Boolean(dispatch?.owner_visible_internal_notes || dispatch?.admin_internal_notes);
 
   const selectedTimeEntryByTruck = Object.values(
     filteredTimeEntries.reduce((map, entry) => {
@@ -238,6 +254,30 @@ export const buildDispatchHtml = ({
       background: #f8fafc;
       color: #0f172a;
       white-space: nowrap;
+    }
+
+    .status-badge.status-scheduled {
+      background: #dbeafe;
+      border-color: #60a5fa;
+      color: #1e40af;
+    }
+
+    .status-badge.status-dispatch {
+      background: #dcfce7;
+      border-color: #4ade80;
+      color: #166534;
+    }
+
+    .status-badge.status-amended {
+      background: #fef3c7;
+      border-color: #f59e0b;
+      color: #92400e;
+    }
+
+    .status-badge.status-cancelled {
+      background: #fee2e2;
+      border-color: #f87171;
+      color: #991b1b;
     }
 
     .summary-grid {
@@ -388,6 +428,35 @@ export const buildDispatchHtml = ({
       color: #334155;
     }
 
+    .status-details-box {
+      margin-top: 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 12px;
+      background: #f8fafc;
+    }
+
+    .status-details-title {
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 8px;
+    }
+
+    .status-detail-item + .status-detail-item {
+      margin-top: 8px;
+    }
+
+    .status-detail-label {
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 2px;
+    }
+
+    .status-detail-value {
+      color: #0f172a;
+      white-space: pre-wrap;
+    }
+
     .footer {
       margin-top: 32px;
       border-top: 1px solid #cbd5e1;
@@ -429,8 +498,30 @@ export const buildDispatchHtml = ({
           <h1>CCG Dispatch Record</h1>
           <div class="subtitle">Truck-specific dispatch archive record</div>
         </div>
-        <div class="status-badge">Status: ${escapeHtml(dispatch?.status || '—')}</div>
+        <div class="status-badge ${escapeHtml(statusBadgeClass)}">Status: ${escapeHtml(dispatch?.status || '—')}</div>
       </div>
+
+      ${(dispatch?.canceled_reason || amendmentHistory.length > 0) ? `
+      <div class="status-details-box">
+        <div class="status-details-title">Dispatch Status Details</div>
+        ${dispatch?.canceled_reason ? `
+        <div class="status-detail-item">
+          <div class="status-detail-label">Cancellation Reason</div>
+          <div class="status-detail-value">${escapeHtml(dispatch.canceled_reason)}</div>
+        </div>
+        ` : ''}
+        ${amendmentHistory.length > 0 ? `
+        <div class="status-detail-item">
+          <div class="status-detail-label">Amendment History</div>
+          <div class="status-detail-value">
+            ${amendmentHistory
+    .map((entry) => `${escapeHtml(formatTimestamp(entry?.amended_at))} — ${escapeHtml(entry?.changes || '—')}`)
+    .join('<br />')}
+          </div>
+        </div>
+        ` : ''}
+      </div>
+      ` : ''}
 
       <div class="summary-grid">
         <div class="summary-card">
@@ -465,6 +556,22 @@ export const buildDispatchHtml = ({
         <div class="value">${escapeHtml(selectedDriverName || '—')}</div>
       </div>
     </section>
+
+    ${hasInternalNotes ? `
+    <section class="section">
+      <div class="section-title">Internal Notes</div>
+      <div class="info-grid">
+        ${dispatch?.owner_visible_internal_notes ? `
+        <div class="label">Owner Visible Internal Notes</div>
+        <div class="value">${escapeHtml(dispatch.owner_visible_internal_notes)}</div>
+        ` : ''}
+        ${dispatch?.admin_internal_notes ? `
+        <div class="label">Admin Internal Notes</div>
+        <div class="value">${escapeHtml(dispatch.admin_internal_notes)}</div>
+        ` : ''}
+      </div>
+    </section>
+    ` : ''}
 
     <section class="section">
       <div class="section-title">Assignments</div>
