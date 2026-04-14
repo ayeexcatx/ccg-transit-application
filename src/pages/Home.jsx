@@ -68,16 +68,41 @@ const confirmationActionLabel = (type) => {
   return 'dispatch';
 };
 
-const driverSeenLabel = (notification) => {
-  const normalizedType = String(notification?.notification_type || '').toLowerCase();
-  if (normalizedType === 'driver_amended') return 'amended dispatch';
-  if (normalizedType === 'driver_cancelled') return 'cancelled dispatch';
-  if (normalizedType === 'driver_removed') return 'that the dispatch was removed';
-  const parsedStatus = String(parseStatusFromDispatchStatusKey(notification?.dispatch_status_key) || '').toLowerCase();
-  if (parsedStatus === 'amended') return 'amended dispatch';
-  if (parsedStatus === 'cancelled' || parsedStatus === 'canceled' || parsedStatus === 'cancellation') return 'cancelled dispatch';
-  if (parsedStatus === 'removed') return 'that the dispatch was removed';
-  return 'dispatch';
+const normalizeDispatchLifecycleState = (value) => {
+  const normalized = String(value || '').toLowerCase();
+  if (!normalized) return '';
+  if (normalized.includes('removed')) return 'removed';
+  if (normalized.includes('cancelled') || normalized.includes('canceled') || normalized.includes('cancellation')) return 'cancelled';
+  if (normalized.includes('amended')) return 'amended';
+  if (normalized.includes('dispatched')) return 'dispatched';
+  if (normalized.includes('scheduled') || normalized.includes('schedule')) return 'scheduled';
+  return '';
+};
+
+const getDriverViewLabel = (notification, dispatch) => {
+  const lifecycleStateFromNotificationType = normalizeDispatchLifecycleState(notification?.notification_type);
+  if (lifecycleStateFromNotificationType) {
+    if (lifecycleStateFromNotificationType === 'amended') return 'viewed the amended dispatch';
+    if (lifecycleStateFromNotificationType === 'cancelled') return 'viewed the cancelled dispatch';
+    if (lifecycleStateFromNotificationType === 'removed') return 'viewed that the dispatch was removed';
+    return 'viewed the dispatch';
+  }
+
+  const lifecycleStateFromDispatchStatusKey = normalizeDispatchLifecycleState(
+    parseStatusFromDispatchStatusKey(notification?.dispatch_status_key)
+  );
+  if (lifecycleStateFromDispatchStatusKey) {
+    if (lifecycleStateFromDispatchStatusKey === 'amended') return 'viewed the amended dispatch';
+    if (lifecycleStateFromDispatchStatusKey === 'cancelled') return 'viewed the cancelled dispatch';
+    if (lifecycleStateFromDispatchStatusKey === 'removed') return 'viewed that the dispatch was removed';
+    return 'viewed the dispatch';
+  }
+
+  const lifecycleStateFromDispatch = normalizeDispatchLifecycleState(dispatch?.status);
+  if (lifecycleStateFromDispatch === 'amended') return 'viewed the amended dispatch';
+  if (lifecycleStateFromDispatch === 'cancelled') return 'viewed the cancelled dispatch';
+  if (lifecycleStateFromDispatch === 'removed') return 'viewed that the dispatch was removed';
+  return 'viewed the dispatch';
 };
 
 const parseDriverSeenActorName = (notification) => {
@@ -778,7 +803,7 @@ export default function Home() {
           dispatchId,
           activity_timestamp,
           activity_timestamp_ms,
-          actionText: `Driver ${actorName} viewed the ${driverSeenLabel(notification)}`,
+          actionText: `Driver ${actorName} ${getDriverViewLabel(notification, dispatch)}`,
           details: buildDispatchContextPieces(dispatch),
         });
       });
