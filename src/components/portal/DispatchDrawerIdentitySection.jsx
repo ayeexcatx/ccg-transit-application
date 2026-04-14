@@ -49,26 +49,22 @@ export default function DispatchDrawerIdentitySection({
       </div>
 
       <section className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white p-3.5 sm:p-4">
-        <div className="mb-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="rounded-md border border-slate-700/50 bg-gradient-to-r from-slate-700/85 via-slate-700/65 to-slate-700/15 px-2.5 py-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-100">Trucks Assigned</p>
-            </div>
-            {isOwner &&
-            <Button
-              type="button"
-              data-screenshot-exclude="true"
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
-              data-tour="dispatch-edit-trucks"
-              onClick={onToggleEditingTrucks}>
-              
-                <Pencil className="h-3.5 w-3.5 mr-1" />
-                {isEditingTrucks ? 'Cancel' : 'Edit Trucks'}
-              </Button>
-            }
-          </div>
+        <div className="mb-3 flex w-full items-center justify-between gap-2 rounded-md border border-slate-700/50 bg-gradient-to-r from-slate-700/85 via-slate-700/65 to-slate-700/15 px-2.5 py-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-100">Trucks Assigned</p>
+          {isOwner &&
+          <Button
+            type="button"
+            data-screenshot-exclude="true"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
+            data-tour="dispatch-edit-trucks"
+            onClick={onToggleEditingTrucks}>
+            
+              <Pencil className="h-3.5 w-3.5 mr-1" />
+              {isEditingTrucks ? 'Cancel' : 'Edit Trucks'}
+            </Button>
+          }
         </div>
 
         <div className="space-y-3">
