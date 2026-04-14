@@ -783,7 +783,17 @@ export default function DispatchDetailDrawer({
   const shouldShowUnassignedDriverLabel = shouldShowDriverAssignmentControls;
 
   const getTruckDriverSummaryLabel = (truckNumber) => {
-    if (!isOwner) return assignedDriverNameByTruck[truckNumber] || 'Unassigned';
+    if (!isOwner) {
+      const assignedDriverName = assignedDriverNameByTruck[truckNumber];
+      if (assignedDriverName) return assignedDriverName;
+
+      if (isAdmin) {
+        const ownerAssignment = ownerAssignmentByTruck[truckNumber];
+        if (ownerAssignment?.owner_name) return `${ownerAssignment.owner_name} (Owner)`;
+      }
+
+      return 'Unassigned';
+    }
 
     const selectedDriverId = selectedDriverByTruck[truckNumber];
     const selectedOwnerId = parseOwnerSelectionValue(selectedDriverId);
