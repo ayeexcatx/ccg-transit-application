@@ -280,6 +280,22 @@ export const buildDispatchHtml = ({
       color: #991b1b;
     }
 
+    .status-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      max-width: 360px;
+    }
+
+    .status-reason {
+      font-size: 11px;
+      line-height: 1.35;
+      color: #64748b;
+      text-align: right;
+      white-space: pre-wrap;
+    }
+
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -428,33 +444,9 @@ export const buildDispatchHtml = ({
       color: #334155;
     }
 
-    .status-details-box {
-      margin-top: 16px;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      padding: 12px;
-      background: #f8fafc;
-    }
-
-    .status-details-title {
-      font-weight: 700;
-      color: #334155;
-      margin-bottom: 8px;
-    }
-
-    .status-detail-item + .status-detail-item {
-      margin-top: 8px;
-    }
-
-    .status-detail-label {
-      font-weight: 700;
-      color: #334155;
-      margin-bottom: 2px;
-    }
-
-    .status-detail-value {
-      color: #0f172a;
-      white-space: pre-wrap;
+    .info-grid.internal-notes-grid {
+      background: #fef2f2;
+      border-color: #fecaca;
     }
 
     .footer {
@@ -498,30 +490,21 @@ export const buildDispatchHtml = ({
           <h1>CCG Dispatch Record</h1>
           <div class="subtitle">Truck-specific dispatch archive record</div>
         </div>
-        <div class="status-badge ${escapeHtml(statusBadgeClass)}">Status: ${escapeHtml(dispatch?.status || '—')}</div>
-      </div>
-
-      ${(dispatch?.canceled_reason || amendmentHistory.length > 0) ? `
-      <div class="status-details-box">
-        <div class="status-details-title">Dispatch Status Details</div>
-        ${dispatch?.canceled_reason ? `
-        <div class="status-detail-item">
-          <div class="status-detail-label">Cancellation Reason</div>
-          <div class="status-detail-value">${escapeHtml(dispatch.canceled_reason)}</div>
-        </div>
-        ` : ''}
-        ${amendmentHistory.length > 0 ? `
-        <div class="status-detail-item">
-          <div class="status-detail-label">Amendment History</div>
-          <div class="status-detail-value">
-            ${amendmentHistory
-    .map((entry) => `${escapeHtml(formatTimestamp(entry?.amended_at))} — ${escapeHtml(entry?.changes || '—')}`)
-    .join('<br />')}
+        <div class="status-meta">
+          <div class="status-badge ${escapeHtml(statusBadgeClass)}">Status: ${escapeHtml(dispatch?.status || '—')}</div>
+          ${(dispatch?.canceled_reason || amendmentHistory.length > 0) ? `
+          <div class="status-reason">
+            ${dispatch?.canceled_reason ? `Cancellation: ${escapeHtml(dispatch.canceled_reason)}` : ''}
+            ${dispatch?.canceled_reason && amendmentHistory.length > 0 ? '<br />' : ''}
+            ${amendmentHistory.length > 0
+    ? `Amendment${amendmentHistory.length > 1 ? 's' : ''}: ${amendmentHistory
+      .map((entry) => `${escapeHtml(formatTimestamp(entry?.amended_at))} — ${escapeHtml(entry?.changes || '—')}`)
+      .join('<br />')}`
+    : ''}
           </div>
+          ` : ''}
         </div>
-        ` : ''}
       </div>
-      ` : ''}
 
       <div class="summary-grid">
         <div class="summary-card">
@@ -560,7 +543,7 @@ export const buildDispatchHtml = ({
     ${hasInternalNotes ? `
     <section class="section">
       <div class="section-title">Internal Notes</div>
-      <div class="info-grid">
+      <div class="info-grid internal-notes-grid">
         ${dispatch?.owner_visible_internal_notes ? `
         <div class="label">Owner Visible Internal Notes</div>
         <div class="value">${escapeHtml(dispatch.owner_visible_internal_notes)}</div>
