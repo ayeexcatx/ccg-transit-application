@@ -1057,26 +1057,9 @@ export default function DispatchDetailDrawer({
       screenshotRoot.style.boxSizing = 'border-box';
       screenshotRoot.style.zIndex = '-1';
 
-      const summary = document.createElement('div');
-      summary.style.display = 'grid';
-      summary.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
-      summary.style.gap = '8px';
-      summary.style.padding = '12px';
-      summary.style.border = '1px solid #e2e8f0';
-      summary.style.borderRadius = '10px';
-      summary.style.background = '#f8fafc';
-      summary.style.marginBottom = '16px';
-      summary.style.fontSize = '12px';
-      summary.innerHTML = `
-        <div><p style="margin:0;color:#64748b;font-weight:600;">Date</p><p style="margin:2px 0 0;color:#334155;">${displayDate || '—'}</p></div>
-        <div><p style="margin:0;color:#64748b;font-weight:600;">Shift</p><p style="margin:2px 0 0;color:#334155;">${dispatch.shift_time || '—'}</p></div>
-        <div><p style="margin:0;color:#64748b;font-weight:600;">Status</p><p style="margin:2px 0 0;color:#334155;">${dispatch.status || '—'}</p></div>
-      `;
-
       const clone = target.cloneNode(true);
       clone.querySelectorAll('[data-screenshot-exclude="true"]').forEach((node) => node.remove());
 
-      screenshotRoot.appendChild(summary);
       screenshotRoot.appendChild(clone);
       document.body.appendChild(screenshotRoot);
 

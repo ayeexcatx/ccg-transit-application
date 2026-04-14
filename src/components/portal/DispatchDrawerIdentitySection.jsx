@@ -84,7 +84,9 @@ export default function DispatchDrawerIdentitySection({
                       </span>
                       <div className="flex justify-end">
                         {hasTruckSeenStatus(t) &&
-                      <Badge className="border border-emerald-200/80 bg-emerald-50/70 px-1.5 py-0 text-[10px] font-semibold text-emerald-700">
+                      <Badge
+                        data-screenshot-exclude="true"
+                        className="border border-emerald-200/80 bg-emerald-50/70 px-1.5 py-0 text-[10px] font-semibold text-emerald-700">
                             Seen
                           </Badge>
                       }
