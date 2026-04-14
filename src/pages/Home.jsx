@@ -44,6 +44,7 @@ import {
 
 const HOME_ACTIVITY_LIMIT = 8;
 const CONFIRMATION_GROUP_WINDOW_MS = 90 * 1000;
+const OWNER_ACTIVITY_SUPPRESSION_WINDOW_MS = 90 * 1000;
 
 const dateOnly = (v) => (typeof v === 'string' ? v.slice(0, 10) : v);
 const normalizeId = (value) => normalizeVisibilityId(value);
@@ -118,8 +119,25 @@ const buildDispatchContextPieces = (dispatch, trucks = []) => {
   if (dispatch?.date) context.push(formatDispatchDate(dispatch.date));
   const dispatchTime = formatDispatchTime(dispatch?.start_time);
   if (dispatchTime) context.push(dispatchTime);
-  if (dispatch?.job_number) context.push(`Job #${dispatch.job_number}`);
   return context;
+};
+
+const parseSelectedOwnerName = (message) => {
+  const text = String(message || '').trim();
+  if (!text) return '';
+  const ownerSuffixMatch = text.match(/selected\s+(.+?)\s+\(Owner\)/i);
+  if (ownerSuffixMatch?.[1]) return ownerSuffixMatch[1].trim();
+  const genericMatch = text.match(/selected\s+(.+?)(?:\s+as|\s*$)/i);
+  return genericMatch?.[1]?.trim() || '';
+};
+
+const inferConfirmationTypeFromText = (value) => {
+  const text = String(value || '').toLowerCase();
+  if (!text) return '';
+  if (text.includes('cancellation') || text.includes('cancelled') || text.includes('canceled')) return 'cancelled';
+  if (text.includes('amendment') || text.includes('amended')) return 'amended';
+  if (text.includes('dispatch') || text.includes('scheduled')) return 'dispatch';
+  return '';
 };
 
 const formatDispatchDate = (dateValue) => (dateValue ? format(parseISO(dateValue), 'EEE, MMM d, yyyy') : '');
@@ -541,12 +559,14 @@ export default function Home() {
       });
     });
 
+    const ownerLogCandidates = [];
     filteredDispatches.forEach((dispatch) => {
       const dispatchId = normalizeId(dispatch.id);
       (dispatch?.admin_activity_log || []).forEach((entry, entryIndex) => {
         const action = String(entry?.action || '').toLowerCase();
         const actorType = String(entry?.actor_type || '').toLowerCase();
         if (!entry?.timestamp || (!action.startsWith('owner_') && actorType !== 'companyowner')) return;
+        if (action === 'owner_viewed_driver_seen_acknowledgement') return;
 
         const actorName = String(entry?.actor_name || '').trim() || 'Company owner';
         let actionText = '';
@@ -558,23 +578,58 @@ export default function Home() {
         } else if (action === 'owner_changed_driver') {
           actionText = `${actorName} changed a driver assignment`;
         } else if (action === 'owner_selected_owner_assignment') {
-          const selectedOwner = String(entry?.message || '').match(/selected\s+(.+?)\s+\(Owner\)/i)?.[1]?.trim();
-          actionText = `${actorName} selected ${selectedOwner || 'an owner'} as informational assignee`;
+          const selectedOwner = parseSelectedOwnerName(entry?.message);
+          actionText = `${actorName} assigned ${selectedOwner || 'an owner'} as a driver`;
         } else {
           actionText = String(entry?.message || '').trim();
         }
         if (!actionText) return;
+        if (actionText.toLowerCase().includes('owner viewed driver-seen acknowledgement')) return;
 
         const truckFromMessage = parseTruckNumberFromMessage(entry?.message);
         const { activity_timestamp, activity_timestamp_ms } = buildActivityTimestamp(entry?.timestamp, entry?.created_date);
-        events.push({
+        const confirmationType = inferConfirmationTypeFromText(action) || inferConfirmationTypeFromText(entry?.message);
+        const isDuplicateOfGroupedConfirmation = groupedConfirmations.some((group) => (
+          group.dispatchId === dispatchId &&
+          String(group.actor || '').toLowerCase() === actorName.toLowerCase() &&
+          Math.abs(group.activity_timestamp_ms - activity_timestamp_ms) <= CONFIRMATION_GROUP_WINDOW_MS &&
+          (!confirmationType || confirmationType === inferConfirmationTypeFromText(group.confirmationType))
+        ));
+        if (isDuplicateOfGroupedConfirmation) return;
+
+        ownerLogCandidates.push({
           id: `owner-log-${dispatchId}-${entry?.timestamp}-${entryIndex}`,
           dispatchId,
           activity_timestamp,
           activity_timestamp_ms,
+          actorName,
+          action,
           actionText,
           details: buildDispatchContextPieces(dispatch, truckFromMessage ? [truckFromMessage] : []),
         });
+      });
+    });
+
+    const ownerSelectionCandidates = ownerLogCandidates.filter((event) => event.action === 'owner_selected_owner_assignment');
+    ownerLogCandidates.forEach((event) => {
+      const actionTextLower = String(event.actionText || '').toLowerCase();
+      const isGenericTruckUpdate = event.action === 'updated_truck_assignments' || actionTextLower.includes('updated truck assignments');
+      if (isGenericTruckUpdate) {
+        const shouldSuppress = ownerSelectionCandidates.some((selectionEvent) => (
+          selectionEvent.dispatchId === event.dispatchId &&
+          String(selectionEvent.actorName || '').toLowerCase() === String(event.actorName || '').toLowerCase() &&
+          Math.abs(selectionEvent.activity_timestamp_ms - event.activity_timestamp_ms) <= OWNER_ACTIVITY_SUPPRESSION_WINDOW_MS
+        ));
+        if (shouldSuppress) return;
+      }
+
+      events.push({
+        id: event.id,
+        dispatchId: event.dispatchId,
+        activity_timestamp: event.activity_timestamp,
+        activity_timestamp_ms: event.activity_timestamp_ms,
+        actionText: event.actionText,
+        details: event.details,
       });
     });
 
@@ -726,9 +781,10 @@ export default function Home() {
               {recentCompanyActivity.length === 0 ? (
                 <p className="text-sm text-slate-400">No recent company activity yet.</p>
               ) : (
-                <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory">
+                <div className="flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory">
                   {recentCompanyActivity.map((activity) => {
                     const canOpenDispatch = Boolean(activity.dispatchId);
+                    const compactDetails = activity.details.slice(0, 2);
                     return (
                       <button
                         key={activity.id}
@@ -737,15 +793,15 @@ export default function Home() {
                           if (!canOpenDispatch) return;
                           navigate(createPageUrl(buildDispatchOpenPath('Portal', { dispatchId: activity.dispatchId, normalizeId })));
                         }}
-                        className={`min-w-[16rem] max-w-[16rem] text-left rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-3 shadow-sm transition hover:border-slate-300 hover:shadow ${canOpenDispatch ? 'cursor-pointer snap-start' : 'cursor-default snap-start'}`}
+                        className={`min-w-[13.25rem] max-w-[13.25rem] text-left rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-2.5 shadow-sm transition hover:border-slate-300 hover:shadow ${canOpenDispatch ? 'cursor-pointer snap-start' : 'cursor-default snap-start'}`}
                       >
-                        <p className="text-sm font-semibold text-slate-800 leading-5">{activity.actionText}</p>
-                        <div className="mt-2 space-y-1">
-                          {activity.details.map((detail) => (
-                            <p key={detail} className="text-xs text-slate-600 leading-4">{detail}</p>
+                        <p className="text-sm font-semibold text-slate-800 leading-5 line-clamp-2">{activity.actionText}</p>
+                        <div className="mt-1.5 space-y-0.5">
+                          {compactDetails.map((detail) => (
+                            <p key={detail} className="text-[11px] text-slate-600 leading-4 truncate">{detail}</p>
                           ))}
                         </div>
-                        <p className="mt-3 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                        <p className="mt-2 text-[10px] font-medium uppercase tracking-wide text-slate-500">
                           {formatNotificationTime(activity.activity_timestamp, { withYear: true })}
                         </p>
                       </button>
