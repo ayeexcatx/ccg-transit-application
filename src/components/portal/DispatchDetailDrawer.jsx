@@ -1324,9 +1324,11 @@ export default function DispatchDetailDrawer({
               </div>
 
               {/* Activity */}
+              {isAdmin &&
               <DispatchActivityLogSection
                 activityLog={dispatch.admin_activity_log}
                 formatActivityTimestamp={formatActivityTimestamp} />
+              }
 
             </div>
           }

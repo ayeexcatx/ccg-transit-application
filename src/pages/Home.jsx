@@ -42,6 +42,9 @@ import {
   getDriverProtocolState,
 } from '@/services/driverProtocolAcknowledgmentService';
 
+const HOME_ACTIVITY_LIMIT = 8;
+const CONFIRMATION_GROUP_WINDOW_MS = 90 * 1000;
+
 const dateOnly = (v) => (typeof v === 'string' ? v.slice(0, 10) : v);
 const normalizeId = (value) => normalizeVisibilityId(value);
 
@@ -54,6 +57,53 @@ const statusColors = {
 
 const homeSectionCardClass = 'rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden';
 const homeSectionHeaderClass = 'flex min-h-14 items-center justify-between gap-2 border-b border-slate-200 px-4 py-3';
+
+const confirmationActionLabel = (type) => {
+  const normalized = String(type || '').toLowerCase();
+  if (normalized === 'amended') return 'amendment';
+  if (normalized === 'cancelled' || normalized === 'canceled') return 'cancellation';
+  return 'dispatch';
+};
+
+const driverSeenLabel = (notification) => {
+  const normalizedType = String(notification?.notification_type || '').toLowerCase();
+  if (normalizedType === 'driver_amended') return 'amendment';
+  if (normalizedType === 'driver_cancelled') return 'cancellation';
+  return 'dispatch';
+};
+
+const parseDriverSeenActorName = (notification) => {
+  const title = String(notification?.title || '').trim();
+  const message = String(notification?.message || '').trim();
+  const titleMatch = title.match(/^(.+?)\s+has seen/i);
+  if (titleMatch?.[1]) return titleMatch[1].trim();
+
+  const messageLine = message.split('\n')[0] || '';
+  const messageMatch = messageLine.match(/^(.+?)\s+has seen/i);
+  if (messageMatch?.[1]) return messageMatch[1].trim();
+  return 'Driver';
+};
+
+const parseActivityTimestampMs = (value) => {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const parseTruckNumberFromMessage = (message) => {
+  const match = String(message || '').match(/\bTruck\s+([A-Za-z0-9-]+)/i);
+  return match?.[1] || null;
+};
+
+const buildDispatchContextPieces = (dispatch, trucks = []) => {
+  const context = [];
+  if (trucks.length) context.push(`Truck${trucks.length > 1 ? 's' : ''}: ${trucks.join(', ')}`);
+  if (dispatch?.date) context.push(formatDispatchDate(dispatch.date));
+  const dispatchTime = formatDispatchTime(dispatch?.start_time);
+  if (dispatchTime) context.push(dispatchTime);
+  if (dispatch?.job_number) context.push(`Job #${dispatch.job_number}`);
+  return context;
+};
 
 const formatDispatchDate = (dateValue) => (dateValue ? format(parseISO(dateValue), 'EEE, MMM d, yyyy') : '');
 
@@ -405,71 +455,131 @@ export default function Home() {
   const recentCompanyActivity = useMemo(() => {
     if (!isOwner) return [];
     const events = [];
+    const dispatchById = new Map(filteredDispatches.map((dispatch) => [normalizeId(dispatch.id), dispatch]));
 
-    filteredDispatches.forEach((dispatch) => {
-      const jobLabel = dispatch?.job_number ? `Job #${dispatch.job_number}` : `Dispatch ${dispatch.id}`;
-      (dispatch?.admin_activity_log || []).forEach((entry) => {
-        if (!entry?.timestamp || !entry?.message) return;
-        events.push({
-          id: `log-${dispatch.id}-${entry.timestamp}-${entry.action || 'event'}`,
-          timestamp: entry.timestamp,
-          message: entry.message,
-          context: jobLabel,
-        });
+    const groupedConfirmations = [];
+    confirmations.forEach((confirmation) => {
+      const dispatchId = normalizeId(confirmation?.dispatch_id);
+      const dispatch = dispatchById.get(dispatchId);
+      const timestampMs = parseActivityTimestampMs(confirmation?.confirmed_at);
+      const actor = String(confirmation?.confirmed_by_name || '').trim();
+      const confirmationType = String(confirmation?.confirmation_type || '').trim();
+      const truckNumber = String(confirmation?.truck_number || '').trim();
+      if (!dispatch || !dispatchId || !timestampMs || !actor || !confirmationType || !truckNumber) return;
+
+      const key = `${dispatchId}::${confirmationType.toLowerCase()}::${actor.toLowerCase()}`;
+      const existingGroup = groupedConfirmations.find((group) => (
+        group.groupKey === key &&
+        Math.abs(group.timestampMs - timestampMs) <= CONFIRMATION_GROUP_WINDOW_MS
+      ));
+
+      if (existingGroup) {
+        existingGroup.trucks.add(truckNumber);
+        if (timestampMs > existingGroup.timestampMs) {
+          existingGroup.timestampMs = timestampMs;
+          existingGroup.timestamp = confirmation.confirmed_at;
+        }
+        return;
+      }
+
+      groupedConfirmations.push({
+        groupKey: key,
+        dispatchId,
+        dispatch,
+        actor,
+        confirmationType,
+        timestampMs,
+        timestamp: confirmation.confirmed_at,
+        trucks: new Set([truckNumber]),
       });
     });
 
-    confirmations.forEach((confirmation) => {
-      if (!confirmation?.confirmed_at || !confirmation?.confirmed_by_name) return;
+    groupedConfirmations.forEach((group, index) => {
+      const trucks = [...group.trucks].sort();
       events.push({
-        id: `confirmation-${confirmation.id}`,
-        timestamp: confirmation.confirmed_at,
-        message: `${confirmation.confirmed_by_name} confirmed Truck ${confirmation.truck_number} (${confirmation.confirmation_type})`,
-        context: 'Dispatch confirmation',
+        id: `confirmation-group-${group.dispatchId}-${group.confirmationType}-${group.actor}-${index}`,
+        dispatchId: group.dispatchId,
+        timestamp: group.timestamp,
+        timestampMs: group.timestampMs,
+        actionText: `${group.actor} confirmed the ${confirmationActionLabel(group.confirmationType)}`,
+        details: buildDispatchContextPieces(group.dispatch, trucks),
+      });
+    });
+
+    filteredDispatches.forEach((dispatch) => {
+      const dispatchId = normalizeId(dispatch.id);
+      (dispatch?.admin_activity_log || []).forEach((entry, entryIndex) => {
+        const action = String(entry?.action || '').toLowerCase();
+        const actorType = String(entry?.actor_type || '').toLowerCase();
+        if (!entry?.timestamp || (!action.startsWith('owner_') && actorType !== 'companyowner')) return;
+
+        const actorName = String(entry?.actor_name || '').trim() || 'Company owner';
+        let actionText = '';
+        if (action === 'owner_assigned_driver') {
+          const assignedDriver = String(entry?.message || '').match(/assigned driver\s+(.+?)\s+to Truck/i)?.[1]?.trim();
+          actionText = `${actorName} assigned ${assignedDriver || 'a driver'} to the dispatch`;
+        } else if (action === 'owner_removed_driver') {
+          actionText = `${actorName} removed a driver assignment`;
+        } else if (action === 'owner_changed_driver') {
+          actionText = `${actorName} changed a driver assignment`;
+        } else if (action === 'owner_selected_owner_assignment') {
+          const selectedOwner = String(entry?.message || '').match(/selected\s+(.+?)\s+\(Owner\)/i)?.[1]?.trim();
+          actionText = `${actorName} selected ${selectedOwner || 'an owner'} as informational assignee`;
+        } else {
+          actionText = String(entry?.message || '').trim();
+        }
+        if (!actionText) return;
+
+        const truckFromMessage = parseTruckNumberFromMessage(entry?.message);
+        events.push({
+          id: `owner-log-${dispatchId}-${entry?.timestamp}-${entryIndex}`,
+          dispatchId,
+          timestamp: entry.timestamp,
+          timestampMs: parseActivityTimestampMs(entry.timestamp),
+          actionText,
+          details: buildDispatchContextPieces(dispatch, truckFromMessage ? [truckFromMessage] : []),
+        });
       });
     });
 
     notifications
-      .filter((notification) => ['owner_availability_updated', 'driver_dispatch_seen'].includes(notification.notification_category))
-      .reduce((map, notification) => {
-        const category = String(notification?.notification_category || '').toLowerCase();
-        if (category !== 'driver_dispatch_seen') {
-          map.set(`notification-${notification.id}`, notification);
-          return map;
-        }
-
+      .filter((notification) => String(notification?.notification_category || '').toLowerCase() === 'driver_dispatch_seen')
+      .reduce((dedupedMap, notification) => {
+        const dispatchId = normalizeId(notification?.related_dispatch_id);
         const dedupeKey = [
-          category,
-          String(notification.related_dispatch_id || 'none'),
-          String(notification.notification_type || 'none').toLowerCase(),
-          String(notification.dispatch_status_key || '').replace(/:[^:]+$/, ''),
-          Array.isArray(notification.required_trucks) ? [...notification.required_trucks].filter(Boolean).sort().join(',') : '',
+          dispatchId,
+          String(notification?.dispatch_status_key || '').replace(/:[^:]+$/, ''),
+          String(notification?.notification_type || '').toLowerCase(),
+          String(parseDriverSeenActorName(notification)).toLowerCase(),
         ].join(':');
-        const existing = map.get(dedupeKey);
-        if (!existing) {
-          map.set(dedupeKey, notification);
-          return map;
+        const existing = dedupedMap.get(dedupeKey);
+        const candidateTimestamp = parseActivityTimestampMs(notification?.created_date);
+        if (!existing || candidateTimestamp > parseActivityTimestampMs(existing?.created_date)) {
+          dedupedMap.set(dedupeKey, notification);
         }
-
-        const existingTimestamp = new Date(existing.created_date || 0).getTime();
-        const candidateTimestamp = new Date(notification.created_date || 0).getTime();
-        if (candidateTimestamp > existingTimestamp) {
-          map.set(dedupeKey, notification);
-        }
-        return map;
+        return dedupedMap;
       }, new Map())
       .forEach((notification) => {
+        const dispatchId = normalizeId(notification?.related_dispatch_id);
+        const dispatch = dispatchById.get(dispatchId);
+        const actorName = parseDriverSeenActorName(notification);
+        const requiredTrucks = Array.isArray(notification?.required_trucks)
+          ? [...new Set(notification.required_trucks.filter(Boolean).map(String))].sort()
+          : [];
         events.push({
-          id: `notification-${notification.id}`,
+          id: `driver-seen-${notification.id}`,
+          dispatchId,
           timestamp: notification.created_date,
-          message: notification.message || notification.title,
-          context: notification.notification_category === 'owner_availability_updated' ? 'Availability' : 'Driver acknowledgement',
+          timestampMs: parseActivityTimestampMs(notification.created_date),
+          actionText: `Driver ${actorName} viewed the ${driverSeenLabel(notification)}`,
+          details: buildDispatchContextPieces(dispatch, requiredTrucks),
         });
       });
 
     return events
-      .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
-      .slice(0, 8);
+      .filter((event) => event.timestampMs > 0)
+      .sort((a, b) => b.timestampMs - a.timestampMs)
+      .slice(0, HOME_ACTIVITY_LIMIT);
   }, [isOwner, filteredDispatches, confirmations, notifications]);
 
   const handleNotificationClick = async (n) => {
@@ -567,15 +677,37 @@ export default function Home() {
             <div className={`${homeSectionHeaderClass} bg-slate-700`}>
               <h3 className="text-sm font-semibold text-white">Recent Company Activity</h3>
             </div>
-            <CardContent className="p-3 space-y-2">
+            <CardContent className="p-3">
               {recentCompanyActivity.length === 0 ? (
                 <p className="text-sm text-slate-400">No recent company activity yet.</p>
-              ) : recentCompanyActivity.map((activity) => (
-                <div key={activity.id} className="rounded-lg border border-slate-200 px-3 py-2">
-                  <p className="text-sm text-slate-700">{activity.message}</p>
-                  <p className="text-xs text-slate-400 mt-1">{activity.context} • {formatNotificationTime(activity.timestamp, { withYear: true })}</p>
+              ) : (
+                <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory">
+                  {recentCompanyActivity.map((activity) => {
+                    const canOpenDispatch = Boolean(activity.dispatchId);
+                    return (
+                      <button
+                        key={activity.id}
+                        type="button"
+                        onClick={() => {
+                          if (!canOpenDispatch) return;
+                          navigate(createPageUrl(buildDispatchOpenPath('Portal', { dispatchId: activity.dispatchId, normalizeId })));
+                        }}
+                        className={`min-w-[16rem] max-w-[16rem] text-left rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-3 shadow-sm transition hover:border-slate-300 hover:shadow ${canOpenDispatch ? 'cursor-pointer snap-start' : 'cursor-default snap-start'}`}
+                      >
+                        <p className="text-sm font-semibold text-slate-800 leading-5">{activity.actionText}</p>
+                        <div className="mt-2 space-y-1">
+                          {activity.details.map((detail) => (
+                            <p key={detail} className="text-xs text-slate-600 leading-4">{detail}</p>
+                          ))}
+                        </div>
+                        <p className="mt-3 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                          {formatNotificationTime(activity.timestamp, { withYear: true })}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
-              ))}
+              )}
             </CardContent>
           </Card>
         </section>
