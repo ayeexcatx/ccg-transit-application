@@ -28,10 +28,10 @@ function getGeneralNoteLayout(note) {
 }
 
 function getNoteColumnClass(displayWidth, autoShouldSpanWide = false, NOTE_DISPLAY_WIDTH) {
-  if (displayWidth === NOTE_DISPLAY_WIDTH.FULL) return 'col-span-2 lg:col-span-4';
-  if (displayWidth === NOTE_DISPLAY_WIDTH.HALF) return 'col-span-1 lg:col-span-2';
-  if (displayWidth === NOTE_DISPLAY_WIDTH.QUARTER) return 'col-span-1 lg:col-span-1';
-  return autoShouldSpanWide ? 'col-span-2 lg:col-span-2' : 'col-span-2 lg:col-span-1';
+  if (displayWidth === NOTE_DISPLAY_WIDTH.FULL) return 'col-span-4';
+  if (displayWidth === NOTE_DISPLAY_WIDTH.HALF) return 'col-span-2';
+  if (displayWidth === NOTE_DISPLAY_WIDTH.QUARTER) return 'col-span-1';
+  return autoShouldSpanWide ? 'col-span-2' : 'col-span-1';
 }
 
 function getTextSizeClass(textSize) {
@@ -51,7 +51,7 @@ export default function DispatchDrawerTemplateNotesSection({ boxNotes, generalNo
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-100">General Notes</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-.5 md:gap-.5 lg:grid-cols-4">
+      <div className="grid grid-cols-4 gap-.5 md:gap-.5">
         {unifiedNotes.map((n) => {
           const isBoxNote = n.note_type === NOTE_TYPES.BOX;
           const textSizeClass = getTextSizeClass(n.textSize);
