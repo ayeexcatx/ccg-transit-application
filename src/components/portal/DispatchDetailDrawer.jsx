@@ -1057,8 +1057,23 @@ export default function DispatchDetailDrawer({
       screenshotRoot.style.zIndex = '-1';
 
       const clone = target.cloneNode(true);
+      clone.setAttribute('data-screenshot-export-clone', 'true');
       clone.querySelectorAll('[data-screenshot-exclude="true"]').forEach((node) => node.remove());
       clone.querySelectorAll('[data-screenshot-only="true"]').forEach((node) => node.classList.remove('hidden'));
+      const screenshotBadgeStyle = document.createElement('style');
+      screenshotBadgeStyle.textContent = `
+        [data-screenshot-export-clone="true"] [data-screenshot-badge-top="true"],
+        [data-screenshot-export-clone="true"] [data-screenshot-badge-truck="true"] {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 1.25rem;
+          line-height: 1;
+          padding-top: 0.125rem;
+          padding-bottom: 0.125rem;
+        }
+      `;
+      clone.prepend(screenshotBadgeStyle);
 
       screenshotRoot.appendChild(clone);
       document.body.appendChild(screenshotRoot);
@@ -1138,7 +1153,9 @@ export default function DispatchDetailDrawer({
             <div data-screenshot-only="true" className="hidden">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Badge className={`${statusBadgeColors[dispatch.status]} border text-xs font-medium`}>
+                  <Badge
+                    data-screenshot-badge-top="true"
+                    className={`${statusBadgeColors[dispatch.status]} border text-xs font-medium`}>
                     {dispatch.status}
                   </Badge>
                   <span className="text-sm text-slate-600">{dispatch.shift_time}</span>
