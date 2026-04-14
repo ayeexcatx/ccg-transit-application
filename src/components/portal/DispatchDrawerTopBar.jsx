@@ -27,7 +27,7 @@ export default function DispatchDrawerTopBar({
 
   return (
     <div className="sticky top-0 z-10 border-b border-slate-200 bg-white">
-      <div className="px-5 pb-3 pt-4">
+      <div className="px-5 pb-3 pt-4" data-screenshot-exclude="true">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Button
             type="button"
@@ -108,12 +108,14 @@ export default function DispatchDrawerTopBar({
         </SheetHeader>
       </div>
 
+      <div data-screenshot-exclude="true">
       <DispatchDrawerTutorial
         isOwner={isOwner}
         drawerOpen={open}
         dispatchStatus={dispatch?.status}
         session={session}
       />
+      </div>
     </div>
   );
 }
