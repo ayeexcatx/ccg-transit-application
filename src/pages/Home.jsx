@@ -41,6 +41,7 @@ import {
   driverProtocolAckQueryKey,
   getDriverProtocolState,
 } from '@/services/driverProtocolAcknowledgmentService';
+import { parseStatusFromDispatchStatusKey } from '@/components/notifications/confirmationStateHelpers';
 
 const HOME_ACTIVITY_LIMIT = 8;
 const CONFIRMATION_GROUP_WINDOW_MS = 90 * 1000;
@@ -72,6 +73,10 @@ const driverSeenLabel = (notification) => {
   if (normalizedType === 'driver_amended') return 'amended dispatch';
   if (normalizedType === 'driver_cancelled') return 'cancelled dispatch';
   if (normalizedType === 'driver_removed') return 'that the dispatch was removed';
+  const parsedStatus = String(parseStatusFromDispatchStatusKey(notification?.dispatch_status_key) || '').toLowerCase();
+  if (parsedStatus === 'amended') return 'amended dispatch';
+  if (parsedStatus === 'cancelled' || parsedStatus === 'canceled' || parsedStatus === 'cancellation') return 'cancelled dispatch';
+  if (parsedStatus === 'removed') return 'that the dispatch was removed';
   return 'dispatch';
 };
 
@@ -179,6 +184,24 @@ const parseTruckEditFromMessage = (message) => {
       fromTruck: swapWithMatch[2]?.trim() || '',
       toTruck: swapWithMatch[1]?.trim() || '',
       isSwap: true,
+    };
+  }
+
+  const changedMatch = text.match(/(?:changed|updated|replaced)\s+(?:Truck\s+)?([A-Za-z0-9-]+)\s+(?:to|with|for)\s+(?:Truck\s+)?([A-Za-z0-9-]+)/i);
+  if (changedMatch) {
+    return {
+      fromTruck: changedMatch[1]?.trim() || '',
+      toTruck: changedMatch[2]?.trim() || '',
+      isSwap: false,
+    };
+  }
+
+  const fromToMatch = text.match(/from\s+(?:Truck\s+)?([A-Za-z0-9-]+)\s+to\s+(?:Truck\s+)?([A-Za-z0-9-]+)/i);
+  if (fromToMatch) {
+    return {
+      fromTruck: fromToMatch[1]?.trim() || '',
+      toTruck: fromToMatch[2]?.trim() || '',
+      isSwap: false,
     };
   }
 
@@ -556,14 +579,28 @@ export default function Home() {
     }, new Map());
 
     const groupedConfirmations = [];
+    const currentOwnerAccessCodeId = (
+      isOwner &&
+      String(session?.raw_code_type || '').toLowerCase() === 'companyowner' &&
+      session?.id
+    )
+      ? String(session.id)
+      : null;
+    const isSelfOwnerAction = (actorAccessCodeId) => {
+      if (!currentOwnerAccessCodeId || !actorAccessCodeId) return false;
+      return String(actorAccessCodeId) === currentOwnerAccessCodeId;
+    };
+
     confirmations.forEach((confirmation) => {
       const dispatchId = normalizeId(confirmation?.dispatch_id);
       const dispatch = dispatchById.get(dispatchId);
       const { activity_timestamp, activity_timestamp_ms } = buildActivityTimestamp(confirmation?.confirmed_at);
       const actor = String(confirmation?.confirmed_by_name || '').trim();
+      const actorAccessCodeId = confirmation?.access_code_id || confirmation?.confirmed_by_access_code_id || null;
       const confirmationType = String(confirmation?.confirmation_type || '').trim();
       const truckNumber = String(confirmation?.truck_number || '').trim();
       if (!dispatch || !dispatchId || !activity_timestamp_ms || !actor || !confirmationType || !truckNumber) return;
+      if (isSelfOwnerAction(actorAccessCodeId)) return;
 
       const key = `${dispatchId}::${confirmationType.toLowerCase()}::${actor.toLowerCase()}`;
       const existingGroup = groupedConfirmations.find((group) => (
@@ -614,8 +651,10 @@ export default function Home() {
         if (action === 'owner_viewed_driver_seen_acknowledgement') return;
 
         const actorName = String(entry?.actor_name || '').trim() || 'Company owner';
+        const actorAccessCodeId = entry?.actor_id ? String(entry.actor_id) : null;
         const { activity_timestamp, activity_timestamp_ms } = buildActivityTimestamp(entry?.timestamp, entry?.created_date);
         if (!activity_timestamp_ms) return;
+        if (isSelfOwnerAction(actorAccessCodeId)) return;
 
         if (action === 'owner_assigned_driver' || action === 'owner_changed_driver') {
           const { assignee, truckNumber } = parseDriverAssignmentFromMessage(entry?.message);
@@ -654,8 +693,8 @@ export default function Home() {
 
         if (action === 'owner_updated_truck_assignments' || action === 'owner_swapped_trucks' || action === 'owner_swap_received_truck') {
           const { fromTruck, toTruck, isSwap } = parseTruckEditFromMessage(entry?.message);
-          if (!fromTruck || !toTruck) return;
-          const normalizedPair = [fromTruck, toTruck].sort((a, b) => a.localeCompare(b)).join(':');
+          const hasTruckPair = Boolean(fromTruck && toTruck);
+          const normalizedPair = hasTruckPair ? [fromTruck, toTruck].sort((a, b) => a.localeCompare(b)).join(':') : '';
           ownerLogCandidates.push({
             id: `owner-truck-edit-${dispatchId}-${entry?.timestamp}-${entryIndex}`,
             dispatchId,
@@ -665,10 +704,16 @@ export default function Home() {
             action,
             actionText: isSwap
               ? `${actorName} swapped Truck ${fromTruck} for ${toTruck}`
-              : `${actorName} changed Truck ${fromTruck} to ${toTruck}`,
+              : hasTruckPair
+                ? `${actorName} changed Truck ${fromTruck} to ${toTruck}`
+                : `${actorName} updated truck assignments on the dispatch`,
             details: buildDispatchContextPieces(dispatch),
-            dedupeClusterKey: `${dispatchId}:${actorName.toLowerCase()}:${normalizedPair}:${Math.round(activity_timestamp_ms / OWNER_ACTIVITY_SUPPRESSION_WINDOW_MS)}`,
+            dedupeClusterKey: hasTruckPair
+              ? `${dispatchId}:${actorName.toLowerCase()}:${normalizedPair}:${Math.round(activity_timestamp_ms / OWNER_ACTIVITY_SUPPRESSION_WINDOW_MS)}`
+              : `${dispatchId}:${actorName.toLowerCase()}:generic_truck_update:${Math.round(activity_timestamp_ms / OWNER_ACTIVITY_SUPPRESSION_WINDOW_MS)}`,
             isGenericTruckUpdate: action === 'owner_updated_truck_assignments',
+            isSwap,
+            hasTruckPair,
           });
         }
 
@@ -682,8 +727,8 @@ export default function Home() {
     );
     const seenTruckEditClusterKeys = new Set();
     ownerLogCandidates.forEach((event) => {
-      if (event.isGenericTruckUpdate && specificClusterKeys.has(event.dedupeClusterKey)) return;
-      if (event.action === 'owner_swapped_trucks' || event.action === 'owner_swap_received_truck') {
+      if (event.isGenericTruckUpdate && event.hasTruckPair && specificClusterKeys.has(event.dedupeClusterKey)) return;
+      if (event.isSwap || event.action === 'owner_swapped_trucks' || event.action === 'owner_swap_received_truck') {
         if (seenTruckEditClusterKeys.has(event.dedupeClusterKey)) return;
         seenTruckEditClusterKeys.add(event.dedupeClusterKey);
       }
@@ -742,7 +787,7 @@ export default function Home() {
       .filter((event) => event.activity_timestamp_ms > 0)
       .sort((a, b) => b.activity_timestamp_ms - a.activity_timestamp_ms)
       .slice(0, HOME_ACTIVITY_LIMIT);
-  }, [isOwner, filteredDispatches, confirmations, notifications, driverSeenLogs]);
+  }, [isOwner, filteredDispatches, confirmations, notifications, driverSeenLogs, session?.id, session?.raw_code_type]);
 
   const handleNotificationClick = async (n) => {
     if (!session) return;
