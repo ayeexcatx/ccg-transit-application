@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, addDays, addWeeks, addMonths, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
+import { format, addDays, addWeeks, addMonths, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isBefore, startOfDay } from 'date-fns';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,8 +44,12 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
   const [companySearch, setCompanySearch] = useState('');
   const [adminCompanyId, setAdminCompanyId] = useState('');
   const [requestFeedback, setRequestFeedback] = useState('');
+  const [pastDateAlertOpen, setPastDateAlertOpen] = useState(false);
+  const [blockedPastDate, setBlockedPastDate] = useState(null);
 
   const selectedCompanyId = canSelectCompany ? adminCompanyId : companyId;
+  const todayStart = startOfDay(new Date());
+  const isPastDate = (date) => isBefore(startOfDay(date), todayStart);
 
   const { data: companies = [] } = useQuery({
     queryKey: ['companies'],
@@ -204,6 +208,12 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
   };
 
   const openOverrideEditorForDate = (date) => {
+    if (isPastDate(date)) {
+      setBlockedPastDate(date);
+      setPastDateAlertOpen(true);
+      return;
+    }
+
     setOverrideEditingDate(date);
     setDateOverrideForm(getDateEditInitialState(date));
     setFormError('');
@@ -259,6 +269,11 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
 
   const saveDateOverride = async () => {
     if (!overrideEditingDate || !selectedCompanyId || !dateOverrideForm) return;
+    if (isPastDate(overrideEditingDate)) {
+      setBlockedPastDate(overrideEditingDate);
+      setPastDateAlertOpen(true);
+      return;
+    }
 
     for (const shift of ['Day', 'Night']) {
       const shiftState = dateOverrideForm[shift];
@@ -292,6 +307,12 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
   };
 
   const clearDateOverrides = async (date) => {
+    if (isPastDate(date)) {
+      setBlockedPastDate(date);
+      setPastDateAlertOpen(true);
+      return;
+    }
+
     await Promise.all(
       ['Day', 'Night'].map((shift) => clearOverrideMutation.mutateAsync({ date: toDateKey(date), shift }))
     );
@@ -404,7 +425,10 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
             key={`${keyPrefix}-${shift}-${toDateKey(date)}`}
             type="button"
             onClick={() => openOverrideEditorForDate(date)}
-            className={`rounded border p-1 text-[10px] font-semibold ${faded ? 'bg-slate-50/70 border-slate-200' : 'bg-white border-slate-300'} hover:bg-slate-50`}>
+            className={`rounded border p-1 text-[10px] font-semibold ${
+            isPastDate(date) ?
+            'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' :
+            `${faded ? 'bg-slate-50/70 border-slate-200' : 'bg-white border-slate-300'} hover:bg-slate-50`}`}>
 
                 <span className={shiftDisplay.className}>{shiftDisplay.label}</span>
               </button>);
@@ -557,6 +581,25 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
           {renderWeeklyDefaultsMatrix()}
         </>
       }
+
+      <Dialog
+        open={pastDateAlertOpen}
+        onOpenChange={setPastDateAlertOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Date unavailable for editing</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-600">
+            This date has already passed. Please select a future date to edit or update.
+          </p>
+          {blockedPastDate &&
+          <p className="text-xs text-slate-500">{format(blockedPastDate, 'EEE, MMM d, yyyy')}</p>
+          }
+          <div className="flex justify-end">
+            <Button onClick={() => setPastDateAlertOpen(false)}>OK</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={!!overrideEditingDate}
