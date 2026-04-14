@@ -1117,7 +1117,6 @@ export default function DispatchDetailDrawer({
         className="w-full sm:max-w-lg overflow-y-auto p-0"
         data-tutorial-scroll="drawer">
         
-        <div ref={screenshotSectionRef} className="bg-white">
         <DispatchDrawerTopBar
           dispatch={dispatch}
           session={session}
@@ -1134,10 +1133,8 @@ export default function DispatchDetailDrawer({
           onAdminEditDispatch={() => onAdminEditDispatch?.(dispatch)} />
         
 
-
-
         <div className="px-5 py-5 space-y-6">
-          <div className="space-y-6">
+          <div ref={screenshotSectionRef} className="space-y-6 bg-white">
             <DispatchDrawerIdentitySection
               dispatch={dispatch}
               isAdmin={isAdmin}
@@ -1318,7 +1315,6 @@ export default function DispatchDetailDrawer({
 
             </div>
           }
-        </div>
         </div>
         <Dialog open={isInternalNotesDialogOpen} onOpenChange={setIsInternalNotesDialogOpen}>
           <DialogContent className="sm:max-w-lg">
