@@ -41,7 +41,6 @@ import {
   driverProtocolAckQueryKey,
   getDriverProtocolState,
 } from '@/services/driverProtocolAcknowledgmentService';
-import { parseStatusFromDispatchStatusKey } from '@/components/notifications/confirmationStateHelpers';
 
 const HOME_ACTIVITY_LIMIT = 8;
 const CONFIRMATION_GROUP_WINDOW_MS = 90 * 1000;
@@ -66,55 +65,6 @@ const confirmationActionLabel = (type) => {
   if (normalized === 'amended') return 'amended dispatch';
   if (normalized === 'cancelled' || normalized === 'canceled' || normalized === 'cancellation') return 'cancellation';
   return 'dispatch';
-};
-
-const normalizeDispatchLifecycleState = (value) => {
-  const normalized = String(value || '').toLowerCase();
-  if (!normalized) return '';
-  if (normalized.includes('removed')) return 'removed';
-  if (normalized.includes('cancelled') || normalized.includes('canceled') || normalized.includes('cancellation')) return 'cancelled';
-  if (normalized.includes('amended')) return 'amended';
-  if (normalized.includes('dispatched')) return 'dispatched';
-  if (normalized.includes('scheduled') || normalized.includes('schedule')) return 'scheduled';
-  return '';
-};
-
-const getDriverViewLabel = (notification, dispatch) => {
-  const lifecycleStateFromNotificationType = normalizeDispatchLifecycleState(notification?.notification_type);
-  if (lifecycleStateFromNotificationType) {
-    if (lifecycleStateFromNotificationType === 'amended') return 'viewed the amended dispatch';
-    if (lifecycleStateFromNotificationType === 'cancelled') return 'viewed the cancelled dispatch';
-    if (lifecycleStateFromNotificationType === 'removed') return 'viewed that the dispatch was removed';
-    return 'viewed the dispatch';
-  }
-
-  const lifecycleStateFromDispatchStatusKey = normalizeDispatchLifecycleState(
-    parseStatusFromDispatchStatusKey(notification?.dispatch_status_key)
-  );
-  if (lifecycleStateFromDispatchStatusKey) {
-    if (lifecycleStateFromDispatchStatusKey === 'amended') return 'viewed the amended dispatch';
-    if (lifecycleStateFromDispatchStatusKey === 'cancelled') return 'viewed the cancelled dispatch';
-    if (lifecycleStateFromDispatchStatusKey === 'removed') return 'viewed that the dispatch was removed';
-    return 'viewed the dispatch';
-  }
-
-  const lifecycleStateFromDispatch = normalizeDispatchLifecycleState(dispatch?.status);
-  if (lifecycleStateFromDispatch === 'amended') return 'viewed the amended dispatch';
-  if (lifecycleStateFromDispatch === 'cancelled') return 'viewed the cancelled dispatch';
-  if (lifecycleStateFromDispatch === 'removed') return 'viewed that the dispatch was removed';
-  return 'viewed the dispatch';
-};
-
-const parseDriverSeenActorName = (notification) => {
-  const title = String(notification?.title || '').trim();
-  const message = String(notification?.message || '').trim();
-  const titleMatch = title.match(/^(.+?)\s+has seen/i);
-  if (titleMatch?.[1]) return titleMatch[1].trim();
-
-  const messageLine = message.split('\n')[0] || '';
-  const messageMatch = messageLine.match(/^(.+?)\s+has seen/i);
-  if (messageMatch?.[1]) return messageMatch[1].trim();
-  return 'Driver';
 };
 
 const parseActivityTimestampMs = (value) => {
@@ -436,15 +386,6 @@ export default function Home() {
     queryFn: () => base44.entities.CompanyAvailabilityOverride.filter({ company_id: ownerWorkspaceCompanyId }, '-created_date', 1000),
     enabled: isOwner && !!ownerWorkspaceCompanyId,
   });
-  const { data: driverSeenLogs = [] } = useQuery({
-    queryKey: ['home-owner-driver-seen-logs', ownerWorkspaceCompanyId],
-    queryFn: () => base44.entities.DriverDispatchLog.filter({
-      company_id: ownerWorkspaceCompanyId,
-      event_type: 'driver_dispatch_seen',
-    }, '-seen_at', 1000),
-    enabled: isOwner && !!ownerWorkspaceCompanyId,
-  });
-
   const { latestUnresolvedAvailabilityRequest } = useMemo(() => {
     const latestAvailabilityUpdateMs = getLatestAvailabilityUpdateMs({
       defaults: ownerAvailabilityDefaults,
@@ -592,16 +533,6 @@ export default function Home() {
     if (!isOwner) return [];
     const events = [];
     const dispatchById = new Map(filteredDispatches.map((dispatch) => [normalizeId(dispatch.id), dispatch]));
-    const driverSeenAtByNotificationId = (driverSeenLogs || []).reduce((accumulator, entry) => {
-      const notificationId = normalizeId(entry?.notification_id);
-      if (!notificationId) return accumulator;
-      const existing = accumulator.get(notificationId);
-      const candidateTimestamp = buildActivityTimestamp(entry?.seen_at, entry?.created_date, entry?.updated_date);
-      if (!existing || candidateTimestamp.activity_timestamp_ms > existing.activity_timestamp_ms) {
-        accumulator.set(notificationId, candidateTimestamp);
-      }
-      return accumulator;
-    }, new Map());
 
     const groupedConfirmations = [];
     const currentOwnerAccessCodeId = (
@@ -768,51 +699,11 @@ export default function Home() {
       });
     });
 
-    notifications
-      .filter((notification) => String(notification?.notification_category || '').toLowerCase() === 'driver_dispatch_seen')
-      .reduce((dedupedMap, notification) => {
-        const dispatchId = normalizeId(notification?.related_dispatch_id);
-        const notificationTimestamp = driverSeenAtByNotificationId.get(normalizeId(notification?.id));
-        const canonicalDriverSeenTimestamp = buildActivityTimestamp(
-          notificationTimestamp?.activity_timestamp,
-          notification?.created_date,
-          notification?.created_at,
-        );
-        const dedupeKey = [
-          dispatchId,
-          String(notification?.dispatch_status_key || '').replace(/:[^:]+$/, ''),
-          String(notification?.notification_type || '').toLowerCase(),
-          String(parseDriverSeenActorName(notification)).toLowerCase(),
-        ].join(':');
-        const existing = dedupedMap.get(dedupeKey);
-        if (!existing || canonicalDriverSeenTimestamp.activity_timestamp_ms > existing.activity_timestamp_ms) {
-          dedupedMap.set(dedupeKey, {
-            notification,
-            activity_timestamp: canonicalDriverSeenTimestamp.activity_timestamp,
-            activity_timestamp_ms: canonicalDriverSeenTimestamp.activity_timestamp_ms,
-          });
-        }
-        return dedupedMap;
-      }, new Map())
-      .forEach(({ notification, activity_timestamp, activity_timestamp_ms }) => {
-        const dispatchId = normalizeId(notification?.related_dispatch_id);
-        const dispatch = dispatchById.get(dispatchId);
-        const actorName = parseDriverSeenActorName(notification);
-        events.push({
-          id: `driver-seen-${notification.id}`,
-          dispatchId,
-          activity_timestamp,
-          activity_timestamp_ms,
-          actionText: `Driver ${actorName} ${getDriverViewLabel(notification, dispatch)}`,
-          details: buildDispatchContextPieces(dispatch),
-        });
-      });
-
     return events
       .filter((event) => event.activity_timestamp_ms > 0)
       .sort((a, b) => b.activity_timestamp_ms - a.activity_timestamp_ms)
       .slice(0, HOME_ACTIVITY_LIMIT);
-  }, [isOwner, filteredDispatches, confirmations, notifications, driverSeenLogs, session?.id, session?.raw_code_type]);
+  }, [isOwner, filteredDispatches, confirmations, session?.id, session?.raw_code_type]);
 
   const handleNotificationClick = async (n) => {
     if (!session) return;
