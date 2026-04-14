@@ -90,6 +90,23 @@ const parseActivityTimestampMs = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const buildActivityTimestamp = (...values) => {
+  for (const value of values) {
+    const timestampMs = parseActivityTimestampMs(value);
+    if (timestampMs > 0) {
+      return {
+        activity_timestamp: value,
+        activity_timestamp_ms: timestampMs,
+      };
+    }
+  }
+
+  return {
+    activity_timestamp: null,
+    activity_timestamp_ms: 0,
+  };
+};
+
 const parseTruckNumberFromMessage = (message) => {
   const match = String(message || '').match(/\bTruck\s+([A-Za-z0-9-]+)/i);
   return match?.[1] || null;
@@ -308,6 +325,14 @@ export default function Home() {
     queryFn: () => base44.entities.CompanyAvailabilityOverride.filter({ company_id: ownerWorkspaceCompanyId }, '-created_date', 1000),
     enabled: isOwner && !!ownerWorkspaceCompanyId,
   });
+  const { data: driverSeenLogs = [] } = useQuery({
+    queryKey: ['home-owner-driver-seen-logs', ownerWorkspaceCompanyId],
+    queryFn: () => base44.entities.DriverDispatchLog.filter({
+      company_id: ownerWorkspaceCompanyId,
+      event_type: 'driver_dispatch_seen',
+    }, '-seen_at', 1000),
+    enabled: isOwner && !!ownerWorkspaceCompanyId,
+  });
 
   const { latestUnresolvedAvailabilityRequest } = useMemo(() => {
     const latestAvailabilityUpdateMs = getLatestAvailabilityUpdateMs({
@@ -456,28 +481,38 @@ export default function Home() {
     if (!isOwner) return [];
     const events = [];
     const dispatchById = new Map(filteredDispatches.map((dispatch) => [normalizeId(dispatch.id), dispatch]));
+    const driverSeenAtByNotificationId = (driverSeenLogs || []).reduce((accumulator, entry) => {
+      const notificationId = normalizeId(entry?.notification_id);
+      if (!notificationId) return accumulator;
+      const existing = accumulator.get(notificationId);
+      const candidateTimestamp = buildActivityTimestamp(entry?.seen_at, entry?.created_date, entry?.updated_date);
+      if (!existing || candidateTimestamp.activity_timestamp_ms > existing.activity_timestamp_ms) {
+        accumulator.set(notificationId, candidateTimestamp);
+      }
+      return accumulator;
+    }, new Map());
 
     const groupedConfirmations = [];
     confirmations.forEach((confirmation) => {
       const dispatchId = normalizeId(confirmation?.dispatch_id);
       const dispatch = dispatchById.get(dispatchId);
-      const timestampMs = parseActivityTimestampMs(confirmation?.confirmed_at);
+      const { activity_timestamp, activity_timestamp_ms } = buildActivityTimestamp(confirmation?.confirmed_at);
       const actor = String(confirmation?.confirmed_by_name || '').trim();
       const confirmationType = String(confirmation?.confirmation_type || '').trim();
       const truckNumber = String(confirmation?.truck_number || '').trim();
-      if (!dispatch || !dispatchId || !timestampMs || !actor || !confirmationType || !truckNumber) return;
+      if (!dispatch || !dispatchId || !activity_timestamp_ms || !actor || !confirmationType || !truckNumber) return;
 
       const key = `${dispatchId}::${confirmationType.toLowerCase()}::${actor.toLowerCase()}`;
       const existingGroup = groupedConfirmations.find((group) => (
         group.groupKey === key &&
-        Math.abs(group.timestampMs - timestampMs) <= CONFIRMATION_GROUP_WINDOW_MS
+        Math.abs(group.activity_timestamp_ms - activity_timestamp_ms) <= CONFIRMATION_GROUP_WINDOW_MS
       ));
 
       if (existingGroup) {
         existingGroup.trucks.add(truckNumber);
-        if (timestampMs > existingGroup.timestampMs) {
-          existingGroup.timestampMs = timestampMs;
-          existingGroup.timestamp = confirmation.confirmed_at;
+        if (activity_timestamp_ms > existingGroup.activity_timestamp_ms) {
+          existingGroup.activity_timestamp_ms = activity_timestamp_ms;
+          existingGroup.activity_timestamp = activity_timestamp;
         }
         return;
       }
@@ -488,8 +523,8 @@ export default function Home() {
         dispatch,
         actor,
         confirmationType,
-        timestampMs,
-        timestamp: confirmation.confirmed_at,
+        activity_timestamp,
+        activity_timestamp_ms,
         trucks: new Set([truckNumber]),
       });
     });
@@ -499,8 +534,8 @@ export default function Home() {
       events.push({
         id: `confirmation-group-${group.dispatchId}-${group.confirmationType}-${group.actor}-${index}`,
         dispatchId: group.dispatchId,
-        timestamp: group.timestamp,
-        timestampMs: group.timestampMs,
+        activity_timestamp: group.activity_timestamp,
+        activity_timestamp_ms: group.activity_timestamp_ms,
         actionText: `${group.actor} confirmed the ${confirmationActionLabel(group.confirmationType)}`,
         details: buildDispatchContextPieces(group.dispatch, trucks),
       });
@@ -531,11 +566,12 @@ export default function Home() {
         if (!actionText) return;
 
         const truckFromMessage = parseTruckNumberFromMessage(entry?.message);
+        const { activity_timestamp, activity_timestamp_ms } = buildActivityTimestamp(entry?.timestamp, entry?.created_date);
         events.push({
           id: `owner-log-${dispatchId}-${entry?.timestamp}-${entryIndex}`,
           dispatchId,
-          timestamp: entry.timestamp,
-          timestampMs: parseActivityTimestampMs(entry.timestamp),
+          activity_timestamp,
+          activity_timestamp_ms,
           actionText,
           details: buildDispatchContextPieces(dispatch, truckFromMessage ? [truckFromMessage] : []),
         });
@@ -546,6 +582,12 @@ export default function Home() {
       .filter((notification) => String(notification?.notification_category || '').toLowerCase() === 'driver_dispatch_seen')
       .reduce((dedupedMap, notification) => {
         const dispatchId = normalizeId(notification?.related_dispatch_id);
+        const notificationTimestamp = driverSeenAtByNotificationId.get(normalizeId(notification?.id));
+        const canonicalDriverSeenTimestamp = buildActivityTimestamp(
+          notificationTimestamp?.activity_timestamp,
+          notification?.created_date,
+          notification?.created_at,
+        );
         const dedupeKey = [
           dispatchId,
           String(notification?.dispatch_status_key || '').replace(/:[^:]+$/, ''),
@@ -553,13 +595,16 @@ export default function Home() {
           String(parseDriverSeenActorName(notification)).toLowerCase(),
         ].join(':');
         const existing = dedupedMap.get(dedupeKey);
-        const candidateTimestamp = parseActivityTimestampMs(notification?.created_date);
-        if (!existing || candidateTimestamp > parseActivityTimestampMs(existing?.created_date)) {
-          dedupedMap.set(dedupeKey, notification);
+        if (!existing || canonicalDriverSeenTimestamp.activity_timestamp_ms > existing.activity_timestamp_ms) {
+          dedupedMap.set(dedupeKey, {
+            notification,
+            activity_timestamp: canonicalDriverSeenTimestamp.activity_timestamp,
+            activity_timestamp_ms: canonicalDriverSeenTimestamp.activity_timestamp_ms,
+          });
         }
         return dedupedMap;
       }, new Map())
-      .forEach((notification) => {
+      .forEach(({ notification, activity_timestamp, activity_timestamp_ms }) => {
         const dispatchId = normalizeId(notification?.related_dispatch_id);
         const dispatch = dispatchById.get(dispatchId);
         const actorName = parseDriverSeenActorName(notification);
@@ -569,18 +614,18 @@ export default function Home() {
         events.push({
           id: `driver-seen-${notification.id}`,
           dispatchId,
-          timestamp: notification.created_date,
-          timestampMs: parseActivityTimestampMs(notification.created_date),
+          activity_timestamp,
+          activity_timestamp_ms,
           actionText: `Driver ${actorName} viewed the ${driverSeenLabel(notification)}`,
           details: buildDispatchContextPieces(dispatch, requiredTrucks),
         });
       });
 
     return events
-      .filter((event) => event.timestampMs > 0)
-      .sort((a, b) => b.timestampMs - a.timestampMs)
+      .filter((event) => event.activity_timestamp_ms > 0)
+      .sort((a, b) => b.activity_timestamp_ms - a.activity_timestamp_ms)
       .slice(0, HOME_ACTIVITY_LIMIT);
-  }, [isOwner, filteredDispatches, confirmations, notifications]);
+  }, [isOwner, filteredDispatches, confirmations, notifications, driverSeenLogs]);
 
   const handleNotificationClick = async (n) => {
     if (!session) return;
@@ -701,7 +746,7 @@ export default function Home() {
                           ))}
                         </div>
                         <p className="mt-3 text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                          {formatNotificationTime(activity.timestamp, { withYear: true })}
+                          {formatNotificationTime(activity.activity_timestamp, { withYear: true })}
                         </p>
                       </button>
                     );
