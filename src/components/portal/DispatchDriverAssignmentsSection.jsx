@@ -53,7 +53,7 @@ export default function DispatchDriverAssignmentsSection({
       </p>
       {hasOwnerChoices && (
         <p className="text-xs text-slate-500">
-          Owner options are informational labels only and do not trigger driver notifications.
+          Selecting an owner as a driver does not trigger driver assignment notifications for that driver.
         </p>
       )}
       {eligibleDrivers.length === 0 && !hasOwnerChoices && (

@@ -42,6 +42,11 @@ function buildSharedOwnerNotificationEventKey(notification) {
     : '';
   const message = String(notification?.message || '').trim().toLowerCase();
   const title = String(notification?.title || '').trim().toLowerCase();
+  const isDriverSeenSharedOwnerEvent = category === 'driver_dispatch_seen' && recipientType === 'accesscode';
+
+  if (isDriverSeenSharedOwnerEvent) {
+    return `owner:${companyId}:driver_dispatch_seen:${dispatchId}:${notificationType}:${normalizedDispatchStatusKey}:${requiredTrucks}`;
+  }
 
   if (recipientType !== 'accesscode') {
     return `${recipientType}:${category}:${dispatchId}:${notificationType}:${normalizedDispatchStatusKey}:${requiredTrucks}:${message}:${title}`;
@@ -251,12 +256,14 @@ export function useOwnerNotifications(session) {
       recipient_type: 'AccessCode',
       notification_category: target.notification_category,
       related_dispatch_id: target.related_dispatch_id || null,
-      dispatch_status_key: target.dispatch_status_key || null,
     }, '-created_date', 500);
+    const relatedSharedOwnerEntries = (related || []).filter((entry) =>
+      buildSharedOwnerNotificationEventKey(entry) === sharedOwnerEventKey
+    );
     const ownerReadAt = new Date().toISOString();
     const ownerReadByName = getSessionActorName(session);
 
-    await Promise.all((related || [])
+    await Promise.all(relatedSharedOwnerEntries
       .filter((entry) => entry.read_flag !== true)
       .map((entry) => base44.entities.Notification.update(entry.id, {
         read_flag: true,

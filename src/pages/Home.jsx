@@ -431,6 +431,33 @@ export default function Home() {
 
     notifications
       .filter((notification) => ['owner_availability_updated', 'driver_dispatch_seen'].includes(notification.notification_category))
+      .reduce((map, notification) => {
+        const category = String(notification?.notification_category || '').toLowerCase();
+        if (category !== 'driver_dispatch_seen') {
+          map.set(`notification-${notification.id}`, notification);
+          return map;
+        }
+
+        const dedupeKey = [
+          category,
+          String(notification.related_dispatch_id || 'none'),
+          String(notification.notification_type || 'none').toLowerCase(),
+          String(notification.dispatch_status_key || '').replace(/:[^:]+$/, ''),
+          Array.isArray(notification.required_trucks) ? [...notification.required_trucks].filter(Boolean).sort().join(',') : '',
+        ].join(':');
+        const existing = map.get(dedupeKey);
+        if (!existing) {
+          map.set(dedupeKey, notification);
+          return map;
+        }
+
+        const existingTimestamp = new Date(existing.created_date || 0).getTime();
+        const candidateTimestamp = new Date(notification.created_date || 0).getTime();
+        if (candidateTimestamp > existingTimestamp) {
+          map.set(dedupeKey, notification);
+        }
+        return map;
+      }, new Map())
       .forEach((notification) => {
         events.push({
           id: `notification-${notification.id}`,
