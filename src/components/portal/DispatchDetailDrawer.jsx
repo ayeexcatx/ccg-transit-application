@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,9 +11,7 @@ import { format, parseISO } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import {
-  canCompanyOwnerViewAssignmentsAndTimeLogs } from
-'./statusConfig';
+import { canCompanyOwnerViewAssignmentsAndTimeLogs, statusBadgeColors } from './statusConfig';
 import { filterTemplateNotesForDispatch, NOTE_DISPLAY_WIDTH, NOTE_TYPES, normalizeTemplateNote } from '@/lib/templateNotes';
 import { calculateWorkedHours, formatTime24h, formatWorkedHours } from '@/lib/timeLogs';
 import { toast } from 'sonner';
@@ -1059,6 +1058,7 @@ export default function DispatchDetailDrawer({
 
       const clone = target.cloneNode(true);
       clone.querySelectorAll('[data-screenshot-exclude="true"]').forEach((node) => node.remove());
+      clone.querySelectorAll('[data-screenshot-only="true"]').forEach((node) => node.classList.remove('hidden'));
 
       screenshotRoot.appendChild(clone);
       document.body.appendChild(screenshotRoot);
@@ -1135,6 +1135,18 @@ export default function DispatchDetailDrawer({
 
         <div className="px-5 py-5 space-y-6">
           <div ref={screenshotSectionRef} className="space-y-6 bg-white">
+            <div data-screenshot-only="true" className="hidden">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Badge className={`${statusBadgeColors[dispatch.status]} border text-xs font-medium`}>
+                    {dispatch.status}
+                  </Badge>
+                  <span className="text-sm text-slate-600">{dispatch.shift_time}</span>
+                </div>
+                <span className="text-lg font-bold text-slate-800">{displayDate}</span>
+              </div>
+              <div className="mt-3 border-t border-slate-200" />
+            </div>
             <DispatchDrawerIdentitySection
               dispatch={dispatch}
               isAdmin={isAdmin}
