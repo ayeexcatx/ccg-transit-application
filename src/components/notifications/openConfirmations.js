@@ -6,19 +6,15 @@ import {
 } from './confirmationStateHelpers';
 import { NON_CONFIRMATION_NOTIFICATION_CATEGORIES } from './ownerActionStatus';
 
-const dedupeTruckRows = (rows) => {
-  const seen = new Set();
-  return rows.filter((row) => {
-    const key = `${row.notificationId}:${row.truckNumber}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-};
-
 const parseStatusFromDedupKey = (notification) => parseStatusFromDispatchStatusKey(notification?.dispatch_status_key);
 const normalizeId = (value) => String(value ?? '').trim();
 const normalizeStatus = (value) => String(value ?? '').trim();
+
+function parseRowTimestamp(value) {
+  if (!value) return Number.POSITIVE_INFINITY;
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+}
 
 const resolveRequiredTrucks = (notification, dispatch, ownerScopeTrucks = []) => {
   const baseRequired = Array.isArray(notification?.required_trucks)
@@ -39,6 +35,39 @@ const resolveRequiredTrucks = (notification, dispatch, ownerScopeTrucks = []) =>
     ownerAllowedTrucks: ownerScopeTrucks,
   });
 };
+
+function collapseCompanyPendingRows(rows = []) {
+  const grouped = new Map();
+
+  (rows || []).forEach((row) => {
+    const groupKey = [
+      normalizeId(row.dispatchId),
+      normalizeId(row.companyId),
+      normalizeStatus(row.status),
+      String(row.truckNumber || '').trim(),
+    ].join(':');
+
+    const existing = grouped.get(groupKey);
+    if (!existing) {
+      grouped.set(groupKey, row);
+      return;
+    }
+
+    const existingTimestamp = parseRowTimestamp(existing.createdAt);
+    const candidateTimestamp = parseRowTimestamp(row.createdAt);
+
+    if (candidateTimestamp < existingTimestamp) {
+      grouped.set(groupKey, {
+        ...existing,
+        id: row.id,
+        notificationId: row.notificationId,
+        createdAt: row.createdAt,
+      });
+    }
+  });
+
+  return [...grouped.values()];
+}
 
 export function buildOpenConfirmationRows({
   notifications = [],
@@ -91,6 +120,7 @@ export function buildOpenConfirmationRows({
         id: `${notification.id}:${truckNumber}`,
         notificationId: notification.id,
         dispatchId: dispatch.id,
+        companyId: dispatch.company_id,
         status,
         companyName,
         dispatchDate: dispatch.date,
@@ -103,7 +133,7 @@ export function buildOpenConfirmationRows({
     });
   });
 
-  return dedupeTruckRows(rows).sort((a, b) => {
+  return collapseCompanyPendingRows(rows).sort((a, b) => {
     const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
     return bTime - aTime;
