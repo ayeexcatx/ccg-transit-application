@@ -15,7 +15,7 @@ import DeleteConfirmationDialog from '@/components/admin/DeleteConfirmationDialo
 import { Building2, Plus, Pencil, Trash2, X, TrendingUp, TrendingDown, Minus, MessageSquare, Smartphone, UserRound, Truck, ChevronRight, Briefcase } from 'lucide-react';
 import { format } from 'date-fns';
 import { calculateCompanyScore, SCORING_EVENT_TYPES, SCORING_PERIODS } from '@/lib/companyScoring';
-import { formatPhoneNumber, getCompanySmsContact, getDriverSmsState } from '@/lib/sms';
+import { formatPhoneNumber, getCompanyOwnerSmsState, getCompanySmsContact, getDriverSmsState } from '@/lib/sms';
 import { validateAdminAccessCode } from '@/lib/adminAccessCodeValidation';
 import { reviewCompanyProfileChangeRequest } from '@/services/companyProfileChangeReviewService';
 import { activeDriverProtocolQueryKey, getCurrentActiveDriverProtocol } from '@/services/driverProtocolService';
@@ -217,6 +217,48 @@ const DriverAccordionCard = ({ driver, smsState, driverCode, protocolAck, latest
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+const CompanyOwnerCard = ({ ownerCode, ownerUser, ownerCount }) => {
+  const smsState = getCompanyOwnerSmsState({ accessCode: ownerCode });
+  const consentRecorded = ownerCode?.sms_consent_given === true;
+  const ownerDisplayName = String(ownerUser?.app_display_name || '').trim()
+    || String(ownerCode?.label || '').trim()
+    || `Owner ${ownerCount}`;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">{ownerDisplayName}</p>
+          <p className="mt-1 text-xs text-slate-500">Access code: {ownerCode?.code || 'Not available'}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className={ownerCode?.active_flag === false ? 'border-slate-300 bg-slate-100 text-slate-600' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}>
+            {ownerCode?.active_flag === false ? 'Inactive' : 'Active'}
+          </Badge>
+          <Badge variant="outline" className={smsState.effective ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700'}>
+            {smsState.effective ? 'SMS Active' : 'SMS Off'}
+          </Badge>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Owner Profile & SMS Compliance</p>
+        <div className="mt-2">
+          <KeyValueRow label="Owner name / display name" value={ownerDisplayName} />
+          <KeyValueRow label="SMS phone" value={smsState.normalizedPhone ? formatPhoneNumber(smsState.normalizedPhone) : 'Not available'} />
+          <KeyValueRow label="Owner SMS enabled" value={smsState.ownerEnabled ? 'Yes' : 'No'} />
+          <KeyValueRow label="Owner SMS effective" value={smsState.effective ? 'Yes' : 'No'} />
+          <KeyValueRow label="Owner consent" value={consentRecorded ? 'Recorded' : 'Not recorded'} />
+          <KeyValueRow label="Owner consent timestamp" value={formatDateTime(ownerCode?.sms_consent_at)} />
+          <KeyValueRow label="Owner consent method" value={ownerCode?.sms_consent_method} />
+          <KeyValueRow label="Owner opt-out timestamp" value={formatDateTime(ownerCode?.sms_opted_out_at)} />
+          <KeyValueRow label="Owner intro/welcome sent" value={formatDateTime(ownerCode?.sms_intro_sent_at)} />
+        </div>
+      </div>
     </div>
   );
 };
@@ -457,6 +499,7 @@ export default function AdminCompanies() {
   const { data: incidents = [] } = useQuery({ queryKey: ['scoring-incidents'], queryFn: () => base44.entities.IncidentReport.list('-created_date', 1000) });
   const { data: drivers = [] } = useQuery({ queryKey: ['scoring-drivers'], queryFn: () => base44.entities.Driver.list('-created_date', 1000) });
   const { data: accessCodes = [] } = useQuery({ queryKey: ['access-codes'], queryFn: () => base44.entities.AccessCode.list() });
+  const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: () => base44.entities.User.list('-created_date', 1000) });
   const { data: assignments = [] } = useQuery({ queryKey: ['scoring-driver-assignments'], queryFn: () => base44.entities.DriverDispatch.list('-created_date', 1000) });
   const { data: events = [] } = useQuery({ queryKey: ['company-scoring-events'], queryFn: () => base44.entities.CompanyScoringEvent.list('-event_date', 1000) });
   const { data: driverProtocolAcknowledgments = [] } = useQuery({
@@ -566,11 +609,17 @@ export default function AdminCompanies() {
     map.set(code.id, code);
     return map;
   }, new Map()), [accessCodes]);
-  const ownerCodeByCompany = useMemo(() => accessCodes.reduce((map, code) => {
+  const ownerCodesByCompany = useMemo(() => accessCodes.reduce((map, code) => {
     if (code.code_type !== 'CompanyOwner' || !code.company_id) return map;
-    if (!map.has(code.company_id)) map.set(code.company_id, code);
+    if (code.active_flag === false) return map;
+    if (!map.has(code.company_id)) map.set(code.company_id, []);
+    map.get(code.company_id).push(code);
     return map;
   }, new Map()), [accessCodes]);
+  const usersById = useMemo(() => users.reduce((map, user) => {
+    if (user?.id) map.set(user.id, user);
+    return map;
+  }, new Map()), [users]);
 
   const openNew = () => {
     setEditing(null);
@@ -832,9 +881,7 @@ export default function AdminCompanies() {
               {(() => {
                 const companyDrivers = (driversByCompany.get(selectedCompanyDetail.id) || []).slice().sort((a, b) => (a.driver_name || '').localeCompare(b.driver_name || ''));
                 const smsContact = getCompanySmsContact(selectedCompanyDetail);
-                const ownerCode = ownerCodeByCompany.get(selectedCompanyDetail.id);
-                const ownerConsentRecorded = ownerCode?.sms_consent_given === true;
-                const ownerSmsEnabled = ownerCode?.sms_enabled === true;
+                const ownerCodes = (ownerCodesByCompany.get(selectedCompanyDetail.id) || []).slice().sort((a, b) => (a.label || a.code || '').localeCompare(b.label || b.code || '', undefined, { sensitivity: 'base' }));
 
                 return (
                   <>
@@ -876,25 +923,28 @@ export default function AdminCompanies() {
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">SMS Configuration</p>
                           <div className="mt-2">
                             <KeyValueRow label="SMS contact" value={smsContact.phone ? formatPhoneNumber(smsContact.phone) : 'No SMS phone selected'} />
-                            <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-2 last:border-b-0">
-                              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Owner SMS enabled</p>
-                              <Badge
-                                variant="outline"
-                                className={ownerSmsEnabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700'}
-                              >
-                                {ownerSmsEnabled ? 'Yes' : 'No'}
-                              </Badge>
-                            </div>
                           </div>
                         </div>
+
                         <div className="rounded-xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Consent & Messaging History</p>
-                          <div className="mt-2">
-                            <KeyValueRow label="Owner consent" value={ownerConsentRecorded ? 'Recorded' : 'Not recorded'} />
-                            <KeyValueRow label="Owner consent timestamp" value={formatDateTime(ownerCode?.sms_consent_at)} />
-                            <KeyValueRow label="Owner opt-out timestamp" value={formatDateTime(ownerCode?.sms_opted_out_at)} />
-                            <KeyValueRow label="Owner intro/welcome sent" value={formatDateTime(ownerCode?.sms_intro_sent_at)} />
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Company Owners & Individual SMS Compliance</p>
+                            <Badge variant="secondary">{ownerCodes.length} active owner{ownerCodes.length === 1 ? '' : 's'}</Badge>
                           </div>
+                          {ownerCodes.length === 0 ? (
+                            <p className="mt-3 text-sm italic text-slate-500">No active company owners are currently linked to this company.</p>
+                          ) : (
+                            <div className="mt-3 space-y-3">
+                              {ownerCodes.map((ownerCode, index) => (
+                                <CompanyOwnerCard
+                                  key={ownerCode.id || `${ownerCode.company_id}-${ownerCode.code}-${index}`}
+                                  ownerCode={ownerCode}
+                                  ownerUser={ownerCode?.used_by_user_id ? usersById.get(ownerCode.used_by_user_id) : null}
+                                  ownerCount={index + 1}
+                                />
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </DrawerSection>
