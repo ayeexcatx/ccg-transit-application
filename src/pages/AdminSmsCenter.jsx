@@ -485,7 +485,7 @@ export default function AdminSmsCenter() {
         }
 
         try {
-          const response = await base44.functions.invoke('sendNotificationSms/entry', { phone: smsPhone, message: `CCG Transit: ${trimmedMessage}` });
+          const response = await base44.functions.invoke('sendNotificationSms', { phone: smsPhone, message: `CCG Transit: ${trimmedMessage}` });
           const responseData = response?.data || response || {};
           await base44.entities.General.create({
             record_type: 'sms_log',

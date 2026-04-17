@@ -445,7 +445,7 @@ export async function sendNotificationSmsIfEligible(notification) {
 
     const smsMessage = await buildSmsMessage(notification, recipient);
 
-    const response = await base44.functions.invoke('sendNotificationSms/entry', {
+    const response = await base44.functions.invoke('sendNotificationSms', {
       phone: smsPhone,
       message: smsMessage,
       notificationId: notification.id,
