@@ -360,6 +360,14 @@ export default function AdminAccessCodes() {
                   {comp && <span>Company: {comp.name}</span>}
                   {driver && <span>Driver: {driver.driver_name || driver.id}</span>}
                   {c.used_at && <span>Claimed: {new Date(c.used_at).toLocaleString()}</span>}
+                  {c.used_by_user_id && (
+                    <span className="flex items-center gap-1">
+                      User ID: <span className="font-mono">{c.used_by_user_id}</span>
+                      <button onClick={() => { navigator.clipboard.writeText(c.used_by_user_id); toast.success('User ID copied'); }} className="text-slate-400 hover:text-slate-600">
+                        <Copy className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
                   {c.code_type === 'Admin' && (c.allowed_trucks || []).length > 0 && (
                     <span>Trucks: {c.allowed_trucks.join(', ')}</span>
                   )}
