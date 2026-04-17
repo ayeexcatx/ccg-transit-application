@@ -21,6 +21,22 @@ function maskPhone(value) {
   return `***${lastFour}`;
 }
 
+function stringifyError(error) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function buildStageErrorMessage(stage, error, context = {}) {
+  const errorText = stringifyError(error);
+  const suffix = Object.keys(context).length ? ` | context=${JSON.stringify(context)}` : '';
+  return `stage=${stage} | error=${errorText}${suffix}`;
+}
+
 function normalizeHeadline(value) {
   const headline = normalizeText(value);
   if (!headline) return '';
@@ -316,6 +332,11 @@ async function resolveRecipientAccessCode(notification) {
 }
 
 export async function sendNotificationSmsIfEligible(notification) {
+  let stage = 'start';
+  let recipient = null;
+  let smsPhone = '';
+  let smsMessage = '';
+
   try {
     if (!notification?.id) return;
 
@@ -346,7 +367,8 @@ export async function sendNotificationSmsIfEligible(notification) {
       return;
     }
 
-    const recipient = await resolveRecipientAccessCode(notification);
+    stage = 'recipient_resolution';
+    recipient = await resolveRecipientAccessCode(notification);
     if (!recipient) {
       console.log('SMS debug exit: recipient access code not found', {
         notificationId: notification.id,
@@ -360,11 +382,18 @@ export async function sendNotificationSmsIfEligible(notification) {
         phone: null,
         message: notification.message || null,
         status: 'skipped',
-        skipReason: notification.recipient_type === 'Admin' ? 'shared_admin_config_not_found' : 'recipient_access_code_not_found',
+        skipReason: notification.recipient_type === 'Admin'
+          ? 'shared_admin_config_not_found:recipient_resolution'
+          : 'recipient_access_code_not_found:recipient_resolution',
+        errorMessage: buildStageErrorMessage('recipient_resolution', 'no_recipient', {
+          notificationRecipientAccessCodeId: notification.recipient_access_code_id || null,
+          notificationRecipientId: notification.recipient_id || null,
+        }),
       });
       return;
     }
 
+    stage = 'rule_eligibility';
     const { allowed, ruleKey } = await evaluateRuleEligibility(notification, recipient);
     if (!allowed) {
       await createSmsLog({
@@ -373,13 +402,14 @@ export async function sendNotificationSmsIfEligible(notification) {
         phone: null,
         message: notification.message || null,
         status: 'skipped',
-        skipReason: `rule_disabled:${ruleKey}` ,
+        skipReason: `rule_disabled:${ruleKey}:rule_eligibility` ,
       });
       return;
     }
 
     let eligibility;
     try {
+      stage = 'sms_eligibility_resolution';
       eligibility = await resolveSmsEligibility(recipient);
     } catch (error) {
       console.error('SMS debug exit: failed to resolve recipient SMS eligibility', {
@@ -395,12 +425,18 @@ export async function sendNotificationSmsIfEligible(notification) {
         phone: null,
         message: notification.message || null,
         status: 'skipped',
-        skipReason: 'sms_eligibility_resolution_failed',
-        errorMessage: error instanceof Error ? error.message : String(error),
+        skipReason: 'sms_eligibility_resolution_failed:sms_eligibility_resolution',
+        errorMessage: buildStageErrorMessage('sms_eligibility_resolution', error, {
+          notificationRecipientAccessCodeId: notification.recipient_access_code_id || null,
+          notificationRecipientId: notification.recipient_id || null,
+          resolvedRecipientId: recipient?.id || null,
+          recipientCodeType: recipient?.code_type || null,
+        }),
       });
       return;
     }
-    const { smsEnabled, smsPhone, skipReason } = eligibility;
+    const { smsEnabled, smsPhone: resolvedSmsPhone, skipReason } = eligibility;
+    smsPhone = resolvedSmsPhone || '';
 
     if (!smsEnabled) {
       console.log('SMS debug exit: sms disabled', {
@@ -411,10 +447,10 @@ export async function sendNotificationSmsIfEligible(notification) {
       await createSmsLog({
         notification,
         recipient,
-        phone: smsPhone || null,
+        phone: maskPhone(smsPhone) || null,
         message: notification.message || null,
         status: 'skipped',
-        skipReason: skipReason || 'sms_disabled',
+        skipReason: `${skipReason || 'sms_disabled'}:sms_eligibility_resolution`,
       });
       return;
     }
@@ -431,7 +467,7 @@ export async function sendNotificationSmsIfEligible(notification) {
         phone: null,
         message: notification.message || null,
         status: 'skipped',
-        skipReason: 'missing_sms_phone',
+        skipReason: 'missing_sms_phone:sms_eligibility_resolution',
       });
       return;
     }
@@ -443,8 +479,10 @@ export async function sendNotificationSmsIfEligible(notification) {
       relatedDispatchId: notification.related_dispatch_id || null,
     });
 
-    const smsMessage = await buildSmsMessage(notification, recipient);
+    stage = 'sms_message_building';
+    smsMessage = await buildSmsMessage(notification, recipient);
 
+    stage = 'backend_function_invoke';
     const response = await base44.functions.invoke('sendNotificationSms', {
       phone: smsPhone,
       message: smsMessage,
@@ -482,24 +520,40 @@ export async function sendNotificationSmsIfEligible(notification) {
     await createSmsLog({
       notification,
       recipient,
-      phone: smsPhone,
+      phone: maskPhone(smsPhone) || null,
       message: smsMessage || null,
       status: isProviderNotConfigured ? 'skipped' : 'failed',
-      skipReason: isProviderNotConfigured ? 'provider_not_configured' : null,
-      errorMessage,
+      skipReason: isProviderNotConfigured ? 'provider_not_configured:backend_function_invoke' : null,
+      errorMessage: buildStageErrorMessage('backend_function_invoke', errorMessage, {
+        responseReason: reason || null,
+      }),
       provider: responseData?.provider || SMS_PROVIDER,
       providerMessageId: responseData?.providerMessageId || null,
     });
   } catch (error) {
-    console.error('SMS delivery attempt failed:', error);
+    console.error('SMS delivery attempt failed:', {
+      stage,
+      notificationId: notification?.id || null,
+      notificationRecipientAccessCodeId: notification?.recipient_access_code_id || null,
+      notificationRecipientId: notification?.recipient_id || null,
+      resolvedRecipientId: recipient?.id || null,
+      recipientCodeType: recipient?.code_type || null,
+      maskedPhone: maskPhone(smsPhone),
+      error,
+    });
 
     await createSmsLog({
       notification,
-      recipient: null,
-      phone: null,
-      message: notification?.message || null,
+      recipient: recipient || null,
+      phone: maskPhone(smsPhone) || null,
+      message: smsMessage || notification?.message || null,
       status: 'failed',
-      errorMessage: error instanceof Error ? error.message : String(error),
+      errorMessage: buildStageErrorMessage(stage, error, {
+        notificationRecipientAccessCodeId: notification?.recipient_access_code_id || null,
+        notificationRecipientId: notification?.recipient_id || null,
+        resolvedRecipientId: recipient?.id || null,
+        recipientCodeType: recipient?.code_type || null,
+      }),
     });
   }
 }
