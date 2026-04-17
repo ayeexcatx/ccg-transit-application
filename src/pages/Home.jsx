@@ -73,6 +73,11 @@ const parseActivityTimestampMs = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const normalizeOwnerNameForComparison = (value) => String(value || '')
+  .trim()
+  .replace(/\s+/g, ' ')
+  .toLowerCase();
+
 const buildActivityTimestamp = (...values) => {
   for (const value of values) {
     const timestampMs = parseActivityTimestampMs(value);
@@ -553,9 +558,31 @@ export default function Home() {
     )
       ? String(session.id)
       : null;
+    const currentOwnerNormalizedNames = new Set(
+      [
+        session?.label,
+        session?.name,
+        session?.profile_name,
+      ]
+        .map((value) => normalizeOwnerNameForComparison(value))
+        .filter(Boolean)
+    );
+    const hasCurrentOwnerNameFallback = currentOwnerNormalizedNames.size > 0;
     const isSelfOwnerAction = (actorAccessCodeId) => {
       if (!currentOwnerAccessCodeId || !actorAccessCodeId) return false;
       return String(actorAccessCodeId) === currentOwnerAccessCodeId;
+    };
+    const isLegacySelfOwnerActionByName = ({ actorAccessCodeId, actorName, isOwnerSpecificAction }) => {
+      // Safety-first legacy fallback: only apply to owner-specific activity rows,
+      // only when id-based matching is unavailable for at least one side, and only
+      // with exact normalized owner-name equality (no fuzzy / partial matching).
+      if (!isOwnerSpecificAction) return false;
+      if (!hasCurrentOwnerNameFallback) return false;
+      if (currentOwnerAccessCodeId && actorAccessCodeId) return false;
+
+      const normalizedActorName = normalizeOwnerNameForComparison(actorName);
+      if (!normalizedActorName) return false;
+      return currentOwnerNormalizedNames.has(normalizedActorName);
     };
 
     confirmations.forEach((confirmation) => {
@@ -622,6 +649,13 @@ export default function Home() {
         const { activity_timestamp, activity_timestamp_ms } = buildActivityTimestamp(entry?.timestamp, entry?.created_date);
         if (!activity_timestamp_ms) return;
         if (isSelfOwnerAction(actorAccessCodeId)) return;
+        if (isLegacySelfOwnerActionByName({
+          actorAccessCodeId,
+          actorName,
+          isOwnerSpecificAction: action.startsWith('owner_') || actorType === 'companyowner',
+        })) {
+          return;
+        }
 
         if (action === 'owner_assigned_driver' || action === 'owner_changed_driver' || action === 'owner_removed_driver') {
           const { assignee, truckNumber, verb } = parseDriverAssignmentFromMessage(entry?.message);
