@@ -477,8 +477,9 @@ function CompanyOwnerProfile({ session }) {
 
   const smsMutation = useMutation({
     mutationFn: async (nextOptIn) => {
-      if (!activeAccessCode?.id) {
-        throw new Error('Owner SMS settings are unavailable because no linked CompanyOwner access code was found.');
+      const isRealRecord = activeAccessCode?.id && accessCodes.some((c) => c.id === activeAccessCode.id);
+      if (!isRealRecord) {
+        throw new Error('Owner SMS settings are unavailable because no linked CompanyOwner access code was found for your account.');
       }
       const ownerPhone = normalizeSmsPhone(activeAccessCode?.sms_phone || '');
       if (nextOptIn && !hasUsSmsPhone(ownerPhone)) {
@@ -549,7 +550,11 @@ function CompanyOwnerProfile({ session }) {
         smsPending={smsMutation.isPending}
         ownerProfile={activeAccessCode}
         onUpdateOwnerProfile={async (updates) => {
-          if (!activeAccessCode?.id) return;
+          const isRealRecord = activeAccessCode?.id && accessCodes.some((c) => c.id === activeAccessCode.id);
+          if (!isRealRecord) {
+            toast.error('Unable to save: no linked access code record found for your account.');
+            return;
+          }
           await base44.entities.AccessCode.update(activeAccessCode.id, updates);
           queryClient.invalidateQueries({ queryKey: ['owner-profile-access-codes', profileCompanyId] });
           queryClient.invalidateQueries({ queryKey: ['access-codes'] });
