@@ -264,9 +264,7 @@ async function resolveSmsEligibility(recipient) {
   }
 
   if (recipient.code_type === 'CompanyOwner') {
-    const companyRecords = await base44.entities.Company.filter({ id: recipient.company_id }, '-created_date', 1);
-    const company = companyRecords?.[0] || null;
-    const state = getCompanyOwnerSmsState({ accessCode: recipient, company });
+    const state = getCompanyOwnerSmsState({ accessCode: recipient, company: null });
     return {
       smsEnabled: state.effective,
       smsPhone: state.normalizedPhone || '',
@@ -380,7 +378,29 @@ export async function sendNotificationSmsIfEligible(notification) {
       return;
     }
 
-    const { smsEnabled, smsPhone, skipReason } = await resolveSmsEligibility(recipient);
+    let eligibility;
+    try {
+      eligibility = await resolveSmsEligibility(recipient);
+    } catch (error) {
+      console.error('SMS debug exit: failed to resolve recipient SMS eligibility', {
+        notificationId: notification.id,
+        recipientAccessCodeId: recipient.id,
+        recipientCodeType: recipient.code_type || null,
+        error,
+      });
+
+      await createSmsLog({
+        notification,
+        recipient,
+        phone: null,
+        message: notification.message || null,
+        status: 'skipped',
+        skipReason: 'sms_eligibility_resolution_failed',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
+    const { smsEnabled, smsPhone, skipReason } = eligibility;
 
     if (!smsEnabled) {
       console.log('SMS debug exit: sms disabled', {
