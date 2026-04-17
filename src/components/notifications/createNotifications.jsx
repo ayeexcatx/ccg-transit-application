@@ -957,7 +957,7 @@ export async function reconcileOwnerNotificationsForDispatch(dispatch, accessCod
       }
 
       const ownerCode = ownerCodeMap.get(notification.recipient_access_code_id || notification.recipient_id);
-      if (!ownerCode) continue;
+      if (ownerCode && ownerCode.code_type !== 'CompanyOwner') continue;
 
       const relevantTrucks = reconcileExistingRequiredTrucks(notification, dispatch, company);
       const statusText = statusLabels[status] || status;
