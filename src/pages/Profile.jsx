@@ -31,7 +31,7 @@ async function sendProfileSmsConfirmation(phone, message) {
   const smsRules = await getSmsRules();
   if (!smsRules.opt_out_confirmation_sms) return;
   try {
-    await base44.functions.invoke('sendNotificationSms/entry', { phone, message });
+    await base44.functions.invoke('sendNotificationSms', { phone, message });
   } catch (error) {
     console.error('Failed sending profile SMS confirmation', error);
   }

@@ -148,7 +148,7 @@ export async function sendSmsWelcomeIfNeeded({ accessCodeId, consentGiven }) {
   }
 
   try {
-    const response = await base44.functions.invoke('sendNotificationSms/entry', {
+    const response = await base44.functions.invoke('sendNotificationSms', {
       phone,
       message: SMS_WELCOME_MESSAGE,
     });
