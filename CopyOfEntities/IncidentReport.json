@@ -18,6 +18,10 @@
       "type": "string",
       "description": "Access code ID of the user who created the report"
     },
+    "reported_by_name": {
+      "type": "string",
+      "description": "Readable name of the user who created the report"
+    },
     "reported_by_code_type": {
       "type": "string",
       "enum": [
