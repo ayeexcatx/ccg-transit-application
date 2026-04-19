@@ -22,6 +22,10 @@
       "type": "string",
       "description": "Access code ID of the user adding the update"
     },
+    "added_by_name": {
+      "type": "string",
+      "description": "Readable name of the user adding the update"
+    },
     "added_by_code_type": {
       "type": "string",
       "enum": [

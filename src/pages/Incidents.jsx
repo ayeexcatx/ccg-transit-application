@@ -144,12 +144,6 @@ export default function Incidents() {
     enabled: !!session
   });
 
-  const { data: companies = [] } = useQuery({
-    queryKey: ['incident-companies'],
-    queryFn: () => base44.entities.Company.list('-created_date', 500),
-    enabled: !!session
-  });
-
   const { data: driverAssignments = [] } = useQuery({
     queryKey: ['incident-driver-dispatch-assignments', driverIdentity],
     queryFn: () => listDriverDispatchesForDriver(driverIdentity),
@@ -177,23 +171,16 @@ export default function Incidents() {
     [accessCodes]
   );
 
-  const companyMap = useMemo(
-    () => Object.fromEntries(companies.map((company) => [company.id, company])),
-    [companies]
-  );
-
-  const getBestReadableName = (person = {}, companyId = null, fallbackCodeType = null) => {
+  const getBestReadableName = (person = {}, fallbackCodeType = null) => {
     const readable = [
-    person.full_name,
-    person.display_name,
-    person.label,
-    person.name,
-    person.owner_name,
-    person.company_owner_name,
-    person.company_name,
-    companyId ? companyMap[companyId]?.name : null,
-    fallbackCodeType].
-    find((value) => typeof value === 'string' && value.trim());
+      person.full_name,
+      person.display_name,
+      person.label,
+      person.name,
+      person.owner_name,
+      person.company_owner_name,
+      fallbackCodeType
+    ].find((value) => typeof value === 'string' && value.trim());
 
     return readable || null;
   };
@@ -214,20 +201,11 @@ export default function Incidents() {
     reportedByCode?.company_owner_name].
     find((value) => typeof value === 'string' && value.trim());
 
-    const companyContext = [
-    reportedByCode?.company_name,
-    incident.company_id ? companyMap[incident.company_id]?.name : null].
-    find((value) => typeof value === 'string' && value.trim());
-
-    if (reporterName && companyContext && reporterName.trim().toLowerCase() !== companyContext.trim().toLowerCase()) {
-      return `${reporterName} (${companyContext})`;
-    }
-
     if (reporterName) {
       return reporterName;
     }
 
-    return companyContext || incident.reported_by_code_type || incident.reported_by_access_code_id || '—';
+    return incident.reported_by_code_type || incident.reported_by_access_code_id || '—';
   };
 
 
@@ -258,7 +236,6 @@ export default function Incidents() {
         display_name: update?.added_by_display_name,
         ...updateCode
       },
-      incident.company_id,
       update?.added_by_code_type
     ) || update?.added_by_access_code_id || null;
   };
@@ -392,6 +369,7 @@ export default function Incidents() {
         company_id: incident.company_id || null,
         truck_number: incident.truck_number || null,
         added_by_access_code_id: session?.id || null,
+        added_by_name: getBestReadableName(session, effectiveView),
         added_by_code_type: effectiveView || null,
         update_datetime: new Date().toISOString(),
         update_text: trimmed
@@ -519,7 +497,7 @@ export default function Incidents() {
       company_id: form.company_id || activeCompanyId || null,
       truck_number: form.truck_number,
       reported_by_access_code_id: session?.id,
-      reported_by_name: getBestReadableName(session, form.company_id || activeCompanyId, effectiveView),
+      reported_by_name: getBestReadableName(session, effectiveView),
       reported_by_code_type: effectiveView,
       incident_type: form.incident_type,
       status: 'Open',
