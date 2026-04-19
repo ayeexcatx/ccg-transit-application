@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { SessionProvider, useSession } from './components/session/SessionContext';
 import { createPageUrl } from './utils';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, Truck, Shield, Building2, Megaphone, TriangleAlert, CalendarDays, Home, CheckCircle2, FileText, UserRound, Bell, Menu, BookOpenText, MessageSquare } from 'lucide-react';
+import { LogOut, Truck, Shield, Building2, Megaphone, TriangleAlert, CalendarDays, Home, CheckCircle2, FileText, UserRound, Bell, Menu, BookOpenText, MessageSquare, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -43,7 +43,7 @@ function LayoutInner({ children, currentPageName }) {
   const isOwner = effectiveView === 'CompanyOwner';
   const isDriver = session?.code_type === 'Driver';
   const canUsePortalTabs = isOwner || isDriver;
-  const adminPages = ['AdminDashboard', 'AdminCompanies', 'AdminConfirmations', 'AdminAccessCodes', 'AdminDispatches', 'AdminTemplateNotes', 'AdminAnnouncements', 'AdminAvailability', 'AdminSmsCenter', 'AdminDriverProtocol'];
+  const adminPages = ['AdminDashboard', 'AdminCompanies', 'AdminConfirmations', 'AdminAccessCodes', 'AdminDispatches', 'AdminTemplateNotes', 'AdminAnnouncements', 'AdminAvailability', 'AdminSmsCenter', 'AdminDriverProtocol', 'AdminUserLookup'];
   const ownerPages = ['Availability', 'Drivers'];
 
   const { data: allDrivers = [] } = useQuery({
@@ -253,6 +253,14 @@ function LayoutInner({ children, currentPageName }) {
                           <Link to={createPageUrl('AdminDriverProtocol')} className="cursor-pointer">
                             <BookOpenText className="h-4 w-4" />
                             Driver Protocol
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {isAdmin && (
+                        <DropdownMenuItem asChild className="py-2.5">
+                          <Link to={createPageUrl('AdminUserLookup')} className="cursor-pointer">
+                            <Search className="h-4 w-4" />
+                            User Lookup
                           </Link>
                         </DropdownMenuItem>
                       )}
