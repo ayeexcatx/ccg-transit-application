@@ -49,8 +49,11 @@
       "type": "string",
       "enum": [
         "queued",
+        "sending",
         "sent",
+        "delivered",
         "failed",
+        "undelivered",
         "skipped"
       ],
       "description": "SMS delivery attempt status"
