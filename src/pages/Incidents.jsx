@@ -192,15 +192,31 @@ export default function Incidents() {
     accessCodeMap[incident.reported_by_access_code_id] :
     null;
 
-    return getBestReadableName(
-      {
-        full_name: incident.reported_by_name,
-        display_name: incident.reported_by_display_name,
-        ...reportedByCode
-      },
-      incident.company_id,
-      incident.reported_by_code_type
-    ) || incident.reported_by_access_code_id || '—';
+    const reporterName = [
+    incident.reported_by_name,
+    incident.reported_by_display_name,
+    reportedByCode?.full_name,
+    reportedByCode?.display_name,
+    reportedByCode?.label,
+    reportedByCode?.name,
+    reportedByCode?.owner_name,
+    reportedByCode?.company_owner_name].
+    find((value) => typeof value === 'string' && value.trim());
+
+    const companyContext = [
+    reportedByCode?.company_name,
+    incident.company_id ? companyMap[incident.company_id]?.name : null].
+    find((value) => typeof value === 'string' && value.trim());
+
+    if (reporterName && companyContext && reporterName.trim().toLowerCase() !== companyContext.trim().toLowerCase()) {
+      return `${reporterName} (${companyContext})`;
+    }
+
+    if (reporterName) {
+      return reporterName;
+    }
+
+    return companyContext || incident.reported_by_code_type || incident.reported_by_access_code_id || '—';
   };
 
 
