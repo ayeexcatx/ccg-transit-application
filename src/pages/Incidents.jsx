@@ -11,6 +11,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 import { AlertTriangle, Plus, Truck } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -103,6 +113,7 @@ export default function Incidents() {
   const [draftUpdates, setDraftUpdates] = useState({});
   const [draftTimeStoppedTo, setDraftTimeStoppedTo] = useState({});
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const effectiveView = getEffectiveView(session);
   const activeCompanyId = getActiveCompanyId(session);
@@ -425,6 +436,39 @@ export default function Incidents() {
     },
     onError: (error) => {
       toast.error(error?.message || 'Failed to update incident status.');
+    }
+  });
+
+  const deleteIncidentMutation = useMutation({
+    mutationFn: async (incident) => {
+      if (!isAdmin) {
+        throw new Error('Only admins can delete incidents.');
+      }
+
+      const updates = await base44.entities.IncidentUpdate.filter({ incident_report_id: incident.id }, '-created_date', 1000);
+
+      if (updates.length > 0) {
+        await Promise.all(updates.map((update) => base44.entities.IncidentUpdate.delete(update.id)));
+      }
+
+      await base44.entities.IncidentReport.delete(incident.id);
+      return updates.length;
+    },
+    onSuccess: async (deletedUpdatesCount) => {
+      setDeleteConfirmOpen(false);
+      setSelectedIncidentId(null);
+      await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['incidents'] }),
+      queryClient.invalidateQueries({ queryKey: ['incident-updates'] }),
+      queryClient.invalidateQueries({ queryKey: ['scoring-incidents'] })]);
+      toast.success(
+        deletedUpdatesCount > 0 ?
+        `Incident deleted. ${deletedUpdatesCount} related update${deletedUpdatesCount === 1 ? '' : 's'} removed.` :
+        'Incident deleted.'
+      );
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Failed to delete incident.');
     }
   });
 
@@ -865,6 +909,18 @@ export default function Incidents() {
                     </div>
                   }
 
+                  {isAdmin &&
+                  <div className="flex justify-end">
+                      <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => setDeleteConfirmOpen(true)}
+                      disabled={deleteIncidentMutation.isPending}>
+                        {deleteIncidentMutation.isPending ? 'Deleting…' : 'Delete Incident'}
+                      </Button>
+                    </div>
+                  }
+
                   <div className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-3">
                     <p className="text-sm font-medium text-slate-700">Incident Timeline</p>
                     <div className="text-sm text-slate-700">
@@ -896,6 +952,25 @@ export default function Incidents() {
           })()}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Incident</AlertDialogTitle>
+            <AlertDialogDescription>Are you sure you want to delete?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteIncidentMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedIncident && deleteIncidentMutation.mutate(selectedIncident)}
+              disabled={deleteIncidentMutation.isPending || !selectedIncident}
+              className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-500"
+            >
+              {deleteIncidentMutation.isPending ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>);
 
 }
