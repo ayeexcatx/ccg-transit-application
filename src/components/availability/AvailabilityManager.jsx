@@ -41,9 +41,11 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
   const [overrideEditingDate, setOverrideEditingDate] = useState(null);
   const [dateOverrideForm, setDateOverrideForm] = useState(null);
   const [formError, setFormError] = useState('');
-  const [companySearch, setCompanySearch] = useState('');
   const [adminCompanyId, setAdminCompanyId] = useState('');
   const [requestFeedback, setRequestFeedback] = useState('');
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [requestCompanyIds, setRequestCompanyIds] = useState([]);
+  const [requestAlsoSendSms, setRequestAlsoSendSms] = useState(false);
   const [pastDateAlertOpen, setPastDateAlertOpen] = useState(false);
   const [blockedPastDate, setBlockedPastDate] = useState(null);
 
@@ -65,11 +67,9 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
     setRequestFeedback('');
   }, [selectedCompanyId]);
 
-  const filteredCompanies = useMemo(() => {
-    const term = companySearch.trim().toLowerCase();
-    if (!term) return companies;
-    return companies.filter((company) => (company.name || company.id || '').toLowerCase().includes(term));
-  }, [companies, companySearch]);
+  const sortedCompanies = useMemo(() => [...companies].sort((a, b) =>
+  String(a?.name || a?.id || '').localeCompare(String(b?.name || b?.id || ''), undefined, { sensitivity: 'base' })
+  ), [companies]);
 
   const { data: defaults = [] } = useQuery({
     queryKey: ['company-availability-defaults', selectedCompanyId],
@@ -120,24 +120,42 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
 
 
   const requestAvailabilityMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedCompanyId) throw new Error('Select a company first.');
+    mutationFn: async ({ companyIds, sendSms }) => {
+      const uniqueCompanyIds = [...new Set((companyIds || []).map((id) => String(id || '').trim()).filter(Boolean))];
+      if (!uniqueCompanyIds.length) throw new Error('Select at least one company.');
       const requestedByLabel = 'CCG Admin';
-      return createAvailabilityRequestNotifications({
-        companyId: selectedCompanyId,
-        companyName: selectedCompany?.name,
-        requestedByLabel
-      });
+      const results = await Promise.all(uniqueCompanyIds.map(async (companyId) => {
+        const company = sortedCompanies.find((entry) => String(entry.id) === companyId);
+        const result = await createAvailabilityRequestNotifications({
+          companyId,
+          companyName: company?.name,
+          requestedByLabel,
+          sendSms: sendSms === true
+        });
+        return {
+          companyId,
+          companyName: result.companyName || company?.name || companyId,
+          ownerCount: result.ownerCount || 0
+        };
+      }));
+      return results;
     },
-    onSuccess: ({ ownerCount, companyName }) => {
-      if (!ownerCount) {
+    onSuccess: (results) => {
+      const targetedCount = results.length;
+      const successCount = results.filter((result) => result.ownerCount > 0).length;
+      const totalOwners = results.reduce((total, result) => total + (result.ownerCount || 0), 0);
+
+      if (!successCount) {
         setRequestFeedback('');
-        toast.error(`No active company owner access code found for ${companyName || 'this company'}.`);
+        toast.error('No active company owner access code found for selected companies.');
         return;
       }
 
-      setRequestFeedback(`Availability request sent to ${companyName || selectedCompany?.name || 'selected company'}.`);
-      toast.success(`Availability request sent to ${ownerCount} owner${ownerCount === 1 ? '' : 's'}${companyName ? ` for ${companyName}` : ''}.`);
+      setRequestFeedback(`Availability request sent for ${successCount} compan${successCount === 1 ? 'y' : 'ies'}.`);
+      toast.success(`Availability request sent to ${totalOwners} owner${totalOwners === 1 ? '' : 's'} across ${successCount}/${targetedCount} selected compan${targetedCount === 1 ? 'y' : 'ies'}.`);
+      setRequestModalOpen(false);
+      setRequestCompanyIds([]);
+      setRequestAlsoSendSms(false);
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
     onError: (error) => {
@@ -145,6 +163,29 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
       toast.error(error?.message || 'Failed to send availability request.');
     }
   });
+
+  const toggleRequestCompanyId = (companyId, checked) => {
+    const normalizedId = String(companyId || '');
+    setRequestCompanyIds((prev) => {
+      if (checked) return [...new Set([...prev, normalizedId])];
+      return prev.filter((id) => id !== normalizedId);
+    });
+  };
+
+  const selectAllRequestCompanies = () => {
+    setRequestCompanyIds(sortedCompanies.map((company) => String(company.id)));
+  };
+
+  const clearAllRequestCompanies = () => {
+    setRequestCompanyIds([]);
+  };
+
+  const submitAvailabilityRequests = () => {
+    requestAvailabilityMutation.mutate({
+      companyIds: requestCompanyIds,
+      sendSms: requestAlsoSendSms
+    });
+  };
 
   const maybeNotifyAdminAvailabilityUpdated = async () => {
     if (canSelectCompany || !selectedCompanyId || !session?.id) return;
@@ -515,21 +556,13 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
       <Card>
           <CardContent className="p-4 space-y-3">
             <div>
-              <p className="text-xs text-slate-500 mb-1">Search companies</p>
-              <Input
-              value={companySearch}
-              onChange={(e) => setCompanySearch(e.target.value)}
-              placeholder="Type a company name" />
-
-            </div>
-            <div>
               <p className="text-xs text-slate-500 mb-1">Company</p>
               <Select value={selectedCompanyId || ''} onValueChange={setAdminCompanyId}>
                 <SelectTrigger className="w-full md:w-[360px]">
                   <SelectValue placeholder="Select company" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredCompanies.map((company) =>
+                  {sortedCompanies.map((company) =>
                 <SelectItem key={company.id} value={company.id}>{company.name || company.id}</SelectItem>
                 )}
                 </SelectContent>
@@ -538,10 +571,10 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
             <div className="flex justify-end">
               <Button
               size="sm"
-              onClick={() => requestAvailabilityMutation.mutate()}
-              disabled={!selectedCompanyId || requestAvailabilityMutation.isPending}>
+              onClick={() => setRequestModalOpen(true)}
+              disabled={requestAvailabilityMutation.isPending || !sortedCompanies.length}>
               
-                {requestAvailabilityMutation.isPending ? 'Sending…' : 'Request Availability'}
+                Request Availability
               </Button>
             </div>
             {requestFeedback &&
@@ -581,6 +614,56 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
           {renderWeeklyDefaultsMatrix()}
         </>
       }
+
+      <Dialog
+        open={requestModalOpen}
+        onOpenChange={(open) => {
+          setRequestModalOpen(open);
+          if (!open && !requestAvailabilityMutation.isPending) {
+            setRequestCompanyIds([]);
+            setRequestAlsoSendSms(false);
+          }
+        }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Request Availability</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm text-slate-600">Select one or more companies.</p>
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={selectAllRequestCompanies}>Select All</Button>
+                <Button type="button" size="sm" variant="ghost" onClick={clearAllRequestCompanies}>Clear All</Button>
+              </div>
+            </div>
+            <div className="max-h-72 overflow-y-auto rounded border border-slate-200">
+              {sortedCompanies.map((company) => {
+                const checked = requestCompanyIds.includes(String(company.id));
+                return (
+                  <label key={`request-${company.id}`} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2 last:border-b-0">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(nextChecked) => toggleRequestCompanyId(company.id, nextChecked === true)}
+                    />
+                    <span className="text-sm text-slate-700">{company.name || company.id}</span>
+                  </label>);
+              })}
+            </div>
+            <label className="flex cursor-pointer items-center gap-3">
+              <Checkbox checked={requestAlsoSendSms} onCheckedChange={(checked) => setRequestAlsoSendSms(checked === true)} />
+              <span className="text-sm text-slate-700">Also send SMS</span>
+            </label>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                onClick={submitAvailabilityRequests}
+                disabled={!requestCompanyIds.length || requestAvailabilityMutation.isPending}>
+                {requestAvailabilityMutation.isPending ? 'Sending…' : 'Send Requests'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={pastDateAlertOpen}

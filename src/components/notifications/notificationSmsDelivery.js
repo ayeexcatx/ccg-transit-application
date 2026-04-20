@@ -190,7 +190,10 @@ function resolveDriverDispatchDateTimeLine(notification, dispatch) {
   return formatDispatchDateTimeLine(dispatch, 'at', driverStartTime);
 }
 
-async function buildSmsMessage(notification, recipient) {
+async function buildSmsMessage(notification, recipient, options = {}) {
+  const overrideMessage = normalizeText(options?.overrideMessage);
+  if (overrideMessage) return overrideMessage;
+
   if (!notification?.related_dispatch_id) {
     return withSmsBranding(notification?.message || '');
   }
@@ -331,7 +334,7 @@ async function resolveRecipientAccessCode(notification) {
   return records?.[0] || null;
 }
 
-export async function sendNotificationSmsIfEligible(notification) {
+export async function sendNotificationSmsIfEligible(notification, options = {}) {
   let stage = 'start';
   let recipient = null;
   let smsPhone = '';
@@ -480,7 +483,7 @@ export async function sendNotificationSmsIfEligible(notification) {
     });
 
     stage = 'sms_message_building';
-    smsMessage = await buildSmsMessage(notification, recipient);
+    smsMessage = await buildSmsMessage(notification, recipient, options);
 
     stage = 'backend_function_invoke';
     const response = await base44.functions.invoke('sendNotificationSms', {
