@@ -83,6 +83,19 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
     enabled: !!selectedCompanyId
   });
 
+  const canonicalOverrideMap = useMemo(() => {
+    const map = new Map();
+
+    overrides.forEach((override) => {
+      const key = `${selectedCompanyId}-${override.date}-${override.shift}`;
+      if (!map.has(key)) {
+        map.set(key, override);
+      }
+    });
+
+    return map;
+  }, [overrides, selectedCompanyId]);
+
   const upsertDefaultMutation = useMutation({
     mutationFn: async (payload) => {
       const existing = defaults.find((item) => item.weekday === payload.weekday && item.shift === payload.shift);
@@ -97,8 +110,23 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
 
   const upsertOverrideMutation = useMutation({
     mutationFn: async (payload) => {
-      const existing = overrides.find((item) => item.date === payload.date && item.shift === payload.shift);
-      if (existing) return base44.entities.CompanyAvailabilityOverride.update(existing.id, payload);
+      const matches = await base44.entities.CompanyAvailabilityOverride.filter(
+        { company_id: payload.company_id, date: payload.date, shift: payload.shift },
+        '-created_date',
+        20
+      );
+      const [canonical, ...duplicates] = matches || [];
+      if (canonical?.id) {
+        const updated = await base44.entities.CompanyAvailabilityOverride.update(canonical.id, payload);
+        await Promise.all(
+          duplicates
+            .map((item) => item?.id)
+            .filter(Boolean)
+            .map((id) => base44.entities.CompanyAvailabilityOverride.delete(id))
+        );
+        return updated;
+      }
+
       return base44.entities.CompanyAvailabilityOverride.create(payload);
     },
     onSuccess: () => {
@@ -109,8 +137,17 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
 
   const clearOverrideMutation = useMutation({
     mutationFn: async ({ date, shift }) => {
-      const existing = overrides.find((item) => item.date === date && item.shift === shift);
-      if (existing) await base44.entities.CompanyAvailabilityOverride.delete(existing.id);
+      const matches = await base44.entities.CompanyAvailabilityOverride.filter(
+        { company_id: selectedCompanyId, date, shift },
+        '-created_date',
+        20
+      );
+      await Promise.all(
+        (matches || [])
+          .map((item) => item?.id)
+          .filter(Boolean)
+          .map((id) => base44.entities.CompanyAvailabilityOverride.delete(id))
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-availability-overrides', selectedCompanyId] });
@@ -250,11 +287,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
     return map;
   }, [defaults, selectedCompanyId]);
 
-  const overrideMap = useMemo(() => {
-    const map = new Map();
-    overrides.forEach((o) => map.set(`${selectedCompanyId}-${o.date}-${o.shift}`, o));
-    return map;
-  }, [overrides, selectedCompanyId]);
+  const overrideMap = canonicalOverrideMap;
 
   const resolveAvailability = (date, shift) => {
     if (!selectedCompanyId) return { status: STATUS_AVAILABLE, available_truck_count: null };
