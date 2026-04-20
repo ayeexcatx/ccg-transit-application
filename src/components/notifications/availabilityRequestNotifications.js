@@ -1,9 +1,16 @@
 import { base44 } from '@/api/base44Client';
+import { sendNotificationSmsIfEligible } from '@/components/notifications/notificationSmsDelivery';
 
 export const AVAILABILITY_REQUEST_NOTIFICATION_CATEGORY = 'availability_request';
 export const AVAILABILITY_REQUEST_NOTIFICATION_TYPE = 'owner_availability_request';
 export const OWNER_AVAILABILITY_UPDATED_NOTIFICATION_CATEGORY = 'owner_availability_updated';
 export const OWNER_AVAILABILITY_UPDATED_NOTIFICATION_TYPE = 'owner_availability_updated_after_request';
+export const AVAILABILITY_REQUEST_SMS_MESSAGE = [
+  'CCG Transit:',
+  'Your availability has been requested.',
+  'Please visit the app and go to the calendar section and update your availability.',
+  'Thank you.',
+].join('\n');
 
 const toTimestampMs = (value) => {
   if (!value) return 0;
@@ -37,6 +44,7 @@ export async function createAvailabilityRequestNotifications({
   companyId,
   companyName,
   requestedByLabel,
+  sendSms = false,
 }) {
   if (!companyId) return { created: [], ownerCount: 0 };
 
@@ -70,6 +78,14 @@ export async function createAvailabilityRequestNotifications({
       notification_type: AVAILABILITY_REQUEST_NOTIFICATION_TYPE,
     })
   ));
+
+  if (sendSms && created.length) {
+    await Promise.all(created.map((notification) =>
+      sendNotificationSmsIfEligible(notification, {
+        overrideMessage: AVAILABILITY_REQUEST_SMS_MESSAGE,
+      })
+    ));
+  }
 
   return {
     created,
