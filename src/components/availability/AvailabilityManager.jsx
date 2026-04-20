@@ -124,7 +124,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
       const uniqueCompanyIds = [...new Set((companyIds || []).map((id) => String(id || '').trim()).filter(Boolean))];
       if (!uniqueCompanyIds.length) throw new Error('Select at least one company.');
       const requestedByLabel = 'CCG Admin';
-      const results = await Promise.all(uniqueCompanyIds.map(async (companyId) => {
+      const results = await Promise.allSettled(uniqueCompanyIds.map(async (companyId) => {
         const company = sortedCompanies.find((entry) => String(entry.id) === companyId);
         const result = await createAvailabilityRequestNotifications({
           companyId,
@@ -138,24 +138,60 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
           ownerCount: result.ownerCount || 0
         };
       }));
-      return results;
+      const successes = [];
+      const failures = [];
+
+      results.forEach((result, index) => {
+        const companyId = uniqueCompanyIds[index];
+        const company = sortedCompanies.find((entry) => String(entry.id) === companyId);
+        const fallbackCompanyName = company?.name || companyId;
+
+        if (result.status === 'fulfilled') {
+          successes.push(result.value);
+          return;
+        }
+
+        failures.push({
+          companyId,
+          companyName: fallbackCompanyName,
+          reason: result.reason?.message || 'Request failed'
+        });
+      });
+
+      return { successes, failures, targetedCount: uniqueCompanyIds.length };
     },
-    onSuccess: (results) => {
-      const targetedCount = results.length;
-      const successCount = results.filter((result) => result.ownerCount > 0).length;
-      const totalOwners = results.reduce((total, result) => total + (result.ownerCount || 0), 0);
+    onSuccess: ({ successes, failures, targetedCount }) => {
+      const successfulResults = successes.filter((result) => result.ownerCount > 0);
+      const noOwnerResults = successes.filter((result) => result.ownerCount <= 0);
+      const successCount = successfulResults.length;
+      const totalOwners = successfulResults.reduce((total, result) => total + (result.ownerCount || 0), 0);
+      const failedCompanyIds = [...new Set([...noOwnerResults.map((result) => result.companyId), ...failures.map((result) => result.companyId)])];
+      const failureCount = failedCompanyIds.length;
 
       if (!successCount) {
         setRequestFeedback('');
+        if (failureCount) {
+          setRequestCompanyIds(failedCompanyIds);
+          toast.error(`0 companies requested successfully. ${failureCount} compan${failureCount === 1 ? 'y' : 'ies'} failed.`);
+          return;
+        }
         toast.error('No active company owner access code found for selected companies.');
         return;
       }
 
-      setRequestFeedback(`Availability request sent for ${successCount} compan${successCount === 1 ? 'y' : 'ies'}.`);
-      toast.success(`Availability request sent to ${totalOwners} owner${totalOwners === 1 ? '' : 's'} across ${successCount}/${targetedCount} selected compan${targetedCount === 1 ? 'y' : 'ies'}.`);
-      setRequestModalOpen(false);
-      setRequestCompanyIds([]);
-      setRequestAlsoSendSms(false);
+      const feedbackParts = [`${successCount} compan${successCount === 1 ? 'y' : 'ies'} requested successfully`];
+      if (failureCount) feedbackParts.push(`${failureCount} failed`);
+      setRequestFeedback(feedbackParts.join(' • ') + '.');
+
+      if (failureCount) {
+        toast.warning(`Availability requests sent to ${totalOwners} owner${totalOwners === 1 ? '' : 's'}. ${successCount}/${targetedCount} companies succeeded, ${failureCount} failed.`);
+        setRequestCompanyIds(failedCompanyIds);
+      } else {
+        toast.success(`Availability request sent to ${totalOwners} owner${totalOwners === 1 ? '' : 's'} across ${successCount}/${targetedCount} selected compan${targetedCount === 1 ? 'y' : 'ies'}.`);
+        setRequestModalOpen(false);
+        setRequestCompanyIds([]);
+        setRequestAlsoSendSms(false);
+      }
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
     onError: (error) => {
