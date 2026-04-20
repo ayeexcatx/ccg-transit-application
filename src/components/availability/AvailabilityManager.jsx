@@ -124,7 +124,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
       const uniqueCompanyIds = [...new Set((companyIds || []).map((id) => String(id || '').trim()).filter(Boolean))];
       if (!uniqueCompanyIds.length) throw new Error('Select at least one company.');
       const requestedByLabel = 'CCG Admin';
-      const results = await Promise.all(uniqueCompanyIds.map(async (companyId) => {
+      const results = await Promise.allSettled(uniqueCompanyIds.map(async (companyId) => {
         const company = sortedCompanies.find((entry) => String(entry.id) === companyId);
         const result = await createAvailabilityRequestNotifications({
           companyId,
@@ -138,24 +138,60 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
           ownerCount: result.ownerCount || 0
         };
       }));
-      return results;
+      const successes = [];
+      const failures = [];
+
+      results.forEach((result, index) => {
+        const companyId = uniqueCompanyIds[index];
+        const company = sortedCompanies.find((entry) => String(entry.id) === companyId);
+        const fallbackCompanyName = company?.name || companyId;
+
+        if (result.status === 'fulfilled') {
+          successes.push(result.value);
+          return;
+        }
+
+        failures.push({
+          companyId,
+          companyName: fallbackCompanyName,
+          reason: result.reason?.message || 'Request failed'
+        });
+      });
+
+      return { successes, failures, targetedCount: uniqueCompanyIds.length };
     },
-    onSuccess: (results) => {
-      const targetedCount = results.length;
-      const successCount = results.filter((result) => result.ownerCount > 0).length;
-      const totalOwners = results.reduce((total, result) => total + (result.ownerCount || 0), 0);
+    onSuccess: ({ successes, failures, targetedCount }) => {
+      const successfulResults = successes.filter((result) => result.ownerCount > 0);
+      const noOwnerResults = successes.filter((result) => result.ownerCount <= 0);
+      const successCount = successfulResults.length;
+      const totalOwners = successfulResults.reduce((total, result) => total + (result.ownerCount || 0), 0);
+      const failedCompanyIds = [...new Set([...noOwnerResults.map((result) => result.companyId), ...failures.map((result) => result.companyId)])];
+      const failureCount = failedCompanyIds.length;
 
       if (!successCount) {
         setRequestFeedback('');
+        if (failureCount) {
+          setRequestCompanyIds(failedCompanyIds);
+          toast.error(`0 companies requested successfully. ${failureCount} compan${failureCount === 1 ? 'y' : 'ies'} failed.`);
+          return;
+        }
         toast.error('No active company owner access code found for selected companies.');
         return;
       }
 
-      setRequestFeedback(`Availability request sent for ${successCount} compan${successCount === 1 ? 'y' : 'ies'}.`);
-      toast.success(`Availability request sent to ${totalOwners} owner${totalOwners === 1 ? '' : 's'} across ${successCount}/${targetedCount} selected compan${targetedCount === 1 ? 'y' : 'ies'}.`);
-      setRequestModalOpen(false);
-      setRequestCompanyIds([]);
-      setRequestAlsoSendSms(false);
+      const feedbackParts = [`${successCount} compan${successCount === 1 ? 'y' : 'ies'} requested successfully`];
+      if (failureCount) feedbackParts.push(`${failureCount} failed`);
+      setRequestFeedback(feedbackParts.join(' • ') + '.');
+
+      if (failureCount) {
+        toast.warning(`Availability requests sent to ${totalOwners} owner${totalOwners === 1 ? '' : 's'}. ${successCount}/${targetedCount} companies succeeded, ${failureCount} failed.`);
+        setRequestCompanyIds(failedCompanyIds);
+      } else {
+        toast.success(`Availability request sent to ${totalOwners} owner${totalOwners === 1 ? '' : 's'} across ${successCount}/${targetedCount} selected compan${targetedCount === 1 ? 'y' : 'ies'}.`);
+        setRequestModalOpen(false);
+        setRequestCompanyIds([]);
+        setRequestAlsoSendSms(false);
+      }
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
     onError: (error) => {
@@ -571,6 +607,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
             <div className="flex justify-end">
               <Button
               size="sm"
+              className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500"
               onClick={() => setRequestModalOpen(true)}
               disabled={requestAvailabilityMutation.isPending || !sortedCompanies.length}>
               
@@ -636,11 +673,16 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
                 <Button type="button" size="sm" variant="ghost" onClick={clearAllRequestCompanies}>Clear All</Button>
               </div>
             </div>
-            <div className="max-h-72 overflow-y-auto rounded border border-slate-200">
+            <div className="max-h-72 overflow-y-auto rounded border border-slate-200 bg-white">
               {sortedCompanies.map((company) => {
                 const checked = requestCompanyIds.includes(String(company.id));
                 return (
-                  <label key={`request-${company.id}`} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2 last:border-b-0">
+                  <label
+                    key={`request-${company.id}`}
+                    className={`flex cursor-pointer items-center gap-3 border-b px-3 py-2 transition-colors last:border-b-0 ${
+                    checked ?
+                    'border-blue-200 bg-blue-50/80' :
+                    'border-slate-100 hover:bg-slate-50'}`}>
                     <Checkbox
                       checked={checked}
                       onCheckedChange={(nextChecked) => toggleRequestCompanyId(company.id, nextChecked === true)}
@@ -649,11 +691,16 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
                   </label>);
               })}
             </div>
-            <label className="flex cursor-pointer items-center gap-3">
-              <Checkbox checked={requestAlsoSendSms} onCheckedChange={(checked) => setRequestAlsoSendSms(checked === true)} />
-              <span className="text-sm text-slate-700">Also send SMS</span>
-            </label>
-            <div className="flex justify-end">
+            <div className="rounded-md border border-amber-200 bg-amber-50/70 px-3 py-2">
+              <label className="flex cursor-pointer items-center gap-3">
+                <Checkbox checked={requestAlsoSendSms} onCheckedChange={(checked) => setRequestAlsoSendSms(checked === true)} />
+                <div>
+                  <span className="text-sm font-medium text-amber-900">Also send SMS</span>
+                  <p className="text-xs text-amber-800/90">Send a text reminder along with in-app requests.</p>
+                </div>
+              </label>
+            </div>
+            <div className="flex justify-end border-t border-slate-200 pt-3">
               <Button
                 type="button"
                 onClick={submitAvailabilityRequests}
