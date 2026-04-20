@@ -571,6 +571,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
             <div className="flex justify-end">
               <Button
               size="sm"
+              className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500"
               onClick={() => setRequestModalOpen(true)}
               disabled={requestAvailabilityMutation.isPending || !sortedCompanies.length}>
               
@@ -636,11 +637,16 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
                 <Button type="button" size="sm" variant="ghost" onClick={clearAllRequestCompanies}>Clear All</Button>
               </div>
             </div>
-            <div className="max-h-72 overflow-y-auto rounded border border-slate-200">
+            <div className="max-h-72 overflow-y-auto rounded border border-slate-200 bg-white">
               {sortedCompanies.map((company) => {
                 const checked = requestCompanyIds.includes(String(company.id));
                 return (
-                  <label key={`request-${company.id}`} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2 last:border-b-0">
+                  <label
+                    key={`request-${company.id}`}
+                    className={`flex cursor-pointer items-center gap-3 border-b px-3 py-2 transition-colors last:border-b-0 ${
+                    checked ?
+                    'border-blue-200 bg-blue-50/80' :
+                    'border-slate-100 hover:bg-slate-50'}`}>
                     <Checkbox
                       checked={checked}
                       onCheckedChange={(nextChecked) => toggleRequestCompanyId(company.id, nextChecked === true)}
@@ -649,11 +655,16 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
                   </label>);
               })}
             </div>
-            <label className="flex cursor-pointer items-center gap-3">
-              <Checkbox checked={requestAlsoSendSms} onCheckedChange={(checked) => setRequestAlsoSendSms(checked === true)} />
-              <span className="text-sm text-slate-700">Also send SMS</span>
-            </label>
-            <div className="flex justify-end">
+            <div className="rounded-md border border-amber-200 bg-amber-50/70 px-3 py-2">
+              <label className="flex cursor-pointer items-center gap-3">
+                <Checkbox checked={requestAlsoSendSms} onCheckedChange={(checked) => setRequestAlsoSendSms(checked === true)} />
+                <div>
+                  <span className="text-sm font-medium text-amber-900">Also send SMS</span>
+                  <p className="text-xs text-amber-800/90">Send a text reminder along with in-app requests.</p>
+                </div>
+              </label>
+            </div>
+            <div className="flex justify-end border-t border-slate-200 pt-3">
               <Button
                 type="button"
                 onClick={submitAvailabilityRequests}
