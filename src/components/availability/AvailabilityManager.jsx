@@ -325,9 +325,8 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
     for (const shift of ['Day', 'Night']) {
       const shiftState = dateOverrideForm[shift];
       if (!shiftState?.operational) continue;
-
       const count = shiftState.status === STATUS_AVAILABLE ? normalizeCount(shiftState.count) : null;
-      if (shiftState.status === STATUS_AVAILABLE && shiftState.count !== '' && count === null) {
+      if (shiftState.status === STATUS_AVAILABLE && count === null) {
         setFormError(`${shift} shift available truck count must be a whole number greater than 0.`);
         return;
       }
@@ -351,6 +350,50 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
     await maybeNotifyAdminAvailabilityUpdated();
     setOverrideEditingDate(null);
     setDateOverrideForm(null);
+  };
+
+  const copyAvailabilityToRestOfWeek = async () => {
+    if (!overrideEditingDate || !selectedCompanyId || !dateOverrideForm) return;
+    if (!window.confirm('Copy this availability to the rest of this week?')) return;
+
+    for (const shift of ['Day', 'Night']) {
+      const shiftState = dateOverrideForm[shift];
+      if (!shiftState?.operational) continue;
+      const count = shiftState.status === STATUS_AVAILABLE ? normalizeCount(shiftState.count) : null;
+      if (shiftState.status === STATUS_AVAILABLE && count === null) {
+        setFormError(`${shift} shift available truck count must be a whole number greater than 0.`);
+        return;
+      }
+    }
+
+    const weekEnd = endOfWeek(overrideEditingDate, { weekStartsOn: 0 });
+    const targetDates = eachDayOfInterval({
+      start: addDays(overrideEditingDate, 1),
+      end: weekEnd
+    }).filter((date) => !isPastDate(date));
+
+    const savePromises = targetDates.flatMap((date) =>
+      ['Day', 'Night'].map(async (shift) => {
+        const sourceShiftState = dateOverrideForm[shift];
+        if (!sourceShiftState?.operational) return;
+        if (!getOperationalShifts(date.getDay()).includes(shift)) return;
+
+        const count = sourceShiftState.status === STATUS_AVAILABLE ? normalizeCount(sourceShiftState.count) : null;
+        await upsertOverrideMutation.mutateAsync({
+          company_id: selectedCompanyId,
+          status: sourceShiftState.status,
+          available_truck_count: sourceShiftState.status === STATUS_UNAVAILABLE ? null : count,
+          date: toDateKey(date),
+          shift
+        });
+      })
+    );
+
+    await Promise.all(savePromises);
+    await maybeNotifyAdminAvailabilityUpdated();
+    setOverrideEditingDate(null);
+    setDateOverrideForm(null);
+    setFormError('');
   };
 
   const clearDateOverrides = async (date) => {
@@ -392,7 +435,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
       return { label: String(availability.available_truck_count), className: getStatusClass(availability.status) };
     }
 
-    return { label: 'Avail', className: getStatusClass(availability.status) };
+    return { label: '—', className: getStatusClass(availability.status) };
   };
 
   const shiftActiveDate = (direction) => {
@@ -663,7 +706,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
 
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit day override</DialogTitle>
+            <DialogTitle>Update Availability</DialogTitle>
           </DialogHeader>
 
           {overrideEditingDate && dateOverrideForm &&
@@ -716,8 +759,8 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
               {formError && <p className="text-xs text-red-600">{formError}</p>}
 
               <div className="flex flex-wrap justify-end gap-2">
-                <Button variant="outline" onClick={() => clearDateOverrides(overrideEditingDate)}>Use Weekly Default</Button>
                 <Button variant="outline" onClick={() => {setOverrideEditingDate(null);setDateOverrideForm(null);setFormError('');}}>Cancel</Button>
+                <Button variant="outline" onClick={copyAvailabilityToRestOfWeek}>Copy to rest of this week</Button>
                 <Button onClick={saveDateOverride}>Save</Button>
               </div>
             </div>
