@@ -539,8 +539,7 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold text-slate-900">Calendar</h2>
-          <p className="text-slate-500 text-sm font-medium text-left">Select how many trucks you have available for each shift.</p>
-          <p className="text-slate-500 text-sm font-medium">Anything entered here will override any of your defaults (just for that specific day/shift only).</p> 
+          <p className="text-slate-500 text-sm font-medium text-left">Select how many trucks you have available for each shift.</p> 
           <p className="text-red-600 text-sm font-bold">The correct way to fill this out is to select the date, then enter the number of trucks you have available for that shift.</p>
           <p className="text-red-600 text-sm font-bold italic">Owner-operators: You must still enter 1 for each shift you are available.</p>
         </div>
