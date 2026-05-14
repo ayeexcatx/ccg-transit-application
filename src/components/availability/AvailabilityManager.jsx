@@ -21,7 +21,6 @@ import {
   VIEW_MODES,
   STATUS_AVAILABLE,
   STATUS_UNAVAILABLE,
-  WEEKDAY_LABELS,
   getOperationalShifts,
   getStatusClass,
   normalizeCount,
@@ -36,8 +35,6 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState('week');
   const [activeDate, setActiveDate] = useState(new Date());
-  const [defaultsEditorOpen, setDefaultsEditorOpen] = useState(false);
-  const [defaultsEditorForm, setDefaultsEditorForm] = useState(null);
   const [overrideEditingDate, setOverrideEditingDate] = useState(null);
   const [dateOverrideForm, setDateOverrideForm] = useState(null);
   const [formError, setFormError] = useState('');
@@ -95,18 +92,6 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
 
     return map;
   }, [overrides, selectedCompanyId]);
-
-  const upsertDefaultMutation = useMutation({
-    mutationFn: async (payload) => {
-      const existing = defaults.find((item) => item.weekday === payload.weekday && item.shift === payload.shift);
-      if (existing) return base44.entities.CompanyAvailabilityDefault.update(existing.id, payload);
-      return base44.entities.CompanyAvailabilityDefault.create(payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-availability-defaults', selectedCompanyId] });
-      queryClient.invalidateQueries({ queryKey: ['availability-summary-defaults'] });
-    }
-  });
 
   const upsertOverrideMutation = useMutation({
     mutationFn: async (payload) => {
@@ -329,54 +314,6 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
     setFormError('');
   };
 
-  const openDefaultsEditor = () => {
-    const form = {};
-    for (let weekday = 0; weekday < 7; weekday += 1) {
-      const operationalShifts = getOperationalShifts(weekday);
-      form[weekday] = {
-        Day: {
-          operational: operationalShifts.includes('Day'),
-          checked: (defaultMap.get(`${selectedCompanyId}-${weekday}-Day`)?.status || STATUS_AVAILABLE) === STATUS_AVAILABLE
-        },
-        Night: {
-          operational: operationalShifts.includes('Night'),
-          checked: (defaultMap.get(`${selectedCompanyId}-${weekday}-Night`)?.status || STATUS_AVAILABLE) === STATUS_AVAILABLE
-        }
-      };
-    }
-    setDefaultsEditorForm(form);
-    setDefaultsEditorOpen(true);
-    setFormError('');
-  };
-
-  const saveWeeklyDefaults = async () => {
-    if (!selectedCompanyId || !defaultsEditorForm) return;
-
-    const jobs = [];
-    for (let weekday = 0; weekday < 7; weekday += 1) {
-      for (const shift of ['Day', 'Night']) {
-        const shiftState = defaultsEditorForm[weekday]?.[shift];
-        if (!shiftState?.operational) continue;
-
-        const existing = defaultMap.get(`${selectedCompanyId}-${weekday}-${shift}`);
-        jobs.push(
-          upsertDefaultMutation.mutateAsync({
-            company_id: selectedCompanyId,
-            weekday,
-            shift,
-            status: shiftState.checked ? STATUS_AVAILABLE : STATUS_UNAVAILABLE,
-            available_truck_count: shiftState.checked ? existing?.available_truck_count ?? null : null
-          })
-        );
-      }
-    }
-
-    await Promise.all(jobs);
-    await maybeNotifyAdminAvailabilityUpdated();
-    setDefaultsEditorOpen(false);
-    setDefaultsEditorForm(null);
-  };
-
   const saveDateOverride = async () => {
     if (!overrideEditingDate || !selectedCompanyId || !dateOverrideForm) return;
     if (isPastDate(overrideEditingDate)) {
@@ -456,16 +393,6 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
     }
 
     return { label: 'Avail', className: getStatusClass(availability.status) };
-  };
-
-  const getDefaultMatrixDisplay = (weekday, shift) => {
-    if (!getOperationalShifts(weekday).includes(shift)) return { label: 'N/A', className: 'text-slate-400' };
-    const availability = selectedCompanyId ?
-    defaultMap.get(`${selectedCompanyId}-${weekday}-${shift}`) || { status: STATUS_AVAILABLE, available_truck_count: null } :
-    { status: STATUS_AVAILABLE, available_truck_count: null };
-    if (availability.status === STATUS_UNAVAILABLE) return { label: 'No', className: 'text-red-700' };
-    if (availability.available_truck_count) return { label: String(availability.available_truck_count), className: 'text-green-700' };
-    return { label: 'Yes', className: 'text-green-700' };
   };
 
   const shiftActiveDate = (direction) => {
@@ -564,45 +491,6 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
 
   };
 
-  const renderWeeklyDefaultsMatrix = () =>
-  <div className="space-y-3">
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Weekly Defaults</h2>
-        <p className="text-slate-500 text-sm font-medium">Select your default availability that is the same every week.</p>
-      </div>
-      <Card data-tour="recurring-weekly-defaults">
-        <CardContent className="bg-slate-50 p-4 space-y-3">
-        <div className="space-y-1 text-xs text-slate-500">
-          <p className="text-red-500">(Example: I can work all day shifts + Mon/Wed/Fri night shifts) </p>
-          <p>If you need off on a specific day when you are usually available (default), use the availability chart ABOVE to select Unavailable. </p>
-          <p>If you can work on a day when you are usually unavailable (default), use the availability chart ABOVE to select Available/Number of trucks. </p> 
-        </div>
-        <div className="overflow-x-auto">
-          <div className="min-w-[320px] divide-y divide-slate-200 rounded border border-slate-200">
-            <div className="bg-zinc-50 text-slate-600 px-3 py-2 text-xs font-semibold grid grid-cols-[1.6fr_1fr_1fr]">
-              <span>Weekday</span>
-              <span className="text-center">Day</span>
-              <span className="text-center">Night</span>
-            </div>
-            {[1, 2, 3, 4, 5, 6, 0].map((weekday) => {const dayDisplay = getDefaultMatrixDisplay(weekday, 'Day');const nightDisplay = getDefaultMatrixDisplay(weekday, 'Night');
-            return (
-              <div key={`default-${weekday}`} className="grid grid-cols-[1.6fr_1fr_1fr] px-3 py-2 text-sm">
-                  <span className="text-slate-700">{WEEKDAY_LABELS[weekday]}</span>
-                  <span className={`text-center font-semibold ${dayDisplay.className}`}>{dayDisplay.label}</span>
-                  <span className={`text-center font-semibold ${nightDisplay.className}`}>{nightDisplay.label}</span>
-                </div>);
-
-          })}
-          </div>
-        </div>
-        <div className="flex justify-end">
-          <Button size="sm" variant="outline" onClick={openDefaultsEditor}>Edit Defaults</Button>
-        </div>
-        </CardContent>
-      </Card>
-    </div>;
-
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -681,7 +569,6 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
             </CardContent>
           </Card>
 
-          {renderWeeklyDefaultsMatrix()}
         </>
       }
 
@@ -838,73 +725,6 @@ export default function AvailabilityManager({ companyId, canSelectCompany = fals
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={defaultsEditorOpen}
-        onOpenChange={(open) => {
-          setDefaultsEditorOpen(open);
-          if (!open) {
-            setDefaultsEditorForm(null);
-            setFormError('');
-          }
-        }}>
-
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit weekly defaults</DialogTitle>
-          </DialogHeader>
-
-          {defaultsEditorForm &&
-          <div className="space-y-4">
-              <div className="divide-y divide-slate-200 rounded border border-slate-200">
-                <div className="grid grid-cols-[1.5fr_1fr_1fr] bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
-                  <span>Weekday</span>
-                  <span className="text-center">Day</span>
-                  <span className="text-center">Night</span>
-                </div>
-                {[1, 2, 3, 4, 5, 6, 0].map((weekday) =>
-              <div key={`edit-default-${weekday}`} className="grid grid-cols-[1.5fr_1fr_1fr] items-center px-3 py-2 text-sm">
-                    <span className="text-slate-700">{WEEKDAY_LABELS[weekday]}</span>
-                    {['Day', 'Night'].map((shift) => {
-                  const shiftState = defaultsEditorForm[weekday][shift];
-                  if (!shiftState.operational) {
-                    return <span key={`${weekday}-${shift}`} className="text-center text-xs text-slate-400">N/A</span>;
-                  }
-
-                  return (
-                    <label key={`${weekday}-${shift}`} className="mx-auto flex items-center gap-2 text-xs text-slate-700">
-                          <Checkbox
-                        checked={shiftState.checked}
-                        onCheckedChange={(checked) => {
-                          setDefaultsEditorForm((prev) => ({
-                            ...prev,
-                            [weekday]: {
-                              ...prev[weekday],
-                              [shift]: {
-                                ...prev[weekday][shift],
-                                checked: !!checked
-                              }
-                            }
-                          }));
-                        }} />
-
-                          {shift}
-                        </label>);
-
-                })}
-                  </div>
-              )}
-              </div>
-
-              {formError && <p className="text-xs text-red-600">{formError}</p>}
-
-              <div className="flex flex-wrap justify-end gap-2">
-                <Button variant="outline" onClick={() => {setDefaultsEditorOpen(false);setDefaultsEditorForm(null);setFormError('');}}>Cancel</Button>
-                <Button onClick={saveWeeklyDefaults}>Save</Button>
-              </div>
-            </div>
-          }
-        </DialogContent>
-      </Dialog>
     </div>);
 
 }
