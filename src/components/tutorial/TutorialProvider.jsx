@@ -19,6 +19,8 @@ const TutorialContext = createContext({
 
 const DEBUG_TUTORIAL_SCROLL = false;
 
+const COMPANY_OWNER_HOME_TUTORIAL_ENABLED = false;
+
 const logTutorialScroll = (...args) => {
   if (!DEBUG_TUTORIAL_SCROLL) return;
   if (typeof window !== 'undefined') {
@@ -77,6 +79,7 @@ export default function TutorialProvider({ session, children }) {
   }, [setTargetRect]);
 
   const startTutorial = useCallback((language = tutorialConfig.defaultLanguage) => {
+    if (!COMPANY_OWNER_HOME_TUTORIAL_ENABLED) return;
     if (!isCompanyOwner) return;
     setSelectedLanguage(language);
     setShowWelcome(false);
@@ -85,6 +88,7 @@ export default function TutorialProvider({ session, children }) {
   }, [isCompanyOwner, setStepIndex, tutorialConfig.defaultLanguage]);
 
   const openTutorialWelcome = useCallback(({ markSeen = false } = {}) => {
+    if (!COMPANY_OWNER_HOME_TUTORIAL_ENABLED) return;
     if (!isCompanyOwner) return;
     if (markSeen) {
       localStorage.setItem(seenKey, 'true');
@@ -158,6 +162,12 @@ export default function TutorialProvider({ session, children }) {
   }, []);
 
   useEffect(() => {
+    if (!COMPANY_OWNER_HOME_TUTORIAL_ENABLED) {
+      setShowWelcome(false);
+      stopTutorial();
+      return;
+    }
+
     if (!isCompanyOwner) {
       setShowWelcome(false);
       stopTutorial();
@@ -197,7 +207,7 @@ export default function TutorialProvider({ session, children }) {
     <TutorialContext.Provider value={value}>
       {children}
 
-      {isCompanyOwner && !isDispatchDrawerOpen && (
+      {COMPANY_OWNER_HOME_TUTORIAL_ENABLED && isCompanyOwner && !isDispatchDrawerOpen && (
         <Button
           type="button"
           size="sm"
