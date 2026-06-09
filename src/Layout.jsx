@@ -165,6 +165,7 @@ function LayoutInner({ children, currentPageName }) {
   };
 
   return (
+    isAdmin ? (
     <TutorialProvider session={session}>
       <AdminDispatchDrawerProvider session={session} isAdmin={isAdmin}>
       <div className="bg-zinc-50 min-h-screen">
@@ -355,6 +356,196 @@ function LayoutInner({ children, currentPageName }) {
       </div>
       </AdminDispatchDrawerProvider>
     </TutorialProvider>
+    ) : (
+    <AdminDispatchDrawerProvider session={session} isAdmin={isAdmin}>
+      <div className="bg-zinc-50 min-h-screen">
+        <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+          <div className="bg-slate-50 mx-auto max-w-7xl px-4 sm:px-6">
+            <div className="min-h-16 py-2 sm:h-16 sm:py-0 flex items-center justify-between gap-2 sm:gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <img src="/transitlogo.png" alt="CCG Transit logo" className="h-10 w-10 sm:h-12 sm:w-12 object-contain" />
+                <div className="min-w-0">
+                  <h1 className="text-xs sm:text-sm font-semibold text-slate-900 tracking-tight leading-tight sm:leading-normal max-w-[16rem] sm:max-w-none [display:-webkit-box] [-webkit-line-clamp:2] sm:[-webkit-line-clamp:1] [-webkit-box-orient:vertical] overflow-hidden">
+                    {headerTitle}
+                  </h1>
+                  <p className="text-[11px] sm:text-xs text-slate-500 flex items-center gap-1 truncate">
+                    {isAdmin && <Shield className="h-3 w-3 shrink-0" />}
+                    {isOwner && <Building2 className="h-3 w-3 shrink-0" />}
+                    {isDriver && <UserRound className="h-3 w-3 shrink-0" />}
+                    <span className="truncate">{workspaceDisplayLabel || effectiveView}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {showWorkspaceSwitcher && (
+                  <div className="hidden sm:flex items-center gap-2">
+                    <span className="text-xs text-slate-500">Workspace</span>
+                    <Select value={selectedWorkspaceKey} onValueChange={handleWorkspaceChange}>
+                      <SelectTrigger className="h-8 min-w-36 text-xs bg-white">
+                        <SelectValue placeholder="Workspace" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {workspaceOptions.map((workspace) => (
+                          <SelectItem key={workspace.key} value={workspace.key}>
+                            {workspace.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {(isAdmin || isOwner || isDriver) && <NotificationBell session={session} />}
+
+                {(isAdmin || isOwner || isDriver) && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-11 w-11 text-slate-500 hover:text-slate-700" aria-label="Open menu">
+                        <Menu className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      {showWorkspaceSwitcher && (
+                        <>
+                          <div className="px-2 pt-2 pb-1 text-[11px] font-medium text-slate-500">Workspace</div>
+                          <div className="px-2 pb-2">
+                            <Select value={selectedWorkspaceKey} onValueChange={handleWorkspaceChange}>
+                              <SelectTrigger className="h-8 min-w-48 text-xs bg-white">
+                                <SelectValue placeholder="Workspace" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {workspaceOptions.map((workspace) => (
+                                  <SelectItem key={workspace.key} value={workspace.key}>
+                                    {workspace.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
+                      <DropdownMenuItem asChild className="py-2.5">
+                        <Link to={createPageUrl('Profile')} className="cursor-pointer">
+                          <UserRound className="h-4 w-4" />
+                          Profile
+                        </Link>
+                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <DropdownMenuItem asChild className="py-2.5">
+                          <Link to={createPageUrl('AdminSmsCenter')} className="cursor-pointer">
+                            <MessageSquare className="h-4 w-4" />
+                            SMS Center
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {isAdmin && (
+                        <DropdownMenuItem asChild className="py-2.5">
+                          <Link to={createPageUrl('AdminDriverProtocol')} className="cursor-pointer">
+                            <BookOpenText className="h-4 w-4" />
+                            Driver Protocol
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {isAdmin && (
+                        <DropdownMenuItem asChild className="py-2.5">
+                          <Link to={createPageUrl('AdminUserLookup')} className="cursor-pointer">
+                            <Search className="h-4 w-4" />
+                            User Lookup
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onClick={handleLogout} className="py-2.5 sm:hidden cursor-pointer">
+                        <LogOut className="h-4 w-4" />
+                        Log out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="hidden sm:inline-flex text-slate-500 hover:text-slate-700"
+                >
+                  <LogOut className="h-4 w-4 mr-1" />
+                  <span className="bg-transparent text-xs">Log out</span>
+                </Button>
+              </div>
+            </div>
+
+            {(isAdmin || canUsePortalTabs) && (
+              <div className="hidden md:flex border-t border-slate-200 py-2 justify-center">
+                <div className="flex items-center gap-4 overflow-x-auto whitespace-nowrap">
+                  {isAdmin && (
+                    <nav className="flex items-center gap-1">
+                      <Link to={createPageUrl('AdminDashboard')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminDashboard'))}><Home className="h-3 w-3" />Dashboard</Button></Link>
+                      <Link to={createPageUrl('AdminDispatches')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminDispatches'))}><Truck className="h-3 w-3" />Dispatches</Button></Link>
+                      <Link to={createPageUrl('AdminAvailability')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminAvailability'))}><CalendarDays className="h-3 w-3" />Availability</Button></Link>
+                      <Link to={createPageUrl('AdminConfirmations')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminConfirmations'))}><CheckCircle2 className="h-3 w-3" />Confirmations</Button></Link>
+                      <Link to={createPageUrl('Incidents')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('Incidents'))}><TriangleAlert className="h-3 w-3" />Incidents</Button></Link>
+                      <Link to={createPageUrl('AdminAnnouncements')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminAnnouncements'))}><Megaphone className="h-3 w-3" />Announcements</Button></Link>
+                      <Link to={createPageUrl('AdminCompanies')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminCompanies'))}><Building2 className="h-3 w-3" /><span>Companies</span>{pendingCompanyProfileRequestsCount > 0 && (<span className="ml-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">{pendingCompanyProfileRequestsCount}</span>)}</Button></Link>
+                      <Link to={createPageUrl('AdminAccessCodes')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminAccessCodes'))}><Shield className="h-3 w-3" /><span>Access Codes</span>{pendingDriverRequestsCount > 0 && (<span className="ml-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">{pendingDriverRequestsCount}</span>)}</Button></Link>
+                      <Link to={createPageUrl('AdminTemplateNotes')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminTemplateNotes'))}><FileText className="h-3 w-3" />Notes</Button></Link>
+                    </nav>
+                  )}
+                  {canUsePortalTabs && (
+                    <nav className="flex items-center gap-1">
+                      {portalNavItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link key={item.page} to={createPageUrl(item.page)}>
+                            <Button variant="ghost" size="sm" className={getNavItemClassName(isActive(item.page))} data-tour={item.tour}>
+                              <Icon className="h-3 w-3" />
+                              {item.label}
+                            </Button>
+                          </Link>
+                        );
+                      })}
+                    </nav>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {canUsePortalTabs && (
+            <div className="md:hidden border-t border-slate-100 px-4 py-2 flex gap-1 overflow-x-auto">
+              {portalNavItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link key={item.page} to={createPageUrl(item.page)}>
+                    <Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive(item.page))} data-tour={item.tour}>
+                      <Icon className="h-3 w-3" />
+                      {item.label}
+                    </Button>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {isAdmin && (
+            <div className="md:hidden border-t border-slate-100 px-4 py-2 flex gap-1 overflow-x-auto">
+              <Link to={createPageUrl('AdminDashboard')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminDashboard'))}><Home className="h-3 w-3" />Dashboard</Button></Link>
+              <Link to={createPageUrl('AdminDispatches')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminDispatches'))}><Truck className="h-3 w-3" />Dispatches</Button></Link>
+              <Link to={createPageUrl('AdminAvailability')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminAvailability'))}><CalendarDays className="h-3 w-3" />Availability</Button></Link>
+              <Link to={createPageUrl('AdminConfirmations')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminConfirmations'))}><CheckCircle2 className="h-3 w-3" />Confirmations</Button></Link>
+              <Link to={createPageUrl('Incidents')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('Incidents'))}><TriangleAlert className="h-3 w-3" />Incidents</Button></Link>
+              <Link to={createPageUrl('AdminAnnouncements')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminAnnouncements'))}><Megaphone className="h-3 w-3" />Announcements</Button></Link>
+              <Link to={createPageUrl('AdminCompanies')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminCompanies'))}><Building2 className="h-3 w-3" /><span>Companies</span>{pendingCompanyProfileRequestsCount > 0 && (<span className="ml-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">{pendingCompanyProfileRequestsCount}</span>)}</Button></Link>
+              <Link to={createPageUrl('AdminAccessCodes')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminAccessCodes'))}><Shield className="h-3 w-3" /><span>Access Codes</span>{pendingDriverRequestsCount > 0 && (<span className="ml-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">{pendingDriverRequestsCount}</span>)}</Button></Link>
+              <Link to={createPageUrl('AdminTemplateNotes')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminTemplateNotes'))}><FileText className="h-3 w-3" />Notes</Button></Link>
+            </div>
+          )}
+        </header>
+
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6" data-tutorial-scroll="main">{children}</main>
+      </div>
+    </AdminDispatchDrawerProvider>
+    )
   );
 }
 
