@@ -12,8 +12,6 @@ import {
 } from './tutorialConfig';
 import { buildTutorialStorageKey } from './tutorialStorage';
 
-const COMPANY_OWNER_HOME_TUTORIAL_ENABLED = false;
-
 const TutorialContext = createContext({
   startTutorial: () => {},
   openTutorialWelcome: () => {},
