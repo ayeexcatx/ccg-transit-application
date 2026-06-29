@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
 
     const base44 = createClient({
       appId: Deno.env.get('BASE44_APP_ID') || '',
-      serviceRoleKey: Deno.env.get('BASE44_SERVICE_ROLE_KEY') || '',
+      serviceToken: Deno.env.get('BASE44_SERVICE_ROLE_KEY') || '',
     });
 
     const existingLogs = await base44.asServiceRole.entities.General.filter({
