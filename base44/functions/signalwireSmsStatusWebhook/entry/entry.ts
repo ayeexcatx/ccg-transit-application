@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
       serviceRoleKey: Deno.env.get('BASE44_SERVICE_ROLE_KEY') || '',
     });
 
-    const existingLogs = await base44.entities.General.filter({
+    const existingLogs = await base44.asServiceRole.entities.General.filter({
       record_type: 'sms_log',
       provider_message_id: messageSid,
     }, '-created_date', 1);
@@ -113,7 +113,7 @@ Deno.serve(async (req: Request) => {
       updateData.error_message = buildErrorMessage(payload);
     }
 
-    await base44.entities.General.update(existingLog.id, updateData);
+    await base44.asServiceRole.entities.General.update(existingLog.id, updateData);
 
     return new Response(JSON.stringify({
       ok: true,
