@@ -21,10 +21,10 @@ import {
   getDispatchOpenTargets,
   resolveDispatchOpenTab,
 } from '@/lib/dispatchOpenOrchestration';
-import { syncDispatchHtmlToDrive } from '@/lib/dispatchDriveSync';
+import { recordDispatchDriveSyncFailure, syncDispatchRecordHtml as syncDispatchRecordHtmlBase } from '@/lib/dispatchDriveSync';
 import { toast } from 'sonner';
 import { runAdminDispatchMutation } from '@/services/adminDispatchMutationService';
-import { runAdminDispatchArchiveMutation } from '@/services/dispatchArchiveMutationService';
+import { autoArchiveDispatchAfterTimeLogging, runAdminDispatchArchiveMutation } from '@/services/dispatchArchiveMutationService';
 import AdminDispatchesToolbar from '@/components/admin/admin-dispatches/AdminDispatchesToolbar';
 import AdminDispatchesFiltersPanel from '@/components/admin/admin-dispatches/AdminDispatchesFiltersPanel';
 import AdminDispatchesTabBar from '@/components/admin/admin-dispatches/AdminDispatchesTabBar';
@@ -125,20 +125,10 @@ const syncDispatchRecordHtml = async ({
   finalizeAfterSync = false,
   allowArchivedFinalizedSync = false
 }) => {
-  const companyName = getCompanyNameFromDispatch(dispatch, companies);
-  const [confirmationsForDispatch, timeEntriesForDispatch, driverAssignmentsForDispatch] = await Promise.all([
-  base44.entities.Confirmation.filter({ dispatch_id: dispatch.id }, '-confirmed_at', 500),
-  base44.entities.TimeEntry.filter({ dispatch_id: dispatch.id }, '-created_date', 500),
-  base44.entities.DriverDispatch.filter({ dispatch_id: dispatch.id }, '-created_date', 500)]
-  );
-
-  return syncDispatchHtmlToDrive({
+  return syncDispatchRecordHtmlBase({
     dispatch,
     previousDispatch,
-    companyName,
-    confirmations: confirmationsForDispatch,
-    timeEntries: timeEntriesForDispatch,
-    driverAssignments: driverAssignmentsForDispatch,
+    companyName: getCompanyNameFromDispatch(dispatch, companies),
     finalizeAfterSync,
     allowArchivedFinalizedSync
   });
@@ -648,10 +638,7 @@ export default function AdminDispatches() {
         allowArchivedFinalizedSync: true
       }),
       onFinalArchiveSyncError: async ({ dispatch: updatedDispatch, error }) => {
-        await base44.entities.Dispatch.update(updatedDispatch.id, {
-          dispatch_html_drive_last_sync_status: 'failed',
-          dispatch_html_drive_last_sync_error: String(error?.message || error || 'Drive sync failed')
-        });
+        await recordDispatchDriveSyncFailure({ dispatch: updatedDispatch, error, finalizeAfterSync: true });
         toast.warning('Dispatch archived, but final Google Drive sync failed.');
       }
     }),
@@ -787,6 +774,44 @@ export default function AdminDispatches() {
       queryClient.invalidateQueries({ queryKey: ['time-entries-admin'] }),
       queryClient.invalidateQueries({ queryKey: ['time-entries'] }),
     ]);
+
+    const latestEntries = await base44.entities.TimeEntry.filter({ dispatch_id: dispatch.id }, '-created_date', 500);
+    const preferredEntriesByKey = latestEntries.reduce((map, entry) => {
+      const key = getTimeEntryCompositeKey(entry?.dispatch_id, entry?.truck_number);
+      if (!key) return map;
+      map.set(key, pickPreferredTimeEntry(map.get(key), entry));
+      return map;
+    }, new Map());
+    const allComplete = (dispatch.trucks_assigned || []).length > 0 && (dispatch.trucks_assigned || []).every((truck) => {
+      const preferredEntry = preferredEntriesByKey.get(getTimeEntryCompositeKey(dispatch.id, truck));
+      return Boolean(preferredEntry?.start_time && preferredEntry?.end_time);
+    });
+    const automaticallyArchived = await autoArchiveDispatchAfterTimeLogging({
+      dispatch,
+      allComplete,
+      isPastOrToday: Boolean(dispatch.date && dispatch.date <= format(new Date(), 'yyyy-MM-dd')),
+      runFinalArchiveSync: ({ dispatch: updatedDispatch, previousDispatch }) => syncDispatchRecordHtml({
+        dispatch: updatedDispatch,
+        previousDispatch,
+        companies,
+        finalizeAfterSync: true,
+        allowArchivedFinalizedSync: true
+      }),
+      onFinalArchiveSyncError: async ({ dispatch: updatedDispatch, error }) => {
+        await recordDispatchDriveSyncFailure({ dispatch: updatedDispatch, error, finalizeAfterSync: true });
+        toast.warning('Time saved and dispatch archived, but final Google Drive sync failed.');
+      }
+    });
+    if (!automaticallyArchived) {
+      try {
+        await syncDispatchRecordHtml({ dispatch, previousDispatch: dispatch, companies });
+      } catch (error) {
+        await recordDispatchDriveSyncFailure({ dispatch, error });
+        toast.warning('Time saved, but Google Drive sync failed.');
+      }
+    } else {
+      await queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] });
+    }
 
     return canonicalSavedEntries;
   };

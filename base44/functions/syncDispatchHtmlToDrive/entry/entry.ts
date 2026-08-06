@@ -19,6 +19,7 @@ type ExistingDriveRecord = {
   root_folder_id?: string;
   file_id?: string;
   status?: string;
+  finalizationMode?: boolean;
   synced_at?: string;
 };
 
@@ -38,6 +39,20 @@ type DriveFile = {
   parents?: string[];
   mimeType?: string;
 };
+
+type SyncStage = 'parse_payload' | 'get_connector_token' | 'ensure_company_folder' |
+  'ensure_truck_folder' | 'upsert_file' | 'delete_stale_file';
+
+class DriveRequestError extends Error {
+  driveHttpStatus: number;
+  driveResponseBody: string;
+
+  constructor(status: number, responseBody: string) {
+    super(`Google Drive API request failed (${status}).`);
+    this.driveHttpStatus = status;
+    this.driveResponseBody = responseBody.slice(0, 4000);
+  }
+}
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
@@ -67,7 +82,7 @@ async function driveRequest<T>(
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Google Drive API error (${response.status}): ${text}`);
+    throw new DriveRequestError(response.status, text);
   }
 
   if (response.status === 204) return undefined as T;
@@ -164,9 +179,15 @@ async function upsertHtmlFile(
 }
 
 async function deleteFile(token: string, fileId: string): Promise<void> {
-  await driveRequest<void>(token, `${DRIVE_API}/files/${fileId}?supportsAllDrives=true`, {
-    method: 'DELETE',
-  });
+  try {
+    await driveRequest<void>(token, `${DRIVE_API}/files/${fileId}?supportsAllDrives=true`, {
+      method: 'DELETE',
+    });
+  } catch (error) {
+    // Stale-file deletion is idempotent: a prior partial sync may already have removed it.
+    if (error instanceof DriveRequestError && error.driveHttpStatus === 404) return;
+    throw error;
+  }
 }
 
 async function getPayload(req: Request): Promise<SyncPayload> {
@@ -181,9 +202,12 @@ async function getPayload(req: Request): Promise<SyncPayload> {
 
 Deno.serve(async (req: Request) => {
   console.log('syncDispatchHtmlToDrive invoked');
-  
+  let stage: SyncStage = 'parse_payload';
+  let payloadContext: Partial<SyncPayload> = {};
+
   try {
     const payload = await getPayload(req);
+    payloadContext = payload;
     const {
       dispatchId,
       rootFolderId,
@@ -204,6 +228,7 @@ Deno.serve(async (req: Request) => {
     if (!rootFolderId) throw new Error('rootFolderId is required.');
 
     console.log('syncDispatchHtmlToDrive before getting connector token');
+    stage = 'get_connector_token';
     const token = await getGoogleDriveAccessToken(req);
     console.log('syncDispatchHtmlToDrive after token received');
     const syncedFiles: ExistingDriveRecord[] = [];
@@ -217,12 +242,9 @@ Deno.serve(async (req: Request) => {
     for (const stale of staleFiles) {
       if (!stale.file_id) continue;
 
-      try {
-        await deleteFile(token, stale.file_id);
-        removedFiles.push(stale);
-      } catch (error) {
-        console.error('Failed to delete stale Drive file.', { stale, error });
-      }
+      stage = 'delete_stale_file';
+      await deleteFile(token, stale.file_id);
+      removedFiles.push(stale);
     }
 
     for (const target of desiredFiles) {
@@ -233,8 +255,11 @@ Deno.serve(async (req: Request) => {
         pathKey: target.pathKey,
       });
 
+      stage = 'ensure_company_folder';
       const companyFolder = await ensureFolder(token, rootFolderId, target.companyFolderName);
+      stage = 'ensure_truck_folder';
       const truckFolder = await ensureFolder(token, companyFolder.id, target.truckFolderName);
+      stage = 'upsert_file';
       const uploaded = await upsertHtmlFile(token, truckFolder.id, target.fileName, target.htmlContent);
 
       syncedFiles.push({
@@ -256,7 +281,20 @@ Deno.serve(async (req: Request) => {
       removedFiles,
     });
   } catch (error) {
-    console.error('syncDispatchHtmlToDrive failed.', { error });
-    return Response.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
+    const diagnostic = {
+      invocationStage: 'function_execution',
+      stage,
+      dispatchId: payloadContext.dispatchId || null,
+      dispatchStatus: payloadContext.status || null,
+      finalizeAfterSync: Boolean(payloadContext.finalizationMode),
+      desiredFileCount: payloadContext.desiredFiles?.length ?? 0,
+      rootFolderId: payloadContext.rootFolderId || null,
+      connectorTokenRetrievalFailed: stage === 'get_connector_token',
+      driveHttpStatus: error instanceof DriveRequestError ? error.driveHttpStatus : null,
+      driveResponseBody: error instanceof DriveRequestError ? error.driveResponseBody : null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+    console.error('syncDispatchHtmlToDrive failed.', diagnostic);
+    return Response.json(diagnostic, { status: 500 });
   }
 });

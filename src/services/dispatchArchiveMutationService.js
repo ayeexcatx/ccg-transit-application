@@ -76,14 +76,29 @@ export async function runAdminDispatchArchiveMutation({
 export async function autoArchiveDispatchAfterTimeLogging({
   dispatch,
   allComplete,
-  isPastOrToday
+  isPastOrToday,
+  runFinalArchiveSync,
+  onFinalArchiveSyncError
 }) {
-  if (!allComplete || !isPastOrToday || dispatch.archived_flag) return false;
+  if (!allComplete || !isPastOrToday) return false;
+  if (dispatch.archived_flag && dispatch.dispatch_html_drive_sync_finalized_at) return false;
 
-  await base44.entities.Dispatch.update(dispatch.id, buildDispatchArchivePatch({
-    archive: true,
-    archivedReason: 'Time logged'
-  }));
+  const updatedDispatch = dispatch.archived_flag
+    ? dispatch
+    : await base44.entities.Dispatch.update(dispatch.id, buildDispatchArchivePatch({
+      archive: true,
+      archivedReason: 'Time logged'
+    }));
+
+  // Archiving is an operational write and succeeds independently of Drive. A failed
+  // final sync intentionally leaves finalized_at empty so a later retry is possible.
+  if (runFinalArchiveSync) {
+    try {
+      await runFinalArchiveSync({ dispatch: updatedDispatch, previousDispatch: dispatch });
+    } catch (error) {
+      await onFinalArchiveSyncError?.({ dispatch: updatedDispatch, error });
+    }
+  }
 
   return true;
 }
