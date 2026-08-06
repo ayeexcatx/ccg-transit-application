@@ -776,9 +776,16 @@ export default function AdminDispatches() {
     ]);
 
     const latestEntries = await base44.entities.TimeEntry.filter({ dispatch_id: dispatch.id }, '-created_date', 500);
-    const allComplete = (dispatch.trucks_assigned || []).length > 0 && (dispatch.trucks_assigned || []).every((truck) =>
-      latestEntries.some((entry) => entry.truck_number === truck && entry.start_time && entry.end_time)
-    );
+    const preferredEntriesByKey = latestEntries.reduce((map, entry) => {
+      const key = getTimeEntryCompositeKey(entry?.dispatch_id, entry?.truck_number);
+      if (!key) return map;
+      map.set(key, pickPreferredTimeEntry(map.get(key), entry));
+      return map;
+    }, new Map());
+    const allComplete = (dispatch.trucks_assigned || []).length > 0 && (dispatch.trucks_assigned || []).every((truck) => {
+      const preferredEntry = preferredEntriesByKey.get(getTimeEntryCompositeKey(dispatch.id, truck));
+      return Boolean(preferredEntry?.start_time && preferredEntry?.end_time);
+    });
     const automaticallyArchived = await autoArchiveDispatchAfterTimeLogging({
       dispatch,
       allComplete,
@@ -802,6 +809,8 @@ export default function AdminDispatches() {
         await recordDispatchDriveSyncFailure({ dispatch, error });
         toast.warning('Time saved, but Google Drive sync failed.');
       }
+    } else {
+      await queryClient.invalidateQueries({ queryKey: ['dispatches-admin'] });
     }
 
     return canonicalSavedEntries;

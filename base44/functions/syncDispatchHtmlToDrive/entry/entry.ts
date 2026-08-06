@@ -179,9 +179,15 @@ async function upsertHtmlFile(
 }
 
 async function deleteFile(token: string, fileId: string): Promise<void> {
-  await driveRequest<void>(token, `${DRIVE_API}/files/${fileId}?supportsAllDrives=true`, {
-    method: 'DELETE',
-  });
+  try {
+    await driveRequest<void>(token, `${DRIVE_API}/files/${fileId}?supportsAllDrives=true`, {
+      method: 'DELETE',
+    });
+  } catch (error) {
+    // Stale-file deletion is idempotent: a prior partial sync may already have removed it.
+    if (error instanceof DriveRequestError && error.driveHttpStatus === 404) return;
+    throw error;
+  }
 }
 
 async function getPayload(req: Request): Promise<SyncPayload> {
