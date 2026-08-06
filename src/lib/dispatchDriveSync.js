@@ -5,6 +5,38 @@ import { buildDispatchHtml, getDispatchJobNumberString } from '@/lib/dispatchHtm
 export const DRIVE_DISPATCH_ROOT_FOLDER_ID = '1zCnqCZj0kdTLwcjQoZ47Ct_-2Gqyqt17';
 export const DRIVE_DISPATCH_ROOT_FOLDER_NAME = 'Dispatch Records';
 
+const getSafeErrorMessage = (error) => String(error?.message || error || 'Google Drive sync failed').slice(0, 2000);
+
+export const buildDispatchDriveSyncErrorContext = ({
+  error,
+  dispatch,
+  finalizeAfterSync = false,
+  desiredFileCount = 0,
+  invocationStage = 'invoke_function'
+}) => ({
+  invocationStage,
+  dispatchId: dispatch?.id || null,
+  dispatchStatus: dispatch?.status || null,
+  finalizeAfterSync: Boolean(finalizeAfterSync),
+  desiredFileCount,
+  rootFolderId: DRIVE_DISPATCH_ROOT_FOLDER_ID,
+  connectorTokenRetrievalFailed: Boolean(error?.connectorTokenRetrievalFailed),
+  driveStage: error?.driveStage || null,
+  driveHttpStatus: error?.driveHttpStatus || null,
+  driveResponseBody: error?.driveResponseBody || null,
+  message: getSafeErrorMessage(error)
+});
+
+export const recordDispatchDriveSyncFailure = async ({ dispatch, error, finalizeAfterSync = false, desiredFileCount = 0 }) => {
+  if (!dispatch?.id) return;
+  const context = buildDispatchDriveSyncErrorContext({ error, dispatch, finalizeAfterSync, desiredFileCount });
+  console.error('Dispatch Google Drive sync failed.', context);
+  await base44.entities.Dispatch.update(dispatch.id, {
+    dispatch_html_drive_last_sync_status: 'failed',
+    dispatch_html_drive_last_sync_error: JSON.stringify(context)
+  });
+};
+
 const cleanSegment = (value, fallback) => {
   const normalized = String(value ?? '').trim();
   if (!normalized) return fallback;
@@ -35,6 +67,36 @@ export const getTruckSpecificRecordTargets = (dispatch, companyName) => {
       truckFolderName: truckNumber,
       pathKey: `${companyFolderName}/${truckNumber}/${fileName}`
     };
+  });
+};
+
+export const syncDispatchRecordHtml = async ({
+  dispatch,
+  previousDispatch = null,
+  companyName,
+  finalizeAfterSync = false,
+  allowArchivedFinalizedSync = false
+}) => {
+  if (!dispatch?.id) return { skipped: true, reason: 'missing_dispatch_id' };
+  let resolvedCompanyName = companyName;
+  if (!resolvedCompanyName && dispatch.company_id) {
+    const companies = await base44.entities.Company.filter({ id: dispatch.company_id }, '-created_date', 1);
+    resolvedCompanyName = companies?.[0]?.name;
+  }
+  const [confirmations, timeEntries, driverAssignments] = await Promise.all([
+    base44.entities.Confirmation.filter({ dispatch_id: dispatch.id }, '-confirmed_at', 500),
+    base44.entities.TimeEntry.filter({ dispatch_id: dispatch.id }, '-created_date', 500),
+    base44.entities.DriverDispatch.filter({ dispatch_id: dispatch.id }, '-created_date', 500)
+  ]);
+  return syncDispatchHtmlToDrive({
+    dispatch,
+    previousDispatch,
+    companyName: resolvedCompanyName || 'Unknown Company',
+    confirmations,
+    timeEntries,
+    driverAssignments,
+    finalizeAfterSync,
+    allowArchivedFinalizedSync
   });
 };
 
@@ -76,10 +138,32 @@ export const syncDispatchHtmlToDrive = async ({
     })),
     previousFiles: previousRecords,
     status: dispatch.status,
+    finalizationMode: finalizeAfterSync,
     updatedAt: new Date().toISOString()
   };
 
-  const response = await base44.functions.invoke('syncDispatchHtmlToDrive/entry', payload);
+  let response;
+  try {
+    // Base44 functions are invoked by the registered manifest name, not their source path.
+    response = await base44.functions.invoke('syncDispatchHtmlToDrive', payload);
+  } catch (error) {
+    const responseData = error?.response?.data;
+    if (responseData && typeof responseData === 'object') {
+      Object.assign(error, {
+        connectorTokenRetrievalFailed: responseData.connectorTokenRetrievalFailed,
+        driveStage: responseData.stage,
+        driveHttpStatus: responseData.driveHttpStatus,
+        driveResponseBody: responseData.driveResponseBody
+      });
+    }
+    console.error('Dispatch Google Drive function invocation failed.', buildDispatchDriveSyncErrorContext({
+      error,
+      dispatch,
+      finalizeAfterSync,
+      desiredFileCount: payload.desiredFiles.length
+    }));
+    throw error;
+  }
   const responseData = response?.data || response || {};
   const syncedRecords = Array.isArray(responseData.files)
     ? responseData.files

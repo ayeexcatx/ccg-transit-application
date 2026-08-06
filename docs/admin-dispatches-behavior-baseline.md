@@ -30,7 +30,7 @@ Repo-wide callers that intentionally land users on `AdminDispatches`:
 - **Route guard:** enforced in `Layout.jsx` for admin-only page access.
 - **Client filtering:** most page logic is client-side filtering/grouping over broad entity lists.
 - **Entity/backend rule:** entity schemas define fields and enum shapes, but this repo snapshot does **not** show hard backend permission logic for AdminDispatches-specific mutations.
-- **Backend function:** Google Drive HTML sync is enforced by `base44.functions.invoke('syncDispatchHtmlToDrive/entry', payload)`.
+- **Backend function:** Google Drive HTML sync is enforced by `base44.functions.invoke('syncDispatchHtmlToDrive', payload)`, using the registered Base44 function name.
 - **Unknown / needs verification:** whether Base44 entity endpoints have additional server-side role validation beyond the route guard is not visible in this repo snapshot and needs manual verification.
 
 ## 3) State managed by AdminDispatches
@@ -410,7 +410,7 @@ Through the shared admin drawer, this page can indirectly trigger driver assignm
 
 ### Google Drive side effects
 - `syncDispatchRecordHtml()` loads confirmations, time entries, and active driver assignments for the dispatch and calls `syncDispatchHtmlToDrive()`.
-- `syncDispatchHtmlToDrive()` builds per-truck HTML files using `buildDispatchHtml()`, invokes the backend function `syncDispatchHtmlToDrive/entry`, and stores sync metadata back on the dispatch.
+- `syncDispatchHtmlToDrive()` builds per-truck HTML files using `buildDispatchHtml()`, invokes the registered backend function `syncDispatchHtmlToDrive`, and stores sync metadata back on the dispatch. A dispatch with no assigned trucks produces no desired files and removes any previously recorded stale truck files.
 - archived finalized records are skipped unless explicitly allowed.
 
 ## 13) Role-based differences affecting this page
@@ -513,7 +513,7 @@ Effects of that admin drawer mode:
 - **Needs manual verification:** backend-level ACL enforcement is not present in this repo snapshot.
 
 ### Backend function
-- `syncDispatchHtmlToDrive/entry` performs Drive file syncing.
+- `syncDispatchHtmlToDrive` performs Drive file syncing.
 
 ### Unknown / needs verification
 - whether Base44 entity APIs enforce admin-only mutation authorization server-side.

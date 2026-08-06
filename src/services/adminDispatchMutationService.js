@@ -7,6 +7,7 @@ import {
   reconcileOwnerNotificationsForDispatch
 } from '@/components/notifications/createNotifications';
 import { clearRemovedTruckDriverAssignments } from '@/services/driverAssignmentMutationService';
+import { recordDispatchDriveSyncFailure } from '@/lib/dispatchDriveSync';
 
 const getNormalizedTrucks = (value) => (Array.isArray(value) ? value : []).filter(Boolean);
 
@@ -157,10 +158,7 @@ export async function runAdminDispatchMutation({
         companies
       });
     } catch (error) {
-      await base44.entities.Dispatch.update(savedDispatch.id, {
-        dispatch_html_drive_last_sync_status: 'failed',
-        dispatch_html_drive_last_sync_error: String(error?.message || error || 'Drive sync failed')
-      });
+      await recordDispatchDriveSyncFailure({ dispatch: savedDispatch, error });
       notifyDriveSyncWarning('Dispatch saved, but Google Drive sync failed.');
     }
 
@@ -195,10 +193,7 @@ export async function runAdminDispatchMutation({
       companies
     });
   } catch (error) {
-    await base44.entities.Dispatch.update(createdDispatch.id, {
-      dispatch_html_drive_last_sync_status: 'failed',
-      dispatch_html_drive_last_sync_error: String(error?.message || error || 'Drive sync failed')
-    });
+    await recordDispatchDriveSyncFailure({ dispatch: createdDispatch, error });
     notifyDriveSyncWarning('Dispatch created, but Google Drive sync failed.');
   }
 

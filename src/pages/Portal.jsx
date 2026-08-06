@@ -47,6 +47,8 @@ import {
   pickPreferredTimeEntry,
 } from '@/lib/timeLogs';
 import { appendDispatchActivityEntries } from '@/lib/dispatchActivity';
+import { toast } from 'sonner';
+import { recordDispatchDriveSyncFailure, syncDispatchRecordHtml } from '@/lib/dispatchDriveSync';
 
 function getSessionActorMetadata(session) {
   const actorName = session?.label || session?.name || session?.driver_name || session?.code || '';
@@ -105,6 +107,21 @@ export default function Portal() {
     queryKey: ['companies'],
     queryFn: () => base44.entities.Company.list(),
   });
+
+  const syncRelatedDispatchRecord = async (dispatch, previousDispatch = dispatch) => {
+    try {
+      const latest = await base44.entities.Dispatch.filter({ id: dispatch.id }, '-created_date', 1).then((rows) => rows?.[0]);
+      if (!latest) return;
+      await syncDispatchRecordHtml({
+        dispatch: latest,
+        previousDispatch,
+        companyName: companies.find((company) => company.id === latest.company_id)?.name
+      });
+    } catch (error) {
+      await recordDispatchDriveSyncFailure({ dispatch, error });
+      toast.warning('Changes saved, but Google Drive sync failed.');
+    }
+  };
 
   const { data: confirmations = [] } = useConfirmationsQuery(true, effectiveView === 'CompanyOwner' ? ownerCompanyId : null);
   const [swapConfirmationState, setSwapConfirmationState] = useState({
@@ -215,6 +232,7 @@ export default function Portal() {
         savedByKey.set(key, pickPreferredTimeEntry(current, entry));
       });
 
+      await syncRelatedDispatchRecord(dispatch);
       return [...savedByKey.values()];
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['time-entries'] }),
@@ -238,6 +256,10 @@ export default function Portal() {
       queryClient.invalidateQueries({ queryKey: ['incident-driver-dispatch-assignments', driverIdentity] });
       (result?.affectedDispatchIds || []).forEach((dispatchId) => {
         queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', dispatchId] });
+      });
+      (result?.affectedDispatchIds || [variables?.dispatch?.id]).filter(Boolean).forEach((dispatchId) => {
+        const affected = dispatches.find((entry) => String(entry.id) === String(dispatchId)) || variables?.dispatch;
+        if (affected) void syncRelatedDispatchRecord(affected);
       });
       queryClient.invalidateQueries({ queryKey: confirmationsQueryKey });
       queryClient.invalidateQueries({ queryKey: ['confirmations-admin'] });
@@ -360,6 +382,7 @@ export default function Portal() {
         ));
         await queryClient.invalidateQueries({ queryKey: ['notifications'] });
       }
+      await syncRelatedDispatchRecord(dispatch);
     } finally {
       pendingOwnerConfirmationKeysRef.current.delete(confirmationKey);
     }
