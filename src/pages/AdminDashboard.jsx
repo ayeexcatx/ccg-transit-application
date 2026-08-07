@@ -12,6 +12,24 @@ import DashboardSummaryCards from '@/components/admin/admin-dashboard/DashboardS
 import ActiveAnnouncementsSection from '@/components/admin/admin-dashboard/ActiveAnnouncementsSection';
 import ForceRefreshSection from '@/components/admin/admin-dashboard/ForceRefreshSection';
 
+const countAssignedTrucks = (dispatch) => {
+  if (dispatch.status === 'Cancelled' || !Array.isArray(dispatch.trucks_assigned)) return 0;
+
+  return dispatch.trucks_assigned.filter(
+    (truck) => truck !== null && truck !== undefined && String(truck).trim() !== ''
+  ).length;
+};
+
+const countDispatchShiftsByDate = (dispatches, dateStr) => dispatches.reduce((totals, dispatch) => {
+  if (dispatch.date !== dateStr) return totals;
+
+  const assignedTruckCount = countAssignedTrucks(dispatch);
+
+  if (dispatch.shift_time === 'Night Shift') return { ...totals, night: totals.night + assignedTruckCount };
+  if (dispatch.shift_time === 'Day Shift') return { ...totals, day: totals.day + assignedTruckCount };
+  return totals;
+}, { day: 0, night: 0 });
+
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [isRefreshConfirmOpen, setIsRefreshConfirmOpen] = useState(false);
@@ -70,21 +88,9 @@ export default function AdminDashboard() {
     },
   });
 
-  const countDispatchShiftsByDate = (dateStr) => dispatches.reduce((totals, dispatch) => {
-    if (dispatch.date !== dateStr) return totals;
-
-    const assignedTruckCount = Array.isArray(dispatch.trucks_assigned)
-      ? dispatch.trucks_assigned.filter(Boolean).length
-      : 0;
-
-    if (dispatch.shift_time === 'Night Shift') return { ...totals, night: totals.night + assignedTruckCount };
-    if (dispatch.shift_time === 'Day Shift') return { ...totals, day: totals.day + assignedTruckCount };
-    return totals;
-  }, { day: 0, night: 0 });
-
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
-  const todayShiftCounts = countDispatchShiftsByDate(todayStr);
+  const todayShiftCounts = countDispatchShiftsByDate(dispatches, todayStr);
 
   const upcomingCardConfig = (() => {
     const weekday = today.getDay();
@@ -94,14 +100,12 @@ export default function AdminDashboard() {
       : addDays(today, 1);
     const upcomingDateStr = format(upcomingDate, 'yyyy-MM-dd');
     const sundayDateStr = format(addDays(upcomingDate, -1), 'yyyy-MM-dd');
-    const sundayNightCount = dispatches.filter(
-      (dispatch) => dispatch.date === sundayDateStr && dispatch.shift_time === 'Night Shift'
-    ).length;
+    const sundayNightTruckCount = countDispatchShiftsByDate(dispatches, sundayDateStr).night;
 
     return {
       label: 'Upcoming Dispatches',
-      shiftCounts: countDispatchShiftsByDate(upcomingDateStr),
-      showSundayNightIndicator: shouldShowMonday && sundayNightCount > 0,
+      shiftCounts: countDispatchShiftsByDate(dispatches, upcomingDateStr),
+      showSundayNightIndicator: shouldShowMonday && sundayNightTruckCount > 0,
     };
   })();
 
