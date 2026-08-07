@@ -34,6 +34,7 @@ import { resolveAdminDisplayNameFromSession } from '@/lib/adminIdentity';
 import { getTruckOverrideField } from '@/lib/dispatchTruckOverrides';
 import { validateAdminAccessCode } from '@/lib/adminAccessCodeValidation';
 import { getTimeEntryCompositeKey, pickPreferredTimeEntry } from '@/lib/timeLogs';
+import { countDispatchTrucksInBucket } from '@/lib/dispatchTruckCounts';
 
 const STATUS_ORDER = ['Scheduled', 'Dispatch', 'Amended', 'Cancelled'];
 const ACTIVE_LIVE_EXCLUDED_STATUSES = new Set(['Cancelled', 'Scheduled']);
@@ -1171,9 +1172,9 @@ export default function AdminDispatches() {
       <AdminDispatchesTabBar
         tab={tab}
         onChange={setTab}
-        todayCount={todayDispatches.length}
-        upcomingCount={upcomingDispatches.length}
-        historyCount={historyDispatches.length} />
+        todayCount={countDispatchTrucksInBucket(todayDispatches)}
+        upcomingCount={countDispatchTrucksInBucket(upcomingDispatches)}
+        historyCount={countDispatchTrucksInBucket(historyDispatches)} />
 
       {isLoading ?
       <div className="flex justify-center py-12">
