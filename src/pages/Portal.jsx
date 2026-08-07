@@ -49,6 +49,7 @@ import {
 import { appendDispatchActivityEntries } from '@/lib/dispatchActivity';
 import { toast } from 'sonner';
 import { recordDispatchDriveSyncFailure, syncDispatchRecordHtml } from '@/lib/dispatchDriveSync';
+import { countDispatchTrucksInBucket } from '@/lib/dispatchTruckCounts';
 
 function getSessionActorMetadata(session) {
   const actorName = session?.label || session?.name || session?.driver_name || session?.code || '';
@@ -325,6 +326,13 @@ export default function Portal() {
     .sort((a, b) => b.date.localeCompare(a.date)),
   [filteredDispatches]);
 
+  const getCountableTrucks = isDriverUser
+    ? (dispatch) => driverAssignedTrucksByDispatch.get(normalizeId(dispatch.id)) || []
+    : undefined;
+  const todayTruckCount = countDispatchTrucksInBucket(todayDispatches, getCountableTrucks);
+  const upcomingTruckCount = countDispatchTrucksInBucket(upcomingDispatches, getCountableTrucks);
+  const historyTruckCount = countDispatchTrucksInBucket(historyDispatches, getCountableTrucks);
+
   const companyMap = {};
   companies.forEach(c => { companyMap[c.id] = c.name; });
 
@@ -559,13 +567,13 @@ export default function Portal() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="bg-slate-100">
           <TabsTrigger value="today" className="text-xs">
-            Today ({todayDispatches.length})
+            Today ({todayTruckCount})
           </TabsTrigger>
           <TabsTrigger value="upcoming" className="text-xs">
-            Upcoming ({upcomingDispatches.length})
+            Upcoming ({upcomingTruckCount})
           </TabsTrigger>
           <TabsTrigger value="history" className="text-xs">
-            History ({historyDispatches.length})
+            History ({historyTruckCount})
           </TabsTrigger>
         </TabsList>
       </Tabs>
