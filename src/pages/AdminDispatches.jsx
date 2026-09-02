@@ -424,11 +424,6 @@ export default function AdminDispatches() {
     queryFn: () => base44.entities.AccessCode.list()
   });
 
-  const { data: confirmations = [] } = useQuery({
-    queryKey: ['confirmations-admin'],
-    queryFn: () => base44.entities.Confirmation.list('-confirmed_at', 500)
-  });
-
   const { data: timeEntries = [] } = useQuery({
     queryKey: ['time-entries-admin'],
     queryFn: () => base44.entities.TimeEntry.list('-created_date', 500)
@@ -864,6 +859,34 @@ export default function AdminDispatches() {
   [filtered]);
 
   const currentList = tab === 'upcoming' ? upcomingDispatches : tab === 'today' ? todayDispatches : historyDispatches;
+  const currentDispatchIds = useMemo(
+    () => tab === 'live-board' ? [] : currentList.map((dispatch) => dispatch.id).filter(Boolean),
+    [currentList, tab]
+  );
+
+  const { data: confirmations = [] } = useQuery({
+    queryKey: ['confirmations-admin-visible-dispatches', currentDispatchIds],
+    enabled: currentDispatchIds.length > 0,
+    queryFn: async () => {
+      const pageSize = 5000;
+      const records = [];
+      let skip = 0;
+
+      while (true) {
+        const page = await base44.entities.Confirmation.filter(
+          { dispatch_id: currentDispatchIds },
+          '-confirmed_at',
+          pageSize,
+          skip
+        );
+        records.push(...(page || []));
+        if (!page || page.length < pageSize) break;
+        skip += pageSize;
+      }
+
+      return records;
+    }
+  });
 
   const liveBoardSelectedDateKey = useMemo(() => format(startOfDay(liveBoardCenterDate), 'yyyy-MM-dd'), [liveBoardCenterDate]);
 
