@@ -6,6 +6,7 @@ import {
   getEffectiveTruckStartTime,
   hasMixedTruckStartTimes,
 } from '@/lib/dispatchTruckOverrides';
+import { getAssignmentStatusLabel } from '@/lib/assignmentTerminology';
 
 const escapeHtml = (value) => String(value ?? '')
   .replaceAll('&', '&amp;')
@@ -491,7 +492,7 @@ export const buildDispatchHtml = ({
           <div class="subtitle">Truck-specific assignment archive record</div>
         </div>
         <div class="status-meta">
-          <div class="status-badge ${escapeHtml(statusBadgeClass)}">Status: ${escapeHtml(dispatch?.status || '—')}</div>
+          <div class="status-badge ${escapeHtml(statusBadgeClass)}">Status: ${escapeHtml(getAssignmentStatusLabel(dispatch, confirmations, visibleTrucks))}</div>
           ${(dispatch?.canceled_reason || amendmentHistory.length > 0) ? `
           <div class="status-reason">
             ${dispatch?.canceled_reason ? `Cancellation: ${escapeHtml(dispatch.canceled_reason)}` : ''}

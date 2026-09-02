@@ -61,8 +61,8 @@ export const companyOwnerTutorialSteps = {
       target: '[data-tour="action-needed"]',
       title: 'Home: Action Needed',
       description:
-        'This section highlights assignment opportunities that require your immediate attention, such as confirming receipt.',
-      warningText: 'Items will remain in this section until you confirm receipt of your assignment opportunity.',
+        'This section highlights assignment opportunities that require your immediate attention, such as opportunities waiting for your acceptance.',
+      warningText: 'Items will remain in this section until you accept your assignment opportunity.',
     },
     {
       id: 'dispatch-preview',
@@ -237,16 +237,16 @@ export const dispatchDrawerTutorialSteps = {
     {
       id: 'confirm-receipt',
       target: '[data-tour="dispatch-confirm-receipt"]',
-      title: 'Confirm Receipt',
+      title: 'Accept',
       description:
-        'Click here to confirm receipt of the assignment opportunity.',
+        'Click here to accept the assignment opportunity.',
       warningText: 'You must confirm any time you receive: a new opportunity, assignment, amendment, and/or cancellation.',
     },
     {
       id: 'driver-assignments',
       target: '[data-tour="dispatch-driver-assignments"]',
       title: 'Driver Assignments',
-      description: 'After confirming receipt, use this dropdown menu to assign/unassign drivers to your assignment.',
+      description: 'After accepting, use this dropdown menu to assign/unassign drivers to your assignment.',
       warningText: 'Please familiarize yourself with the instructions on the Drivers page before using this feature.',
     },
     {

@@ -9,6 +9,7 @@ import { statusBadgeColors } from './statusConfig';
 export default function DispatchDrawerTopBar({
   dispatch,
   assignmentDetailsLabel,
+  assignmentStatusLabel,
   session,
   displayDate,
   isOwner,
@@ -96,7 +97,7 @@ export default function DispatchDrawerTopBar({
           <SheetTitle className="flex flex-wrap items-center justify-between gap-3 text-base">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Badge className={`${statusBadgeColors[dispatch.status]} border text-xs font-medium`}>
-                {dispatch.status === 'Scheduled' ? 'Opportunity Found' : assignmentDetailsLabel.replace(' Details', '')}
+                {assignmentStatusLabel}
               </Badge>
               <span className="flex items-center gap-1 text-xs font-normal text-slate-500">
                 {dispatch.shift_time === 'Day Shift' ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}

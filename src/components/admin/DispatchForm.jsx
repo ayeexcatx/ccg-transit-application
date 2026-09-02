@@ -729,7 +729,7 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
       <div className="flex gap-3 pt-2">
         <Button variant="outline" onClick={onCancel} className="bg-background text-red-600 px-4 py-2 text-sm font-medium rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input shadow-sm hover:bg-accent hover:text-accent-foreground h-9 flex-1">Cancel</Button>
         <Button onClick={handleSubmit} disabled={saving} className="flex-1 bg-slate-900 hover:bg-slate-800">
-          {saving ? 'Saving...' : dispatch ? 'Update Dispatch' : 'Create Dispatch'}
+          {saving ? 'Saving...' : dispatch ? 'Update Assignment' : 'Create Assignment'}
         </Button>
       </div>
 

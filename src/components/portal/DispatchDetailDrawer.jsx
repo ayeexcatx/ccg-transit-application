@@ -31,7 +31,7 @@ import { deactivateDriverAssignment, sendDriverAssignment, upsertDriverAssignmen
 import { appendDispatchActivityEntries, getSessionActorName } from '@/lib/dispatchActivity';
 import { resolveCompanyOwnerCompanyId, resolveDriverIdentity } from '@/services/currentAppIdentityService';
 import { listDriverDispatchesForDriver } from '@/lib/driverDispatch';
-import { getAssignmentTerminology } from '@/lib/assignmentTerminology';
+import { getAssignmentStatusLabel, getAssignmentTerminology } from '@/lib/assignmentTerminology';
 
 const UNASSIGNED_DRIVER_VALUE = '__unassigned__';
 const DRIVER_SHIFT_CONFLICT_MESSAGE = 'That driver is already assigned on a different dispatch for the same shift. Please remove the driver from that assignment or select a different driver.';
@@ -729,6 +729,7 @@ export default function DispatchDetailDrawer({
   }, [timeEntries, optimisticTimeEntries]);
 
   const assignmentTerminology = getAssignmentTerminology(dispatch, confirmations, myTrucks);
+  const assignmentStatusLabel = getAssignmentStatusLabel(dispatch, confirmations, myTrucks);
 
   if (!dispatch) return null;
 
@@ -1124,6 +1125,7 @@ export default function DispatchDetailDrawer({
         <DispatchDrawerTopBar
           dispatch={dispatch}
           assignmentDetailsLabel={assignmentTerminology.details}
+          assignmentStatusLabel={assignmentStatusLabel}
           session={session}
           displayDate={displayDate}
           isOwner={isOwner}
@@ -1146,7 +1148,7 @@ export default function DispatchDetailDrawer({
                   <Badge
                     data-screenshot-badge-top="true"
                     className={`${statusBadgeColors[dispatch.status]} inline-flex h-6 items-center justify-center border px-2.5 text-xs font-medium leading-none`}>
-                    {dispatch.status}
+                    {assignmentStatusLabel}
                   </Badge>
                   <span className="text-sm text-slate-600">{dispatch.shift_time}</span>
                 </div>

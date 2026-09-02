@@ -19,7 +19,7 @@ export default function DispatchConfirmReceiptLogSection({
     <section data-tour="dispatch-confirm-receipt" className="rounded-xl border border-slate-200 bg-white p-3 sm:p-3.5">
       <p className="bg-slate-50 text-slate-500 mb-2 text-xs uppercase tracking-wide flex items-center gap-1.5">
         <CheckCircle2 className="h-3.5 w-3.5 text-slate-400" />
-        Confirm Receipt — <span className="text-slate-700">{currentConfType}</span>
+        Accept — <span className="text-slate-700">{currentConfType}</span>
       </p>
       <div className="space-y-2">
         {myTrucks.map((truck) => {
@@ -50,7 +50,7 @@ export default function DispatchConfirmReceiptLogSection({
                   onClick={() => handleConfirmTruck(truck)}>
                   
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                    Confirm Receipt
+                    Accept
                   </Button>
                 }
               </div>

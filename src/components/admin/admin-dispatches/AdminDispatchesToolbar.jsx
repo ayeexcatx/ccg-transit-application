@@ -6,7 +6,7 @@ export default function AdminDispatchesToolbar({ dispatchCountLabel, showFilters
   return (
     <div className="flex items-center justify-between flex-wrap gap-3">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 text-left">Assignments</h2>
+        <h2 className="text-2xl font-semibold text-slate-900 text-left">Assignment Opportunities</h2>
         <p className="text-sm text-slate-500">{dispatchCountLabel}</p>
       </div>
       <div className="flex gap-2">

@@ -550,7 +550,7 @@ export default function Portal() {
       )}
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <h2 className="text-2xl font-semibold text-slate-900">My Assignments</h2>
+          <h2 className="text-2xl font-semibold text-slate-900">Assignment Opportunities</h2>
         </div>
         {!isDriverUser && (
           <div className="flex items-center gap-2 flex-wrap">

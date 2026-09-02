@@ -34,6 +34,7 @@ import { resolveAdminDisplayNameFromSession } from '@/lib/adminIdentity';
 import { getTruckOverrideField } from '@/lib/dispatchTruckOverrides';
 import { validateAdminAccessCode } from '@/lib/adminAccessCodeValidation';
 import { getTimeEntryCompositeKey, pickPreferredTimeEntry } from '@/lib/timeLogs';
+import { getAssignmentStatusLabel } from '@/lib/assignmentTerminology';
 import { countDispatchTrucksInBucket } from '@/lib/dispatchTruckCounts';
 
 const STATUS_ORDER = ['Scheduled', 'Dispatch', 'Amended', 'Cancelled'];
@@ -157,7 +158,7 @@ const buildDispatchUpdateActivityEntries = (previousDispatch, nextDispatch, sess
 
   if (previousDispatch.status !== nextDispatch.status) {
     if (nextDispatch.status === 'Cancelled') {
-      return [createAdminActivityEntry(session, 'cancelled_dispatch', `${adminName} cancelled this dispatch`)];
+      return [createAdminActivityEntry(session, 'cancelled_dispatch', `${adminName} cancelled this assignment`)];
     }
 
     return [createAdminActivityEntry(
@@ -168,7 +169,7 @@ const buildDispatchUpdateActivityEntries = (previousDispatch, nextDispatch, sess
   }
 
   if (normalizeTextField(previousDispatch.date) !== normalizeTextField(nextDispatch.date)) {
-    return [createAdminActivityEntry(session, 'changed_dispatch_date', `${adminName} changed dispatch date`)];
+    return [createAdminActivityEntry(session, 'changed_dispatch_date', `${adminName} changed assignment date`)];
   }
 
   if (normalizeTextField(previousDispatch.start_time) !== normalizeTextField(nextDispatch.start_time)) {
@@ -203,7 +204,7 @@ const buildDispatchUpdateActivityEntries = (previousDispatch, nextDispatch, sess
     return [createAdminActivityEntry(session, 'changed_shift', `${adminName} changed shift`)];
   }
 
-  return [createAdminActivityEntry(session, 'updated_dispatch', `${adminName} updated this dispatch`)];
+  return [createAdminActivityEntry(session, 'updated_dispatch', `${adminName} updated this assignment`)];
 };
 
 const formatActivityPreviewTimestamp = (value) => {
@@ -301,7 +302,7 @@ function AdminConfirmationsPanel({ dispatch, confirmations }) {
       {/* Current status section */}
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <Badge className={`${statusBadgeColors[currentStatus]} border text-xs`}>{currentStatus}</Badge>
+          <Badge className={`${statusBadgeColors[currentStatus]} border text-xs`}>{getAssignmentStatusLabel(dispatch, confirmations, trucks)}</Badge>
           <span className="text-xs text-slate-500">current status</span>
         </div>
         <div className="space-y-1.5">
@@ -326,7 +327,7 @@ function AdminConfirmationsPanel({ dispatch, confirmations }) {
 
                 <div className="flex items-center gap-1.5 text-slate-400">
                     <XCircle className="h-4 w-4" />
-                    <span className="text-xs">Not confirmed for {currentStatus}</span>
+                    <span className="text-xs">Not accepted for {getAssignmentStatusLabel(dispatch, confirmations, trucks)}</span>
                   </div>
                 }
               </div>);
@@ -354,7 +355,7 @@ function AdminConfirmationsPanel({ dispatch, confirmations }) {
               {priorStatuses.map((status) =>
           <div key={status}>
                   <div className="flex items-center gap-2 mb-1.5">
-                    <Badge className={`${statusBadgeColors[status]} border text-xs`}>{status}</Badge>
+                    <Badge className={`${statusBadgeColors[status]} border text-xs`}>{getAssignmentStatusLabel({ ...dispatch, status }, byType[status] || [], trucks)}</Badge>
                     <span className="text-xs text-slate-400">prior status</span>
                   </div>
                   <div className="space-y-1">
@@ -1217,6 +1218,7 @@ export default function AdminDispatches() {
               key={d.id}
               dispatch={d}
               session={session}
+              confirmations={confirmations}
               companyName={companyMap[d.company_id]}
               firstLineTimeText={firstLineTimeText}
               latestActivity={latestActivity}

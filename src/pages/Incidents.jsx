@@ -29,6 +29,7 @@ import { buildDispatchOpenPath } from '@/lib/dispatchOpenOrchestration';
 import { useAdminDispatchDrawer } from '@/components/portal/AdminDispatchDrawerContext';
 import { toast } from 'sonner';
 import { canUserSeeIncident, normalizeVisibilityId } from '@/lib/dispatchVisibility';
+import { getAssignmentStatusLabel } from '@/lib/assignmentTerminology';
 import { listDriverDispatchesForDriver } from '@/lib/driverDispatch';
 import { resolveDriverIdentity } from '@/services/currentAppIdentityService';
 import { getActiveCompanyId, getEffectiveView } from '@/components/session/workspaceUtils';
@@ -646,7 +647,7 @@ export default function Incidents() {
                         <p>
                           {formatDispatchDate(dispatch.date)}
                           {dispatch.start_time ? ` • ${dispatch.start_time}` : ''}
-                          {dispatch.status ? ` • ${dispatch.status}` : ''}
+                          {dispatch.status ? ` • ${getAssignmentStatusLabel(dispatch)}` : ''}
                         </p>
                       </div>
                     }
