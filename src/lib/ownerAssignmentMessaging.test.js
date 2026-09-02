@@ -1,13 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildCompanyOwnerAssignmentSms, getAdminAcceptanceTitle } from './ownerAssignmentMessaging.js';
+import { buildCompanyOwnerAssignmentSms, getAdminAcceptanceTitle, getCompanyOwnerNotificationTitle } from './ownerAssignmentMessaging.js';
+
+test('company owner notification bell uses lifecycle-specific titles', () => {
+  assert.equal(getCompanyOwnerNotificationTitle('Scheduled'), 'Pending Opportunity');
+  assert.equal(getCompanyOwnerNotificationTitle('Dispatch'), 'New Opportunity');
+  assert.equal(getCompanyOwnerNotificationTitle('Amended'), 'Assignment Amended');
+  assert.equal(getCompanyOwnerNotificationTitle('Cancelled'), 'Assignment Canceled');
+});
 
 test('scheduled owner SMS uses grammatical singular and plural Pending Opportunity copy', () => {
   const singular = buildCompanyOwnerAssignmentSms({ status: 'Scheduled', truckCount: 1, dateLine: 'MON DAY SHIFT' });
   const plural = buildCompanyOwnerAssignmentSms({ status: 'Scheduled', truckCount: 2, dateLine: 'MON DAY SHIFT' });
-  assert.match(singular, /^CCG Transit: Pending Opportunity\n\(1\) truck has received a pending opportunity for:/);
-  assert.match(plural, /\(2\) trucks have received pending opportunities for:/);
-  assert.doesNotMatch(`${singular}${plural}`, /has been scheduled/i);
+  assert.equal(singular, 'CCG Transit: Pending Opportunity\n(1) truck scheduled pending acceptance.\nMON DAY SHIFT\n\nPlease open app to ACCEPT.');
+  assert.equal(plural, 'CCG Transit: Pending Opportunity\n(2) trucks scheduled pending acceptance.\nMON DAY SHIFT\n\nPlease open app to ACCEPT.');
 });
 
 test('owner lifecycle SMS follows Opportunity then Assignment terminology and retains Accept', () => {
@@ -15,10 +21,10 @@ test('owner lifecycle SMS follows Opportunity then Assignment terminology and re
   const amended = buildCompanyOwnerAssignmentSms({ status: 'Amended', dateLine: 'TUE at 8:00 AM' });
   const canceled = buildCompanyOwnerAssignmentSms({ status: 'Cancelled', dateLine: 'TUE at 8:00 AM' });
   assert.match(opportunity, /^CCG Transit: Opportunity/);
-  assert.match(opportunity, /You have received a new assignment for:/);
+  assert.match(opportunity, /You have received a new assignment opportunity for:/);
   assert.match(opportunity, /ACCEPT/);
-  assert.match(amended, /^CCG Transit: Assignment Amended/);
-  assert.match(canceled, /^CCG Transit: Assignment Canceled/);
+  assert.match(amended, /^CCG Transit: AMENDED/);
+  assert.match(canceled, /^CCG Transit: CANCELLED/);
   assert.doesNotMatch(`${opportunity}${amended}${canceled}`, /dispatch/i);
 });
 
