@@ -32,6 +32,7 @@ import {
 } from '@/lib/dispatchVisibility';
 import { listDriverDispatchesForDriver } from '@/lib/driverDispatch';
 import { getAssignmentStatusLabel } from '@/lib/assignmentTerminology';
+import { getAssignmentBadgeColor, getAssignmentBorderAccent } from '@/components/portal/statusConfig';
 import { resolveCompanyOwnerCompanyId, resolveDriverIdentity } from '@/services/currentAppIdentityService';
 import {
   isAvailabilityRequestNotification,
@@ -49,13 +50,6 @@ const OWNER_ACTIVITY_SUPPRESSION_WINDOW_MS = 90 * 1000;
 
 const dateOnly = (v) => (typeof v === 'string' ? v.slice(0, 10) : v);
 const normalizeId = (value) => normalizeVisibilityId(value);
-
-const statusColors = {
-  Scheduled: 'bg-blue-50 text-blue-700 border-blue-200',
-  Dispatch: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  Amended: 'bg-amber-50 text-amber-700 border-amber-200',
-  Cancelled: 'bg-red-50 text-red-700 border-red-200',
-};
 
 const homeSectionCardClass = 'rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden';
 const homeSectionHeaderClass = 'flex min-h-14 items-center justify-between gap-2 border-b border-slate-200 px-4 py-3';
@@ -264,11 +258,12 @@ const getHomeGreeting = (userName) => {
   }
 };
 
-function MiniDispatchCard({ dispatch, companyName, truckNumbers = [], confirmations = [] }) {
+function MiniDispatchCard({ dispatch, companyName, truckNumbers = [], confirmations = [], audience }) {
+  const statusLabel = getAssignmentStatusLabel(dispatch, confirmations, truckNumbers, { audience });
 
   return (
     <Link to={createPageUrl(buildDispatchOpenPath('Portal', { dispatchId: dispatch.id, normalizeId }))}>
-      <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer">
+      <div className={`flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer ${getAssignmentBorderAccent(dispatch.status, statusLabel)}`}>
         <div className="shrink-0 mt-0.5">
           {dispatch.shift_time === 'Day Shift'
             ? <Sun className="h-4 w-4 text-amber-400" />
@@ -277,7 +272,7 @@ function MiniDispatchCard({ dispatch, companyName, truckNumbers = [], confirmati
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="min-w-0">
-              <Badge className={`${statusColors[dispatch.status]} border text-xs`}>{getAssignmentStatusLabel(dispatch, confirmations, truckNumbers)}</Badge>
+              <Badge className={`${getAssignmentBadgeColor(dispatch.status, statusLabel)} border text-xs`}>{statusLabel}</Badge>
             </div>
             <div className="shrink-0 text-right text-xs text-slate-500 leading-tight">
               <div className="whitespace-nowrap">{formatDispatchDate(dispatch.date)}</div>
@@ -904,7 +899,7 @@ export default function Home() {
             {todayDispatches.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">No assignments today</p>
             ) : (
-              todayDispatches.map(d => <MiniDispatchCard key={d.id} dispatch={d} companyName={d.company_name} truckNumbers={getVisibleTrucksForDispatch(d)} confirmations={confirmations} />)
+              todayDispatches.map(d => <MiniDispatchCard key={d.id} dispatch={d} companyName={d.company_name} truckNumbers={getVisibleTrucksForDispatch(d)} confirmations={confirmations} audience={isDriver ? 'driver' : undefined} />)
             )}
           </CardContent>
         </Card>
@@ -926,7 +921,7 @@ export default function Home() {
             {upcomingDispatches.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">No upcoming assignments</p>
             ) : (
-              upcomingDispatches.map(d => <MiniDispatchCard key={d.id} dispatch={d} companyName={d.company_name} truckNumbers={getVisibleTrucksForDispatch(d)} confirmations={confirmations} />)
+              upcomingDispatches.map(d => <MiniDispatchCard key={d.id} dispatch={d} companyName={d.company_name} truckNumbers={getVisibleTrucksForDispatch(d)} confirmations={confirmations} audience={isDriver ? 'driver' : undefined} />)
             )}
           </CardContent>
         </Card>

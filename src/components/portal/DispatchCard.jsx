@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import DispatchDetailDrawer from './DispatchDetailDrawer';
-import { statusBadgeColors, statusBorderAccent, scheduledStatusMessage } from './statusConfig';
+import { getAssignmentBadgeColor, getAssignmentBorderAccent, scheduledStatusMessage } from './statusConfig';
 import { getVisibleTrucksForDispatch } from '@/lib/dispatchVisibility';
 import { getAssignmentStatusLabel, getAssignmentTerminology } from '@/lib/assignmentTerminology';
 
@@ -67,20 +67,22 @@ const DispatchCard = React.forwardRef(function DispatchCard({
     : session.code_type === 'Driver'
       ? (dispatch.trucks_assigned || [])
       : myTrucks;
-  const terminology = getAssignmentTerminology(dispatch, confirmations, visibleTrucks);
+  const audience = session.code_type === 'Driver' ? 'driver' : undefined;
+  const terminology = getAssignmentTerminology(dispatch, confirmations, visibleTrucks, { audience });
+  const statusLabel = getAssignmentStatusLabel(dispatch, confirmations, visibleTrucks, { audience });
 
   return (
     <div ref={ref}>
       <Card
-        className={`overflow-hidden border-slate-200 hover:border-slate-400 hover:shadow-md transition-all cursor-pointer ${statusBorderAccent[dispatch.status] || ''}`}
+        className={`overflow-hidden border-slate-200 hover:border-slate-400 hover:shadow-md transition-all cursor-pointer ${getAssignmentBorderAccent(dispatch.status, statusLabel)}`}
         onClick={handleOpen}
       >
         <CardContent className="p-0">
           <div className="p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge className={`${statusBadgeColors[dispatch.status]} border text-xs font-medium`}>
-                  {getAssignmentStatusLabel(dispatch, confirmations, visibleTrucks)}
+                <Badge className={`${getAssignmentBadgeColor(dispatch.status, statusLabel)} border text-xs font-medium`}>
+                  {statusLabel}
                 </Badge>
                 <span className="text-xs text-slate-400 flex items-center gap-1">
                   {dispatch.shift_time === 'Day Shift' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-400" />}

@@ -10,6 +10,7 @@ import {
   reconcileRequiredTruckList,
   expandRequiredTruckList,
 } from '@/components/notifications/confirmationStateHelpers';
+import { getDriverAssignmentReceivedCopy } from '@/lib/driverMessaging';
 import { NON_CONFIRMATION_NOTIFICATION_CATEGORIES } from '@/components/notifications/ownerActionStatus';
 
 const statusLabels = {
@@ -113,8 +114,7 @@ function getDriverDispatchStatusNotification(status) {
   }
 
   return {
-    title: 'Assignment Opportunity Received',
-    message: 'You have received a new assignment opportunity.',
+    ...getDriverAssignmentReceivedCopy(),
     notificationType: 'driver_assigned',
   };
 }
@@ -409,8 +409,8 @@ export async function notifyDriverAssignmentChanges(dispatch, previousAssignment
       ...removedDriverIds.map((driverId) => createDriverDispatchNotification({
         dispatch,
         driverAccessCodeId: driverAccessCodeMap.get(driverId),
-        title: 'Dispatch Removed',
-        message: 'This dispatch assignment is no longer available',
+        title: 'Assignment is no longer visible',
+        message: 'This assignment is no longer available',
         notificationType: 'driver_removed',
         requiredTrucks: previousAssignments
           .filter((assignment) => assignment?.active_flag !== false && assignment?.is_visible_to_driver !== false && ['sent','seen'].includes(String(assignment?.delivery_status || 'sent').toLowerCase()) && assignment?.driver_id === driverId)
@@ -420,8 +420,7 @@ export async function notifyDriverAssignmentChanges(dispatch, previousAssignment
       ...addedDriverIds.map((driverId) => createDriverDispatchNotification({
         dispatch,
         driverAccessCodeId: driverAccessCodeMap.get(driverId),
-        title: 'Assignment Opportunity Received',
-        message: 'You have received a new assignment opportunity.',
+        ...getDriverAssignmentReceivedCopy(),
         notificationType: 'driver_assigned',
         requiredTrucks: nextAssignments
           .filter((assignment) => assignment?.active_flag !== false && assignment?.is_visible_to_driver !== false && ['sent','seen'].includes(String(assignment?.delivery_status || 'sent').toLowerCase()) && assignment?.driver_id === driverId)

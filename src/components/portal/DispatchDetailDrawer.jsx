@@ -11,7 +11,7 @@ import { format, parseISO } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { canCompanyOwnerViewAssignmentsAndTimeLogs, statusBadgeColors } from './statusConfig';
+import { canCompanyOwnerViewAssignmentsAndTimeLogs, getAssignmentBadgeColor } from './statusConfig';
 import { filterTemplateNotesForDispatch, NOTE_DISPLAY_WIDTH, NOTE_TYPES, normalizeTemplateNote } from '@/lib/templateNotes';
 import { calculateWorkedHours, formatTime24h, formatWorkedHours } from '@/lib/timeLogs';
 import { toast } from 'sonner';
@@ -728,8 +728,9 @@ export default function DispatchDetailDrawer({
     return merged;
   }, [timeEntries, optimisticTimeEntries]);
 
-  const assignmentTerminology = getAssignmentTerminology(dispatch, confirmations, myTrucks);
-  const assignmentStatusLabel = getAssignmentStatusLabel(dispatch, confirmations, myTrucks);
+  const terminologyAudience = isDriverUser ? 'driver' : undefined;
+  const assignmentTerminology = getAssignmentTerminology(dispatch, confirmations, myTrucks, { audience: terminologyAudience });
+  const assignmentStatusLabel = getAssignmentStatusLabel(dispatch, confirmations, myTrucks, { audience: terminologyAudience });
 
   if (!dispatch) return null;
 
@@ -1147,7 +1148,7 @@ export default function DispatchDetailDrawer({
                 <div className="flex items-center gap-2">
                   <Badge
                     data-screenshot-badge-top="true"
-                    className={`${statusBadgeColors[dispatch.status]} inline-flex h-6 items-center justify-center border px-2.5 text-xs font-medium leading-none`}>
+                    className={`${getAssignmentBadgeColor(dispatch.status, assignmentStatusLabel)} inline-flex h-6 items-center justify-center border px-2.5 text-xs font-medium leading-none`}>
                     {assignmentStatusLabel}
                   </Badge>
                   <span className="text-sm text-slate-600">{dispatch.shift_time}</span>

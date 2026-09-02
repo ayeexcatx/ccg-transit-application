@@ -13,6 +13,17 @@ export const statusBorderAccent = {
   Cancelled: 'border-l-4 border-l-red-400',
 };
 
+export const opportunityBadgeColor = 'bg-green-800 text-white border-green-800';
+export const opportunityBorderAccent = 'border-l-4 border-l-green-800';
+
+export function getAssignmentBadgeColor(status, label) {
+  return label === 'Opportunity' ? opportunityBadgeColor : (statusBadgeColors[status] || '');
+}
+
+export function getAssignmentBorderAccent(status, label) {
+  return label === 'Opportunity' ? opportunityBorderAccent : (statusBorderAccent[status] || '');
+}
+
 export const scheduledStatusMessage = 'We’ve found an assignment opportunity for your truck. Details will follow.';
 
 export const scheduledDispatchNote =

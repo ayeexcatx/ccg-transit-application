@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Archive, ArchiveX, Copy, Eye, FileText, Lock, Moon, Pencil, Sun, Trash2, Truck } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { formatAssignmentActivityMessage, getAssignmentStatusLabel } from '@/lib/assignmentTerminology';
-import { scheduledStatusMessage, statusBadgeColors, statusBorderAccent } from '@/components/portal/statusConfig';
+import { getAssignmentBadgeColor, getAssignmentBorderAccent, scheduledStatusMessage } from '@/components/portal/statusConfig';
 
 export default function AdminDispatchCard({
   dispatch,
@@ -22,17 +22,18 @@ export default function AdminDispatchCard({
   onOpenDelete,
   onRegisterRef
 }) {
+  const statusLabel = getAssignmentStatusLabel(dispatch, confirmations, dispatch.trucks_assigned);
   return (
     <div ref={(el) => onRegisterRef(dispatch.id, el)} className="rounded-lg transition-all duration-500">
       <Card
-        className={`hover:shadow-md transition-shadow cursor-pointer ${statusBorderAccent[dispatch.status] || ''}`}
+        className={`hover:shadow-md transition-shadow cursor-pointer ${getAssignmentBorderAccent(dispatch.status, statusLabel)}`}
         onClick={() => onOpenDispatch(dispatch)}>
 
         <CardContent className="p-4 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-2">
-                <Badge className={`${statusBadgeColors[dispatch.status]} border text-xs`}>{getAssignmentStatusLabel(dispatch, confirmations, dispatch.trucks_assigned)}</Badge>
+                <Badge className={`${getAssignmentBadgeColor(dispatch.status, statusLabel)} border text-xs`}>{statusLabel}</Badge>
                 {dispatch.archived_flag &&
                   <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-xs flex items-center gap-1">
                     <Archive className="h-2.5 w-2.5" />Archived
