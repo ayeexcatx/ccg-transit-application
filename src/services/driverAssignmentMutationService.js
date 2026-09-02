@@ -56,8 +56,8 @@ export async function upsertDriverAssignment({
       await createDriverDispatchNotification({
         dispatch,
         driverAccessCodeId: existing.driver_user_id,
-        title: 'Dispatch Removed',
-        message: 'This dispatch assignment is no longer available',
+        title: 'Assignment Removed',
+        message: 'This assignment is no longer available',
         notificationType: 'driver_removed',
         requiredTrucks: [truckNumber],
       });
@@ -122,8 +122,8 @@ export async function sendDriverAssignment({ dispatch, driverDispatch, session }
     await createDriverDispatchNotification({
       dispatch,
       driverAccessCodeId: saved.driver_user_id,
-      title: 'Dispatch Assigned',
-      message: 'You have been assigned to a dispatch',
+      title: 'Assignment Opportunity Received',
+      message: 'You have received a new assignment opportunity.',
       notificationType: 'driver_assigned',
       requiredTrucks: [saved.truck_number],
     });
@@ -150,8 +150,8 @@ export async function deactivateDriverAssignment({ dispatch, driverAssignments =
       await createDriverDispatchNotification({
         dispatch,
         driverAccessCodeId: row.driver_user_id,
-        title: 'Dispatch Removed',
-        message: 'This dispatch assignment is no longer available',
+        title: 'Assignment Removed',
+        message: 'This assignment is no longer available',
         notificationType: 'driver_removed',
         requiredTrucks: [truckNumber],
       });
@@ -183,8 +183,8 @@ export async function clearRemovedTruckDriverAssignments({ dispatch, removedTruc
       await createDriverDispatchNotification({
         dispatch,
         driverAccessCodeId: row.driver_user_id,
-        title: 'Dispatch Removed',
-        message: 'This dispatch assignment is no longer available',
+        title: 'Assignment Removed',
+        message: 'This assignment is no longer available',
         notificationType: 'driver_removed',
         requiredTrucks: [row.truck_number],
       });

@@ -667,11 +667,11 @@ export default function Incidents() {
           <form className="space-y-4" onSubmit={handleCreate}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <Label>Dispatch (optional)</Label>
+                <Label>Assignment (optional)</Label>
                 <Select value={form.dispatch_id || '__none__'} onValueChange={onDispatchChange}>
-                  <SelectTrigger><SelectValue placeholder="Select dispatch" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select assignment" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">No dispatch link</SelectItem>
+                    <SelectItem value="__none__">No assignment link</SelectItem>
                     {sortedVisibleDispatches.map((dispatch) =>
                     <SelectItem key={dispatch.id} value={dispatch.id}>
                         {`${formatDispatchDateForOption(dispatch.date)} - ${dispatch.job_number || dispatch.reference_tag || dispatch.id}`}
