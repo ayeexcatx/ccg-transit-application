@@ -245,8 +245,8 @@ export default function AdminSmsCenter() {
         group: 'Company Owner',
         title: 'Scheduled dispatch SMS',
         body: [
-          'CCG Transit: Assignment Opportunity Found',
-          '(2) trucks have assignment opportunities for:',
+          'CCG Transit: Scheduled',
+          'We’ve found assignment opportunities for (2) trucks:',
           sampleOwnerDispatchDateShiftLine(),
           '',
           'Details to follow.',
@@ -258,7 +258,7 @@ export default function AdminSmsCenter() {
         group: 'Company Owner',
         title: 'Dispatch SMS',
         body: [
-          'CCG Transit: New Assignment Opportunity',
+          'CCG Transit: Dispatch',
           'You have received a new assignment opportunity for:',
           dispatchLine,
           '',
@@ -312,7 +312,7 @@ export default function AdminSmsCenter() {
       createTemplatePreview({
         group: 'Driver',
         title: 'Driver dispatch amended SMS',
-        body: `CCG Transit: Assignment Amended.\n${dispatchLine}\n\nPlease open the app to view.`,
+        body: `CCG Transit: Assignment Amended.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
         description: 'Driver amended dispatch SMS format.',
       }),
       createTemplatePreview({
@@ -330,7 +330,7 @@ export default function AdminSmsCenter() {
       createTemplatePreview({
         group: 'Driver',
         title: 'Driver optional informational update SMS',
-        body: `CCG Transit: Assignment Updated.\n${dispatchLine}\n\nPlease open the app to view.`,
+        body: `CCG Transit: Assignment Updated.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
         description: 'Driver non-status-change update SMS format (supported).',
       }),
 

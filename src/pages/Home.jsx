@@ -264,7 +264,7 @@ const getHomeGreeting = (userName) => {
   }
 };
 
-function MiniDispatchCard({ dispatch, companyName, truckNumbers = [], confirmations = [], forceAssignment = false }) {
+function MiniDispatchCard({ dispatch, companyName, truckNumbers = [], confirmations = [] }) {
 
   return (
     <Link to={createPageUrl(buildDispatchOpenPath('Portal', { dispatchId: dispatch.id, normalizeId }))}>
@@ -277,7 +277,7 @@ function MiniDispatchCard({ dispatch, companyName, truckNumbers = [], confirmati
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="min-w-0">
-              <Badge className={`${statusColors[dispatch.status]} border text-xs`}>{getAssignmentStatusLabel(dispatch, confirmations, truckNumbers, { forceAssignment })}</Badge>
+              <Badge className={`${statusColors[dispatch.status]} border text-xs`}>{getAssignmentStatusLabel(dispatch, confirmations, truckNumbers)}</Badge>
             </div>
             <div className="shrink-0 text-right text-xs text-slate-500 leading-tight">
               <div className="whitespace-nowrap">{formatDispatchDate(dispatch.date)}</div>
@@ -904,7 +904,7 @@ export default function Home() {
             {todayDispatches.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">No assignments today</p>
             ) : (
-              todayDispatches.map(d => <MiniDispatchCard key={d.id} dispatch={d} companyName={d.company_name} truckNumbers={getVisibleTrucksForDispatch(d)} confirmations={confirmations} forceAssignment={isDriver} />)
+              todayDispatches.map(d => <MiniDispatchCard key={d.id} dispatch={d} companyName={d.company_name} truckNumbers={getVisibleTrucksForDispatch(d)} confirmations={confirmations} />)
             )}
           </CardContent>
         </Card>
@@ -926,7 +926,7 @@ export default function Home() {
             {upcomingDispatches.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">No upcoming assignments</p>
             ) : (
-              upcomingDispatches.map(d => <MiniDispatchCard key={d.id} dispatch={d} companyName={d.company_name} truckNumbers={getVisibleTrucksForDispatch(d)} confirmations={confirmations} forceAssignment={isDriver} />)
+              upcomingDispatches.map(d => <MiniDispatchCard key={d.id} dispatch={d} companyName={d.company_name} truckNumbers={getVisibleTrucksForDispatch(d)} confirmations={confirmations} />)
             )}
           </CardContent>
         </Card>

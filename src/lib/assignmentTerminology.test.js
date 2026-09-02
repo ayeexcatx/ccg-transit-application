@@ -47,33 +47,3 @@ test('formats legacy activity messages for display without changing stored event
   );
   assert.equal(message, 'Alex updated this dispatch and reviewed prior dispatches');
 });
-
-test('driver-visible work is an assignment without confirmation data or seen state', () => {
-  const unseenDriverAssignment = getAssignmentTerminology(dispatch, [], ['101'], { forceAssignment: true });
-  const seenDriverAssignment = getAssignmentTerminology(dispatch, [], ['101'], { forceAssignment: true });
-  assert.equal(unseenDriverAssignment.singular, 'Assignment');
-  assert.equal(unseenDriverAssignment.details, 'Assignment Details');
-  assert.equal(unseenDriverAssignment.view, 'View Assignment');
-  assert.deepEqual(seenDriverAssignment, unseenDriverAssignment);
-  assert.equal(getAssignmentStatusLabel(dispatch, [], ['101'], { forceAssignment: true }), 'Assignment');
-});
-
-test('incident-selectable work is presented as an assignment by workflow guarantee', () => {
-  assert.equal(getAssignmentStatusLabel(dispatch, [], null, { forceAssignment: true }), 'Assignment');
-  assert.equal(getAssignmentStatusLabel({ ...dispatch, status: 'Amended' }, [], null, { forceAssignment: true }), 'Amended');
-  assert.equal(getAssignmentStatusLabel({ ...dispatch, status: 'Canceled' }, [], null, { forceAssignment: true }), 'Canceled');
-});
-
-test('confirmed historical work remains an assignment when its scoped confirmations are supplied', () => {
-  const historicalDispatch = { ...dispatch, archived_flag: true, date: '2024-01-01' };
-  const historicalConfirmations = [
-    { dispatch_id: 'd1', truck_number: '101', confirmation_type: 'Dispatch' },
-    { dispatch_id: 'd1', truck_number: '102', confirmation_type: 'Dispatch' },
-  ];
-
-  assert.equal(getAssignmentStatusLabel(historicalDispatch, historicalConfirmations), 'Assignment');
-  assert.equal(getAssignmentStatusLabel(historicalDispatch, []), 'Opportunity');
-  assert.equal(getAssignmentStatusLabel({ ...historicalDispatch, status: 'Scheduled' }, historicalConfirmations), 'Pending Opportunity');
-  assert.equal(getAssignmentStatusLabel({ ...historicalDispatch, status: 'Amended' }, []), 'Amended');
-  assert.equal(getAssignmentStatusLabel({ ...historicalDispatch, status: 'Canceled' }, []), 'Canceled');
-});

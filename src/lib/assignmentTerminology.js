@@ -22,8 +22,8 @@ export function isAssignmentConfirmed(dispatch, confirmations = [], relevantTruc
   return trucks.every((truck) => confirmedTrucks.has(truck));
 }
 
-export function getAssignmentTerminology(dispatch, confirmations = [], relevantTrucks = null, options = {}) {
-  const confirmed = options.forceAssignment === true || isAssignmentConfirmed(dispatch, confirmations, relevantTrucks);
+export function getAssignmentTerminology(dispatch, confirmations = [], relevantTrucks = null) {
+  const confirmed = isAssignmentConfirmed(dispatch, confirmations, relevantTrucks);
   return {
     confirmed,
     singular: confirmed ? 'Assignment' : 'Assignment Opportunity',
@@ -34,12 +34,11 @@ export function getAssignmentTerminology(dispatch, confirmations = [], relevantT
 }
 
 
-export function getAssignmentStatusLabel(dispatch, confirmations = [], relevantTrucks = null, options = {}) {
+export function getAssignmentStatusLabel(dispatch, confirmations = [], relevantTrucks = null) {
   const status = normalize(dispatch?.status);
+  if (status === 'scheduled') return 'Pending Opportunity';
   if (status === 'amended') return 'Amended';
   if (status === 'cancelled' || status === 'canceled') return 'Canceled';
-  if (options.forceAssignment === true) return 'Assignment';
-  if (status === 'scheduled') return 'Pending Opportunity';
   if (status === 'dispatch' || status === 'dispatched') {
     return isAssignmentConfirmed(dispatch, confirmations, relevantTrucks) ? 'Assignment' : 'Opportunity';
   }

@@ -61,8 +61,8 @@ export const companyOwnerTutorialSteps = {
       target: '[data-tour="action-needed"]',
       title: 'Home: Action Needed',
       description:
-        'This section highlights assignment opportunities that require your immediate attention, such as accepting.',
-      warningText: 'Items will remain in this section until you accept of your assignment opportunity.',
+        'This section highlights assignment opportunities that require your immediate attention, such as opportunities waiting for your acceptance.',
+      warningText: 'Items will remain in this section until you accept your assignment opportunity.',
     },
     {
       id: 'dispatch-preview',
@@ -239,7 +239,7 @@ export const dispatchDrawerTutorialSteps = {
       target: '[data-tour="dispatch-confirm-receipt"]',
       title: 'Accept',
       description:
-        'Click here to accept of the assignment opportunity.',
+        'Click here to accept the assignment opportunity.',
       warningText: 'You must confirm any time you receive: a new opportunity, assignment, amendment, and/or cancellation.',
     },
     {
