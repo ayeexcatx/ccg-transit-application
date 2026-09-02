@@ -122,8 +122,8 @@ export async function sendDriverAssignment({ dispatch, driverDispatch, session }
     await createDriverDispatchNotification({
       dispatch,
       driverAccessCodeId: saved.driver_user_id,
-      title: 'New Assignment',
-      message: 'You have received a new assignment.',
+      title: 'Assignment Opportunity Received',
+      message: 'You have received a new assignment opportunity.',
       notificationType: 'driver_assigned',
       requiredTrucks: [saved.truck_number],
     });

@@ -728,8 +728,8 @@ export default function DispatchDetailDrawer({
     return merged;
   }, [timeEntries, optimisticTimeEntries]);
 
-  const assignmentTerminology = getAssignmentTerminology(dispatch, confirmations, myTrucks, { forceAssignment: isDriverUser });
-  const assignmentStatusLabel = getAssignmentStatusLabel(dispatch, confirmations, myTrucks, { forceAssignment: isDriverUser });
+  const assignmentTerminology = getAssignmentTerminology(dispatch, confirmations, myTrucks);
+  const assignmentStatusLabel = getAssignmentStatusLabel(dispatch, confirmations, myTrucks);
 
   if (!dispatch) return null;
 

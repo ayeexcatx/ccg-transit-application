@@ -47,19 +47,3 @@ test('formats legacy activity messages for display without changing stored event
   );
   assert.equal(message, 'Alex updated this dispatch and reviewed prior dispatches');
 });
-
-test('driver-visible work is an assignment without confirmation data or seen state', () => {
-  const unseenDriverAssignment = getAssignmentTerminology(dispatch, [], ['101'], { forceAssignment: true });
-  const seenDriverAssignment = getAssignmentTerminology(dispatch, [], ['101'], { forceAssignment: true });
-  assert.equal(unseenDriverAssignment.singular, 'Assignment');
-  assert.equal(unseenDriverAssignment.details, 'Assignment Details');
-  assert.equal(unseenDriverAssignment.view, 'View Assignment');
-  assert.deepEqual(seenDriverAssignment, unseenDriverAssignment);
-  assert.equal(getAssignmentStatusLabel(dispatch, [], ['101'], { forceAssignment: true }), 'Assignment');
-});
-
-test('incident-selectable work is presented as an assignment by workflow guarantee', () => {
-  assert.equal(getAssignmentStatusLabel(dispatch, [], null, { forceAssignment: true }), 'Assignment');
-  assert.equal(getAssignmentStatusLabel({ ...dispatch, status: 'Amended' }, [], null, { forceAssignment: true }), 'Amended');
-  assert.equal(getAssignmentStatusLabel({ ...dispatch, status: 'Canceled' }, [], null, { forceAssignment: true }), 'Canceled');
-});

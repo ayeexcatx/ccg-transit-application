@@ -113,8 +113,8 @@ function getDriverDispatchStatusNotification(status) {
   }
 
   return {
-    title: 'New Assignment',
-    message: 'You have received a new assignment.',
+    title: 'Assignment Opportunity Received',
+    message: 'You have received a new assignment opportunity.',
     notificationType: 'driver_assigned',
   };
 }
@@ -420,8 +420,8 @@ export async function notifyDriverAssignmentChanges(dispatch, previousAssignment
       ...addedDriverIds.map((driverId) => createDriverDispatchNotification({
         dispatch,
         driverAccessCodeId: driverAccessCodeMap.get(driverId),
-        title: 'New Assignment',
-        message: 'You have received a new assignment.',
+        title: 'Assignment Opportunity Received',
+        message: 'You have received a new assignment opportunity.',
         notificationType: 'driver_assigned',
         requiredTrucks: nextAssignments
           .filter((assignment) => assignment?.active_flag !== false && assignment?.is_visible_to_driver !== false && ['sent','seen'].includes(String(assignment?.delivery_status || 'sent').toLowerCase()) && assignment?.driver_id === driverId)

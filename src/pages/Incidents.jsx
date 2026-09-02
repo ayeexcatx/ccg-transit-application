@@ -647,7 +647,7 @@ export default function Incidents() {
                         <p>
                           {formatDispatchDate(dispatch.date)}
                           {dispatch.start_time ? ` • ${dispatch.start_time}` : ''}
-                          {dispatch.status ? ` • ${getAssignmentStatusLabel(dispatch, [], null, { forceAssignment: true })}` : ''}
+                          {dispatch.status ? ` • ${getAssignmentStatusLabel(dispatch)}` : ''}
                         </p>
                       </div>
                     }
