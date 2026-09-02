@@ -209,7 +209,11 @@ async function buildSmsMessage(notification, recipient, options = {}) {
   const dispatchDateTimeLine = resolveDriverDispatchDateTimeLine(notification, dispatch);
   const dispatchLine = dispatchDateTimeLine || 'Assignment details are available in the app.';
 
-  return `${SMS_BRAND_PREFIX} ${headline}\n${dispatchLine}\n\nPlease open the app to view and confirm.`;
+  const actionLine = recipient?.code_type === 'Driver'
+    ? 'Please open the app to view.'
+    : 'Please open the app to view and confirm.';
+
+  return `${SMS_BRAND_PREFIX} ${headline}\n${dispatchLine}\n\n${actionLine}`;
 }
 
 async function createSmsLog({

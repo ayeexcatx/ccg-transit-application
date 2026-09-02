@@ -306,7 +306,7 @@ export default function AdminSmsCenter() {
       createTemplatePreview({
         group: 'Driver',
         title: 'Driver dispatch assigned SMS',
-        body: `CCG Transit: Dispatch Assigned.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        body: `CCG Transit: New Assignment.\n${dispatchLine}\n\nPlease open the app to view.`,
         description: 'Driver assignment notification SMS format.',
       }),
       createTemplatePreview({
@@ -318,13 +318,13 @@ export default function AdminSmsCenter() {
       createTemplatePreview({
         group: 'Driver',
         title: 'Driver dispatch cancelled SMS',
-        body: `CCG Transit: Dispatch Cancelled.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        body: `CCG Transit: Assignment Cancelled.\n${dispatchLine}\n\nPlease open the app to view.`,
         description: 'Driver cancelled dispatch SMS format.',
       }),
       createTemplatePreview({
         group: 'Driver',
         title: 'Driver dispatch assignment removed SMS',
-        body: `CCG Transit: Dispatch Removed.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        body: `CCG Transit: Assignment Removed.\n${dispatchLine}\n\nPlease open the app to view.`,
         description: 'Driver removed-assignment SMS format.',
       }),
       createTemplatePreview({
