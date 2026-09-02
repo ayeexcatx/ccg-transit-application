@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Building2, Pencil } from 'lucide-react';
 import { scheduledDispatchNote, scheduledStatusMessage } from './statusConfig';
+import { getScheduledPresentation } from '@/lib/assignmentTerminology';
 
 export default function DispatchDrawerIdentitySection({
   dispatch,
   isAdmin,
   isOwner,
+  isDriver,
   visibleTrucks,
   getTruckDriverSummaryLabel,
   hasTruckSeenStatus,
@@ -24,11 +26,12 @@ export default function DispatchDrawerIdentitySection({
   onSaveTrucks
 }) {
   if (dispatch.status === 'Scheduled') {
+    const presentation = getScheduledPresentation({ audience: isDriver ? 'driver' : undefined });
     return (
       <div>
-        <h2 className="text-sm font-semibold text-slate-700">Assignment Opportunity Found</h2>
-        <p className="text-sm text-blue-600 mt-1 italic">{scheduledStatusMessage}</p>
-        <p className="text-xs text-slate-600 mt-2 italic">{scheduledDispatchNote}</p>
+        <h2 className="text-sm font-semibold text-slate-700">{presentation.title}</h2>
+        <p className="text-sm text-blue-600 mt-1 italic">{isDriver ? presentation.message : scheduledStatusMessage}</p>
+        {!isDriver && <p className="text-xs text-slate-600 mt-2 italic">{scheduledDispatchNote}</p>}
       </div>);
 
   }

@@ -59,6 +59,17 @@ export function getAssignmentStatusLabel(dispatch, confirmations = [], relevantT
   return dispatch?.status || 'Opportunity';
 }
 
+export function getScheduledPresentation({ audience } = {}) {
+  if (isAssignmentOnlyAudience(audience)) {
+    return { title: 'Assignment', message: 'Assignment details are available.', note: '' };
+  }
+  return {
+    title: 'Pending Opportunity',
+    message: 'We’ve found an assignment opportunity for your truck. Details will follow.',
+    note: 'Note: The assignment is subject to cancellation by the customer. Your acknowledgement constitutes acceptance of the assignment and a commitment to perform as scheduled.',
+  };
+}
+
 
 export function formatAssignmentActivityMessage(message) {
   if (typeof message !== 'string') return message;
