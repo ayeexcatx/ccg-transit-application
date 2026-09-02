@@ -10,16 +10,16 @@ import {
   reconcileRequiredTruckList,
   expandRequiredTruckList,
 } from '@/components/notifications/confirmationStateHelpers';
-import { getDriverAssignmentReceivedCopy } from '@/lib/driverMessaging';
-import { getAdminAcceptanceTitle } from '@/lib/ownerAssignmentMessaging';
+import { getDriverAssignmentLifecycleCopy, getDriverAssignmentReceivedCopy } from '@/lib/driverMessaging';
+import { getAdminAcceptanceTitle, getCompanyOwnerNotificationTitle } from '@/lib/ownerAssignmentMessaging';
 import { NON_CONFIRMATION_NOTIFICATION_CATEGORIES } from '@/components/notifications/ownerActionStatus';
 
 const statusLabels = {
   Scheduled: 'Pending Opportunity (details to follow)',
-  Dispatch: 'Opportunity',
-  Amended: 'Assignment Amended',
-  Cancelled: 'Assignment Canceled',
-  Canceled: 'Assignment Canceled',
+  Dispatch: getCompanyOwnerNotificationTitle('Dispatch'),
+  Amended: getCompanyOwnerNotificationTitle('Amended'),
+  Cancelled: getCompanyOwnerNotificationTitle('Cancelled'),
+  Canceled: getCompanyOwnerNotificationTitle('Canceled'),
 };
 
 const NON_CONFIRMATION_CATEGORIES = NON_CONFIRMATION_NOTIFICATION_CATEGORIES;
@@ -97,28 +97,7 @@ function isDispatchCanceledStatus(status) {
 }
 
 function getDriverDispatchStatusNotification(status) {
-  const normalized = String(status || '').toLowerCase();
-
-  if (normalized === 'amended') {
-    return {
-      title: 'Assignment Amended',
-      message: 'Your assignment has been amended.',
-      notificationType: 'driver_amended',
-    };
-  }
-
-  if (normalized === 'cancelled' || normalized === 'canceled') {
-    return {
-      title: 'Assignment Canceled',
-      message: 'Your assignment has been canceled.',
-      notificationType: 'driver_cancelled',
-    };
-  }
-
-  return {
-    ...getDriverAssignmentReceivedCopy(),
-    notificationType: 'driver_assigned',
-  };
+  return getDriverAssignmentLifecycleCopy(status);
 }
 
 function getUniqueDriverIds(assignments = []) {

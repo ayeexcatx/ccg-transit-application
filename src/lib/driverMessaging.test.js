@@ -1,15 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { getDriverAssignmentReceivedCopy, getDriverSmsLifecycleCopy, normalizeDriverSmsHeadline } from './driverMessaging.js';
+import { getDriverAssignmentLifecycleCopy, getDriverAssignmentReceivedCopy, getDriverSmsLifecycleCopy, normalizeDriverSmsHeadline } from './driverMessaging.js';
 
 test('driver assignment notification uses Assignment terminology', () => {
   const copy = getDriverAssignmentReceivedCopy();
   assert.deepEqual(copy, {
-    title: 'Assignment Received',
+    title: 'NEW Assignment',
     message: 'You have received a new assignment.',
   });
   assert.doesNotMatch(`${copy.title} ${copy.message}`, /opportunity/i);
+});
+
+test('driver notification lifecycle uses the exact assignment-only copy', () => {
+  const copies = [
+    getDriverAssignmentLifecycleCopy('Dispatch'),
+    getDriverAssignmentLifecycleCopy('Amended'),
+    getDriverAssignmentLifecycleCopy('Cancelled'),
+  ];
+  assert.equal(copies[0].title, 'NEW Assignment');
+  assert.equal(copies[0].message, 'You have received a new assignment.');
+  assert.equal(copies[1].title, 'Assignment AMENDED');
+  assert.equal(copies[1].message, 'Your assignment has been amended.');
+  assert.equal(copies[2].title, 'Assignment CANCELLED');
+  assert.equal(copies[2].message, 'Your assignment has been canceled.');
+  assert.doesNotMatch(JSON.stringify(copies), /dispatch|opportunity/i);
 });
 
 test('direct-send driver assignment path uses the centralized received copy', async () => {
@@ -38,10 +53,10 @@ test('driver SMS lifecycle copy uses Assignment and never asks the driver to acc
     getDriverSmsLifecycleCopy('Dispatch Removed'),
   ];
 
-  assert.equal(copies[0].headline, 'Assignment Received');
+  assert.equal(copies[0].headline, 'NEW');
   assert.equal(copies[0].body, 'You have received a new assignment.');
-  assert.equal(copies[1].headline, 'Assignment Amended');
-  assert.equal(copies[2].headline, 'Assignment Canceled');
+  assert.equal(copies[1].headline, 'AMENDED');
+  assert.equal(copies[2].headline, 'CANCELLED');
   assert.equal(copies[3].headline, 'Assignment Removed');
   assert.doesNotMatch(JSON.stringify(copies), /dispatch|opportunity|confirm|accept/i);
 });
