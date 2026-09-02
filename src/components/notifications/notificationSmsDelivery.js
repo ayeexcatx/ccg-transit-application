@@ -1,7 +1,8 @@
 import { base44 } from '@/api/base44Client';
 import { formatDispatchDateTimeLine } from '@/components/notifications/dispatchDateTimeFormat';
 import { getAdminSmsProductState, getCompanyOwnerSmsState, getDriverSmsState } from '@/lib/sms';
-import { normalizeDriverSmsHeadline } from '@/lib/driverMessaging';
+import { getDriverSmsLifecycleCopy } from '@/lib/driverMessaging';
+import { buildCompanyOwnerAssignmentSms } from '@/lib/ownerAssignmentMessaging';
 import { getEffectiveTruckStartTime } from '@/lib/dispatchTruckOverrides';
 import { normalizeUsSmsPhone } from '@/lib/smsPhone';
 import { getSmsRules, resolveEffectiveSharedAdminAccessCode, resolveSmsRuleKeyForNotification } from '@/lib/smsConfig';
@@ -106,64 +107,13 @@ function buildCompanyOwnerDispatchSmsMessage(notification, dispatch) {
     : [];
   const truckCount = requiredTrucks.length || (Array.isArray(dispatch?.trucks_assigned) ? dispatch.trucks_assigned.filter(Boolean).length : 0);
 
-  if (status === 'Scheduled') {
-    const displayTruckCount = truckCount > 0 ? truckCount : 1;
-    const truckLine = displayTruckCount === 1
-      ? 'We’ve found an assignment opportunity for your truck:'
-      : `(${displayTruckCount}) trucks have assignment opportunities for:`;
-    const dateShiftLine = formatOwnerDispatchDateShiftLine(dispatch) || 'Assignment details are available in the app.';
-
-    return [
-      `${SMS_BRAND_PREFIX} Assignment Opportunity Found`,
-      truckLine,
-      dateShiftLine,
-      '',
-      'Details to follow.',
-      'Please open the app to view and confirm.',
-    ].join('\n');
-  }
-
-  if (status === 'Dispatch') {
-    return [
-      `${SMS_BRAND_PREFIX} New Assignment Opportunity`,
-      'You have received a new assignment opportunity for:',
-      formatOwnerDispatchDateTimeLine(dispatch) || 'Assignment details are available in the app.',
-      '',
-      'Please open the app to view and CONFIRM.',
-    ].join('\n');
-  }
-
-  if (status === 'Amended') {
-    return [
-      `${SMS_BRAND_PREFIX} Amendment`,
-      'Your assignment has been amended to:',
-      formatOwnerDispatchDateTimeLine(dispatch) || 'Assignment details are available in the app.',
-      '',
-      'Please open the app to view and CONFIRM.',
-    ].join('\n');
-  }
-
-  if (status === 'Cancelled') {
-    return [
-      `${SMS_BRAND_PREFIX} Cancellation`,
-      'Your assignment has been cancelled:',
-      formatOwnerDispatchDateTimeLine(dispatch) || 'Assignment details are available in the app.',
-      '',
-      'Please open the app to view and CONFIRM.',
-    ].join('\n');
-  }
-
-  if (status === 'Update') {
-    return [
-      `${SMS_BRAND_PREFIX} Update`,
-      'Your assignment has been updated:',
-      formatOwnerDispatchDateTimeLine(dispatch) || 'Assignment details are available in the app.',
-      '',
-      'Please open the app to view and CONFIRM.',
-    ].join('\n');
-  }
-
-  return '';
+  return buildCompanyOwnerAssignmentSms({
+    status,
+    truckCount,
+    dateLine: status === 'Scheduled'
+      ? formatOwnerDispatchDateShiftLine(dispatch)
+      : formatOwnerDispatchDateTimeLine(dispatch),
+  });
 }
 
 async function resolveRelatedDispatch(notification) {
@@ -208,15 +158,21 @@ async function buildSmsMessage(notification, recipient, options = {}) {
 
   const fallbackHeadline = recipient?.code_type === 'Driver' ? 'Assignment update' : 'Dispatch update';
   const rawHeadline = normalizeHeadline(notification?.title || fallbackHeadline);
-  const headline = recipient?.code_type === 'Driver' ? normalizeDriverSmsHeadline(rawHeadline) : rawHeadline;
   const dispatchDateTimeLine = resolveDriverDispatchDateTimeLine(notification, dispatch);
   const dispatchLine = dispatchDateTimeLine || 'Assignment details are available in the app.';
 
-  const actionLine = recipient?.code_type === 'Driver'
-    ? 'Please open the app to view.'
-    : 'Please open the app to view and confirm.';
+  if (recipient?.code_type === 'Driver') {
+    const { headline, body } = getDriverSmsLifecycleCopy(rawHeadline);
+    return [
+      `${SMS_BRAND_PREFIX} ${headline}`,
+      body,
+      dispatchLine,
+      '',
+      'Please open the app to view.',
+    ].filter((line, index) => line || index === 3).join('\n');
+  }
 
-  return `${SMS_BRAND_PREFIX} ${headline}\n${dispatchLine}\n\n${actionLine}`;
+  return `${SMS_BRAND_PREFIX} ${rawHeadline}\n${dispatchLine}\n\nPlease open the app to view and confirm.`;
 }
 
 async function createSmsLog({

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatAssignmentActivityMessage, getAssignmentStatusLabel, getAssignmentTerminology, isAssignmentConfirmed } from './assignmentTerminology.js';
+import { formatAssignmentActivityMessage, getAssignmentStatusLabel, getAssignmentTerminology, getScheduledPresentation, isAssignmentConfirmed } from './assignmentTerminology.js';
 
 const dispatch = { id: 'd1', status: 'Dispatch', trucks_assigned: ['101', '102'] };
 
@@ -31,6 +31,13 @@ test('driver work is always presented as an assignment independent of history an
     getAssignmentStatusLabel({ ...dispatch, status: 'Scheduled' }, [], null, { audience: 'driver' }),
     'Assignment'
   );
+});
+
+test('defensive scheduled presentation contains no opportunity copy for drivers', () => {
+  const presentation = getScheduledPresentation({ audience: 'driver' });
+  assert.equal(presentation.title, 'Assignment');
+  assert.doesNotMatch(JSON.stringify(presentation), /pending|opportunity|accept|confirm/i);
+  assert.match(getScheduledPresentation().title, /Pending Opportunity/);
 });
 
 test('incident-associated work is an assignment without confirmation data', () => {

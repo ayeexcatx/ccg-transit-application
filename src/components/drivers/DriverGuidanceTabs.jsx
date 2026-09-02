@@ -33,9 +33,9 @@ export default function DriverGuidanceTabs({ helpLanguage, onLanguageChange }) {
             <section className="space-y-2">
               <h3 className="text-lg font-semibold text-slate-900">Driver Portal</h3>
               <p className="text-sm leading-6 text-slate-700">
-                A driver portal <span className="font-medium">ONLY</span> has the ability to view driver-specific announcements, dispatches that they are
-                assigned to (normal dispatch details only; no editing), driver profile, protocols, and have the ability to report incidents. <span className="font-medium">They do not</span> have the ability to view or see
-                ANYTHING else, including the confirmation logs, other drivers, or even other trucks/drivers assigned to the same dispatch.
+                A driver portal <span className="font-medium">ONLY</span> has the ability to view driver-specific announcements, assignments that they are
+                assigned to (normal assignment details only; no editing), driver profile, protocols, and have the ability to report incidents. <span className="font-medium">They do not</span> have the ability to view or see
+                ANYTHING else, including the confirmation logs, other drivers, or even other trucks/drivers assigned to the same assignment.
               </p>
             </section>
 
@@ -43,12 +43,12 @@ export default function DriverGuidanceTabs({ helpLanguage, onLanguageChange }) {
               <h3 className="text-lg font-semibold text-slate-900">Assigning Drivers</h3>
               <ul className="list-disc pl-5 space-y-2 text-sm leading-6 text-slate-700">
                 <li>
-                  A driver can only see a dispatch and receive notifications <span className="font-medium">IF</span> and <span className="font-medium">WHEN</span> you assign them to a
-                  truck number on a specific dispatch and click "SEND".
+                  A driver can only see an assignment and receive notifications <span className="font-medium">IF</span> and <span className="font-medium">WHEN</span> you assign them to a
+                  truck number on a specific assignment and click "SEND".
                 </li>
                 <li>
-                  When you <span className="font-medium">select a driver</span> on a dispatch and click "SEND", a copy of the dispatch and a notification will be sent to the
-                  driver. <span className="font-medium text-emerald-600">“Dispatch Assigned: You have been assigned to a dispatch”</span><br />
+                  When you <span className="font-medium">select a driver</span> on an assignment and click "SEND", the assignment and a notification will be sent to the
+                  driver. <span className="font-medium text-emerald-600">“Assignment Received: You have received a new assignment”</span><br />
                   IT WILL NOT SEND IF YOU DO NOT CLICK "SEND" !!
                 </li>
                 <li>
@@ -56,7 +56,7 @@ export default function DriverGuidanceTabs({ helpLanguage, onLanguageChange }) {
                   as they remain assigned. (<span className="text-amber-600">Amendments</span>, <span className="text-red-600">Cancellations</span>)
                 </li>
                 <li>
-                  If you <span className="font-medium">"CANCEL" a driver</span> from the dispatch assignment, they will immediately receive a
+                  If you <span className="font-medium">"CANCEL" a driver</span> from the assignment, they will immediately receive a
                   <span className="font-medium text-red-600"> No Longer Available</span> notification.
                 </li>
               </ul>
@@ -67,40 +67,40 @@ export default function DriverGuidanceTabs({ helpLanguage, onLanguageChange }) {
               <ul className="list-disc pl-5 space-y-2 text-sm leading-6 text-slate-700">
                 <li>
                   If you have a driver assigned and you <span className="font-medium">switch the driver</span> in the dropdown menu, the driver you removed will immediately receive a
-                  <span className="text-red-600"> No Longer Available</span> notification, and the driver you added will immediately receive a <span className="text-emerald-600">new "Dispatch Assigned"</span> notification when you click "SEND".
+                  <span className="text-red-600"> No Longer Available</span> notification, and the driver you added will immediately receive a <span className="text-emerald-600">new "Assignment Received"</span> notification when you click "SEND".
                 </li>
               </ul>
               <p className="pl-5 text-sm text-slate-500 italic leading-6">
                 Example: Switch Driver 1 to Driver 2 and click "SEND"<br />
-                Driver 1 = "Dispatch Removed: This dispatch assignment is no longer available" notification<br />
-                Driver 2 = "Dispatch Assigned: You have been assigned to a dispatch" notification
+                Driver 1 = "Assignment Removed: This assignment is no longer available" notification<br />
+                Driver 2 = "Assignment Received: You have received a new assignment" notification
               </p>
               <ul className="list-disc pl-5 space-y-2 text-sm leading-6 text-slate-700">
                 <li>
                   If you <span className="font-medium">switch a truck</span> that currently has a driver assigned, the driver assignment will <span className="font-medium">RESET</span> and the driver will receive a <span className="text-red-600">No Longer Available</span> notification.
-                  They will no longer be able to view the dispatch.
+                  They will no longer be able to view the assignment.
                 </li>
               </ul>
               <p className="pl-5 text-sm text-slate-500 italic leading-6">
-                Example: Truck 1 (which has Driver 1 assigned) is switched to Truck 2 which is not dispatched:<br />
-                The driver assignment is RESET (driver removed), so Driver 1 will receive a "No Longer Available" notification. Reassign them to Truck 2 to send them a new dispatch assignment notification, or choose a new driver to send the new dispatch assignment to them.
+                Example: Truck 1 (which has Driver 1 assigned) is switched to Truck 2 which is not assigned:<br />
+                The driver assignment is RESET (driver removed), so Driver 1 will receive a "No Longer Available" notification. Reassign them to Truck 2 to send them a new assignment notification, or choose a new driver to send the new assignment to them.
               </p>
               <ul className="list-disc pl-5 space-y-2 text-sm leading-6 text-slate-700">
                 <li>
                   If you <span className="font-medium">swap trucks</span> that currently have drivers assigned, the driver assignments will <span className="font-medium">RESET</span> and the drivers will both receive a <span className="text-red-600">No Longer Available</span> notification.
-                  They will no longer be able to view the dispatches until you reassign them. When you reassign them, they will receive a new dispatch assignment notification.
+                  They will no longer be able to view the assignments until you reassign them. When you reassign them, they will receive a new assignment notification.
                 </li>
               </ul>
               <p className="pl-5 text-sm text-slate-500 italic leading-6">
                 Example: Truck 1 has Driver 1 assigned AND is switched to Truck 2 that has Driver 2 assigned:<br />
-                Both trucks will have their drivers RESET (drivers removed), so both drivers will receive a "No Longer Available" notification. Reassign them and click "SEND" to send the new dispatch assignment.
+                Both trucks will have their drivers RESET (drivers removed), so both drivers will receive a "No Longer Available" notification. Reassign them and click "SEND" to send the new assignment.
               </p>
               <ul className="list-disc pl-5 space-y-2 text-sm leading-6 text-slate-700">
                 <li>
-                  Please make sure to double-check all the selections and changes you make, and that you <span className="font-medium">reassign and "SEND"</span> the drivers to the correct dispatch if you <span className="font-medium">switch trucks</span>.
+                  Please make sure to double-check all the selections and changes you make, and that you <span className="font-medium">reassign and "SEND"</span> the drivers to the correct assignment if you <span className="font-medium">switch trucks</span>.
                 </li>
                 <li>
-                  It is still your responsibility to follow up with your drivers to get verbal or written confirmation that they have the correct dispatch and that they understand the assignment.
+                  It is still your responsibility to follow up with your drivers to get verbal or written confirmation that they have the correct assignment and that they understand the assignment.
                 </li>
               </ul>
             </section>
@@ -109,11 +109,11 @@ export default function DriverGuidanceTabs({ helpLanguage, onLanguageChange }) {
               <h3 className="text-lg font-semibold text-slate-900">Passive Driver Notifications</h3>
               <ul className="list-disc pl-5 space-y-2 text-sm leading-6 text-slate-700">
                 <li>
-                  If you <span className="font-medium">select a driver, click "SEND" and do nothing else</span>, they will receive notifications and dispatch updates the same way you receive them, except they will only receive the ones pertaining to the dispatch they are <span className="font-medium">assigned</span> to.
+                  If you <span className="font-medium">select a driver, click "SEND" and do nothing else</span>, they will receive notifications and assignment updates the same way you receive them, except they will only receive the ones pertaining to the assignment they are <span className="font-medium">assigned</span> to.
                 </li>
                 <li>
-                  What you see on your screen is exactly how things stand. If you have a driver selected to a dispatch (& "SENT"), your driver can also see that dispatch. <br />
-                  If you have <span className="font-medium">'No Driver Selected'</span> on your dispatch, then your driver cannot see that dispatch.
+                  What you see on your screen is exactly how things stand. If you have a driver selected to an assignment (& "SENT"), your driver can also see that assignment. <br />
+                  If you have <span className="font-medium">'No Driver Selected'</span> on your assignment, then your driver cannot see that assignment.
                 </li>
               </ul>
             </section>
