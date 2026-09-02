@@ -26,7 +26,7 @@ export default function DispatchDrawerIdentitySection({
   if (dispatch.status === 'Scheduled') {
     return (
       <div>
-        <h2 className="text-sm font-semibold text-slate-700">Scheduled Dispatch</h2>
+        <h2 className="text-sm font-semibold text-slate-700">Assignment Opportunity Found</h2>
         <p className="text-sm text-blue-600 mt-1 italic">{scheduledStatusMessage}</p>
         <p className="text-xs text-slate-600 mt-2 italic">{scheduledDispatchNote}</p>
       </div>);

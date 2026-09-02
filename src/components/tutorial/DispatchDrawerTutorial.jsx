@@ -136,8 +136,8 @@ export default function DispatchDrawerTutorial({ isOwner, drawerOpen, dispatchSt
 
       <TutorialWelcomeModal
         open={showWelcome}
-        title="Welcome to the Dispatch Detail Drawer Tutorial"
-        description="This quick tour will walk you through the main actions and details available in the dispatch detail drawer."
+        title="Welcome to the Assignment Detail Drawer Tutorial"
+        description="This quick tour will walk you through the main actions and details available in the assignment detail drawer."
         portugueseLabel="Inciar Tour em Portugues"
         showDismiss={false}
         onStart={startEnglishTutorial}

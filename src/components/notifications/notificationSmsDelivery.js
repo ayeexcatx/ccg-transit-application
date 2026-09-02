@@ -108,12 +108,12 @@ function buildCompanyOwnerDispatchSmsMessage(notification, dispatch) {
   if (status === 'Scheduled') {
     const displayTruckCount = truckCount > 0 ? truckCount : 1;
     const truckLine = displayTruckCount === 1
-      ? '(1) truck has been scheduled for:'
-      : `(${displayTruckCount}) trucks have been scheduled for:`;
-    const dateShiftLine = formatOwnerDispatchDateShiftLine(dispatch) || 'Dispatch details are available in the app.';
+      ? 'We’ve found an assignment opportunity for your truck:'
+      : `(${displayTruckCount}) trucks have assignment opportunities for:`;
+    const dateShiftLine = formatOwnerDispatchDateShiftLine(dispatch) || 'Assignment details are available in the app.';
 
     return [
-      `${SMS_BRAND_PREFIX} Scheduled`,
+      `${SMS_BRAND_PREFIX} Assignment Opportunity Found`,
       truckLine,
       dateShiftLine,
       '',
@@ -124,9 +124,9 @@ function buildCompanyOwnerDispatchSmsMessage(notification, dispatch) {
 
   if (status === 'Dispatch') {
     return [
-      `${SMS_BRAND_PREFIX} Dispatch`,
-      'You have received a new dispatch for:',
-      formatOwnerDispatchDateTimeLine(dispatch) || 'Dispatch details are available in the app.',
+      `${SMS_BRAND_PREFIX} New Assignment Opportunity`,
+      'You have received a new assignment opportunity for:',
+      formatOwnerDispatchDateTimeLine(dispatch) || 'Assignment details are available in the app.',
       '',
       'Please open the app to view and CONFIRM.',
     ].join('\n');
@@ -135,8 +135,8 @@ function buildCompanyOwnerDispatchSmsMessage(notification, dispatch) {
   if (status === 'Amended') {
     return [
       `${SMS_BRAND_PREFIX} Amendment`,
-      'Your dispatch has been amended to:',
-      formatOwnerDispatchDateTimeLine(dispatch) || 'Dispatch details are available in the app.',
+      'Your assignment has been amended to:',
+      formatOwnerDispatchDateTimeLine(dispatch) || 'Assignment details are available in the app.',
       '',
       'Please open the app to view and CONFIRM.',
     ].join('\n');
@@ -145,8 +145,8 @@ function buildCompanyOwnerDispatchSmsMessage(notification, dispatch) {
   if (status === 'Cancelled') {
     return [
       `${SMS_BRAND_PREFIX} Cancellation`,
-      'Your dispatch has been cancelled:',
-      formatOwnerDispatchDateTimeLine(dispatch) || 'Dispatch details are available in the app.',
+      'Your assignment has been cancelled:',
+      formatOwnerDispatchDateTimeLine(dispatch) || 'Assignment details are available in the app.',
       '',
       'Please open the app to view and CONFIRM.',
     ].join('\n');
@@ -155,8 +155,8 @@ function buildCompanyOwnerDispatchSmsMessage(notification, dispatch) {
   if (status === 'Update') {
     return [
       `${SMS_BRAND_PREFIX} Update`,
-      'Your dispatch has been updated:',
-      formatOwnerDispatchDateTimeLine(dispatch) || 'Dispatch details are available in the app.',
+      'Your assignment has been updated:',
+      formatOwnerDispatchDateTimeLine(dispatch) || 'Assignment details are available in the app.',
       '',
       'Please open the app to view and CONFIRM.',
     ].join('\n');
@@ -207,9 +207,13 @@ async function buildSmsMessage(notification, recipient, options = {}) {
 
   const headline = normalizeHeadline(notification?.title || 'Dispatch update');
   const dispatchDateTimeLine = resolveDriverDispatchDateTimeLine(notification, dispatch);
-  const dispatchLine = dispatchDateTimeLine || 'Dispatch details are available in the app.';
+  const dispatchLine = dispatchDateTimeLine || 'Assignment details are available in the app.';
 
-  return `${SMS_BRAND_PREFIX} ${headline}\n${dispatchLine}\n\nPlease open the app to view and confirm.`;
+  const actionLine = recipient?.code_type === 'Driver'
+    ? 'Please open the app to view.'
+    : 'Please open the app to view and confirm.';
+
+  return `${SMS_BRAND_PREFIX} ${headline}\n${dispatchLine}\n\n${actionLine}`;
 }
 
 async function createSmsLog({

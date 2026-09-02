@@ -13,7 +13,7 @@ export const statusBorderAccent = {
   Cancelled: 'border-l-4 border-l-red-400',
 };
 
-export const scheduledStatusMessage = 'Your truck has been scheduled, details will follow.';
+export const scheduledStatusMessage = 'We’ve found an assignment opportunity for your truck. Details will follow.';
 
 export const scheduledDispatchNote =
   'Note: The assignment is subject to cancellation by the customer. Your acknowledgement constitutes acceptance of the assignment and a commitment to perform as scheduled.';

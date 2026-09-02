@@ -41,7 +41,7 @@ export async function runAdminDispatchArchiveMutation({
   const nextLog = archive
     ? appendAdminActivityLog(
       dispatch.admin_activity_log,
-      createAdminActivityEntry(session, 'archived_dispatch', `${getAdminDisplayName(session)} archived this dispatch`)
+      createAdminActivityEntry(session, 'archived_dispatch', `${getAdminDisplayName(session)} archived this assignment`)
     )
     : dispatch.admin_activity_log;
 

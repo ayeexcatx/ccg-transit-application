@@ -157,7 +157,7 @@ export default function LiveDispatchBoard({
       </Card>
 
       {groupedShifts.every((shiftGroup) => shiftGroup.jobs.length === 0) ?
-        <div className="text-center py-12 text-sm text-slate-500">No live dispatch activity for this date.</div> :
+        <div className="text-center py-12 text-sm text-slate-500">No live assignment activity for this date.</div> :
         <div className="space-y-4">
           <Card>
             <CardContent className="bg-[#ffffff] p-4 space-y-4">

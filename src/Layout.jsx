@@ -143,7 +143,7 @@ function LayoutInner({ children, currentPageName }) {
 
   const portalNavItems = [
     { page: 'Home', label: 'Home', icon: Home, tour: 'home-overview', visible: true },
-    { page: 'Portal', label: 'Dispatches', icon: Truck, tour: 'dispatches-nav', visible: true },
+    { page: 'Portal', label: 'Assignment Opportunities', icon: Truck, tour: 'dispatches-nav', visible: true },
     { page: 'Availability', label: 'Availability', icon: CalendarDays, tour: 'availability-nav', visible: isOwner },
     { page: 'Drivers', label: 'Drivers', icon: UserRound, tour: 'drivers-nav', visible: isOwner },
     { page: 'Notifications', label: 'Notifications', icon: Bell, visible: isOwner },
@@ -290,7 +290,7 @@ function LayoutInner({ children, currentPageName }) {
                   {isAdmin && (
                     <nav className="flex items-center gap-1">
                       <Link to={createPageUrl('AdminDashboard')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminDashboard'))}><Home className="h-3 w-3" />Dashboard</Button></Link>
-                      <Link to={createPageUrl('AdminDispatches')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminDispatches'))}><Truck className="h-3 w-3" />Dispatches</Button></Link>
+                      <Link to={createPageUrl('AdminDispatches')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminDispatches'))}><Truck className="h-3 w-3" />Assignment Opportunities</Button></Link>
                       <Link to={createPageUrl('AdminAvailability')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminAvailability'))}><CalendarDays className="h-3 w-3" />Availability</Button></Link>
                       <Link to={createPageUrl('AdminConfirmations')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('AdminConfirmations'))}><CheckCircle2 className="h-3 w-3" />Confirmations</Button></Link>
                       <Link to={createPageUrl('Incidents')}><Button variant="ghost" size="sm" className={getNavItemClassName(isActive('Incidents'))}><TriangleAlert className="h-3 w-3" />Incidents</Button></Link>
@@ -339,7 +339,7 @@ function LayoutInner({ children, currentPageName }) {
           {isAdmin && (
             <div className="md:hidden border-t border-slate-100 px-4 py-2 flex gap-1 overflow-x-auto">
               <Link to={createPageUrl('AdminDashboard')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminDashboard'))}><Home className="h-3 w-3" />Dashboard</Button></Link>
-              <Link to={createPageUrl('AdminDispatches')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminDispatches'))}><Truck className="h-3 w-3" />Dispatches</Button></Link>
+              <Link to={createPageUrl('AdminDispatches')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminDispatches'))}><Truck className="h-3 w-3" />Assignment Opportunities</Button></Link>
               <Link to={createPageUrl('AdminAvailability')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminAvailability'))}><CalendarDays className="h-3 w-3" />Availability</Button></Link>
               <Link to={createPageUrl('AdminConfirmations')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('AdminConfirmations'))}><CheckCircle2 className="h-3 w-3" />Confirmations</Button></Link>
               <Link to={createPageUrl('Incidents')}><Button variant="ghost" size="sm" className={getMobileNavItemClassName(isActive('Incidents'))}><TriangleAlert className="h-3 w-3" />Incidents</Button></Link>
