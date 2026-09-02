@@ -103,7 +103,7 @@ export default function AdminDashboard() {
     const sundayNightTruckCount = countDispatchShiftsByDate(dispatches, sundayDateStr).night;
 
     return {
-      label: 'Upcoming Dispatches',
+      label: 'Upcoming Assignments',
       shiftCounts: countDispatchShiftsByDate(dispatches, upcomingDateStr),
       showSundayNightIndicator: shouldShowMonday && sundayNightTruckCount > 0,
     };
@@ -124,12 +124,12 @@ export default function AdminDashboard() {
       color: 'bg-blue-500', link: 'AdminConfirmations'
     },
     {
-      label: 'Create Dispatch', value: 'Create Dispatch', headerLabel: 'New', icon: FileText,
+      label: 'Create Assignment Opportunity', value: 'Create Assignment Opportunity', headerLabel: 'New', icon: FileText,
       color: 'bg-emerald-500', link: 'AdminDispatches', state: { openNewDispatch: true }, isAction: true
     },
     {
-      label: "Today's Dispatches", shiftCounts: todayShiftCounts, icon: Clock,
-      headerLabel: "Today's Dispatches",
+      label: "Today's Assignments", shiftCounts: todayShiftCounts, icon: Clock,
+      headerLabel: "Today's Assignments",
       color: 'bg-amber-500', link: 'AdminDispatches'
     },
     {
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Admin Dashboard</h2>
-        <p className="text-sm text-slate-500 mt-1">{format(today, 'EEEE, MMMM d, yyyy')} · Overview of your dispatch operations</p>
+        <p className="text-sm text-slate-500 mt-1">{format(today, 'EEEE, MMMM d, yyyy')} · Overview of your assignment operations</p>
       </div>
 
       <DashboardSummaryCards stats={stats} createPageUrl={createPageUrl} />

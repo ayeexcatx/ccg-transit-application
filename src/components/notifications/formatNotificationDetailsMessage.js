@@ -12,12 +12,12 @@ const STATUS_LINE_VALUES = new Set([
 ]);
 
 const OWNER_STATUS_HEADLINES = {
-  Scheduled: 'Your truck has been scheduled',
-  Dispatch: 'You have received a new dispatch',
-  Dispatched: 'You have received a new dispatch',
-  Amended: 'Your dispatch has been amended',
-  Cancelled: 'Your dispatch has been canceled',
-  Canceled: 'Your dispatch has been canceled',
+  Scheduled: 'We’ve found an assignment opportunity for your truck.',
+  Dispatch: 'You have received a new assignment opportunity.',
+  Dispatched: 'You have received a new assignment opportunity.',
+  Amended: 'Your assignment has been amended',
+  Cancelled: 'Your assignment has been canceled',
+  Canceled: 'Your assignment has been canceled',
 };
 
 export function formatNotificationDetailsMessage(message) {
@@ -84,7 +84,7 @@ export function getNotificationDisplay(notification, dispatch = null) {
     const messageParts = [dateTimeLine, notification?.message].filter(Boolean);
 
     return {
-      title: 'Your dispatch has been updated',
+      title: 'Your assignment has been updated',
       message: messageParts.join('\n'),
       isOwnerDispatchStatus: true,
     };

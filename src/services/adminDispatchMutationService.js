@@ -178,7 +178,7 @@ export async function runAdminDispatchMutation({
     ...data,
     admin_activity_log: appendAdminActivityLog(
       data.admin_activity_log,
-      createAdminActivityEntry(session, 'created_dispatch', `${adminName} created this dispatch`)
+      createAdminActivityEntry(session, 'created_dispatch', `${adminName} created this assignment`)
     ),
     edit_locked: false,
     edit_locked_by_session_id: null,

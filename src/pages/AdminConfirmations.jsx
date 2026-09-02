@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { buildOpenConfirmationRows } from '@/components/notifications/openConfirmations';
 import { statusBadgeColors } from '@/components/portal/statusConfig';
+import { getAssignmentStatusLabel } from '@/lib/assignmentTerminology';
 import { useAdminDispatchDrawer } from '@/components/portal/AdminDispatchDrawerContext';
 
 const EASTERN_TIMEZONE = 'America/New_York';
@@ -101,7 +102,7 @@ function OpenConfirmationMobileCard({ row, onClick }) {
           <p className="text-sm font-semibold text-slate-900 break-words">{row.companyName}</p>
         </div>
         <Badge className={`${statusBadgeColors[row.status] || 'bg-slate-100 text-slate-700 border-slate-200'} border shrink-0`}>
-          {row.status || '—'}
+          {getAssignmentStatusLabel({ id: row.dispatchId, status: row.status, trucks_assigned: [row.truckNumber] })}
         </Badge>
       </div>
 
@@ -131,7 +132,7 @@ function HistoryMobileCard({ row, onClick }) {
       <div className="flex items-start justify-between gap-3">
         <p className="min-w-0 text-sm font-semibold text-slate-900 break-words">{row.companyName}</p>
         <Badge className={`${statusBadgeColors[row.confirmationType] || 'bg-slate-100 text-slate-700 border-slate-200'} border shrink-0`}>
-          {row.confirmationType || '—'}
+          {getAssignmentStatusLabel({ id: row.dispatchId, status: row.confirmationType, trucks_assigned: [row.truckNumber] }, [{ dispatch_id: row.dispatchId, truck_number: row.truckNumber, confirmation_type: row.confirmationType }])}
         </Badge>
       </div>
 
@@ -373,7 +374,7 @@ export default function AdminConfirmations() {
                             <td className="px-3 py-2">{formatDispatchDate(row.dispatchDate)}</td>
                             <td className="px-3 py-2">
                               <Badge className={`${statusBadgeColors[row.status] || 'bg-slate-100 text-slate-700 border-slate-200'} border`}>
-                                {row.status || '—'}
+                                {getAssignmentStatusLabel({ id: row.dispatchId, status: row.status, trucks_assigned: [row.truckNumber] })}
                               </Badge>
                             </td>
                             <td className="px-3 py-2 font-mono">{row.truckNumber}</td>
@@ -450,7 +451,7 @@ export default function AdminConfirmations() {
                             <td className="px-3 py-2">{row.referenceTag || '—'}</td>
                             <td className="px-3 py-2">
                               <Badge className={`${statusBadgeColors[row.confirmationType] || 'bg-slate-100 text-slate-700 border-slate-200'} border`}>
-                                {row.confirmationType || '—'}
+                                {getAssignmentStatusLabel({ id: row.dispatchId, status: row.confirmationType, trucks_assigned: [row.truckNumber] }, [{ dispatch_id: row.dispatchId, truck_number: row.truckNumber, confirmation_type: row.confirmationType }])}
                               </Badge>
                             </td>
                             <td className="px-3 py-2">{row.confirmedAt ? format(new Date(row.confirmedAt), 'MMM d, yyyy h:mm a') : '—'}</td>

@@ -134,7 +134,7 @@ export default function Portal() {
   const [removedAssignmentModalState, setRemovedAssignmentModalState] = useState({
     open: false,
     notificationId: '',
-    title: 'Dispatch assignment no longer available',
+    title: 'Assignment no longer available',
     message: '',
   });
 
@@ -483,8 +483,8 @@ export default function Portal() {
       setRemovedAssignmentModalState({
         open: true,
         notificationId: removalNotification.id,
-        title: 'Dispatch assignment no longer available',
-        message: removalNotification.message || 'This dispatch assignment is no longer available.',
+        title: 'Assignment no longer available',
+        message: removalNotification.message || 'This assignment is no longer available.',
       });
       return;
     }
@@ -550,7 +550,7 @@ export default function Portal() {
       )}
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <h2 className="text-2xl font-semibold text-slate-900">My Dispatches</h2>
+          <h2 className="text-2xl font-semibold text-slate-900">Assignment Opportunities</h2>
         </div>
         {!isDriverUser && (
           <div className="flex items-center gap-2 flex-wrap">
@@ -603,7 +603,7 @@ export default function Portal() {
             <AlertDialogTitle>{removedAssignmentModalState.title}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2 whitespace-pre-line text-sm text-slate-600">
-                <p>This dispatch assignment is no longer available.</p>
+                <p>This assignment is no longer available.</p>
                 {removedAssignmentModalState.message && (
                   <p>{removedAssignmentModalState.message}</p>
                 )}
@@ -624,7 +624,7 @@ export default function Portal() {
             <AlertDialogDescription asChild>
               <div className="space-y-4 text-left text-sm leading-6 text-slate-600">
                 <div>
-                  <p>{swapConfirmationState.incomingTruck} is currently assigned to another dispatch:</p>
+                  <p>{swapConfirmationState.incomingTruck} is currently assigned to another assignment:</p>
                   <p className="font-medium text-slate-900">{swapConfirmationState.conflictSummary}</p>
                 </div>
                 <p>Would you like to swap {swapConfirmationState.outgoingTruck} for {swapConfirmationState.incomingTruck}?</p>

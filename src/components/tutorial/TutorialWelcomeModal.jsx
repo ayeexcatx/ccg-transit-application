@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 
 export default function TutorialWelcomeModal({
   open,
-  title = 'Welcome to CCG Dispatch Hub',
-  description = 'This quick tour will walk you through the main parts of your portal so you know where to find dispatches, announcements, availability, drivers, and incidents.',
+  title = 'Welcome to CCG Assignment Hub',
+  description = 'This quick tour will walk you through the main parts of your portal so you know where to find assignments, announcements, availability, drivers, and incidents.',
   startLabel = 'Start Tour',
   portugueseLabel = 'Inciar Tour em Portugues',
   dismissLabel = "Don't show again",

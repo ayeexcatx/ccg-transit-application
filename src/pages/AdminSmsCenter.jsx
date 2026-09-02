@@ -245,8 +245,8 @@ export default function AdminSmsCenter() {
         group: 'Company Owner',
         title: 'Scheduled dispatch SMS',
         body: [
-          'CCG Transit: Scheduled',
-          '(2) trucks have been scheduled for:',
+          'CCG Transit: Assignment Opportunity Found',
+          '(2) trucks have assignment opportunities for:',
           sampleOwnerDispatchDateShiftLine(),
           '',
           'Details to follow.',
@@ -258,8 +258,8 @@ export default function AdminSmsCenter() {
         group: 'Company Owner',
         title: 'Dispatch SMS',
         body: [
-          'CCG Transit: Dispatch',
-          'You have received a new dispatch for:',
+          'CCG Transit: New Assignment Opportunity',
+          'You have received a new assignment opportunity for:',
           dispatchLine,
           '',
           'Please open the app to view and CONFIRM.',
@@ -271,7 +271,7 @@ export default function AdminSmsCenter() {
         title: 'Amendment SMS',
         body: [
           'CCG Transit: Amendment',
-          'Your dispatch has been amended to:',
+          'Your assignment has been amended to:',
           dispatchLine,
           '',
           'Please open the app to view and CONFIRM.',
@@ -283,7 +283,7 @@ export default function AdminSmsCenter() {
         title: 'Cancellation SMS',
         body: [
           'CCG Transit: Cancellation',
-          'Your dispatch has been cancelled:',
+          'Your assignment has been cancelled:',
           dispatchLine,
           '',
           'Please open the app to view and CONFIRM.',
@@ -295,7 +295,7 @@ export default function AdminSmsCenter() {
         title: 'Optional informational update SMS',
         body: [
           'CCG Transit: Update',
-          'Your dispatch has been updated:',
+          'Your assignment has been updated:',
           dispatchLine,
           '',
           'Please open the app to view and CONFIRM.',
@@ -306,31 +306,31 @@ export default function AdminSmsCenter() {
       createTemplatePreview({
         group: 'Driver',
         title: 'Driver dispatch assigned SMS',
-        body: `CCG Transit: Dispatch Assigned.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        body: `CCG Transit: New Assignment.\n${dispatchLine}\n\nPlease open the app to view.`,
         description: 'Driver assignment notification SMS format.',
       }),
       createTemplatePreview({
         group: 'Driver',
         title: 'Driver dispatch amended SMS',
-        body: `CCG Transit: Dispatch Amended.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        body: `CCG Transit: Assignment Amended.\n${dispatchLine}\n\nPlease open the app to view.`,
         description: 'Driver amended dispatch SMS format.',
       }),
       createTemplatePreview({
         group: 'Driver',
         title: 'Driver dispatch cancelled SMS',
-        body: `CCG Transit: Dispatch Cancelled.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        body: `CCG Transit: Assignment Cancelled.\n${dispatchLine}\n\nPlease open the app to view.`,
         description: 'Driver cancelled dispatch SMS format.',
       }),
       createTemplatePreview({
         group: 'Driver',
         title: 'Driver dispatch assignment removed SMS',
-        body: `CCG Transit: Dispatch Removed.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        body: `CCG Transit: Assignment Removed.\n${dispatchLine}\n\nPlease open the app to view.`,
         description: 'Driver removed-assignment SMS format.',
       }),
       createTemplatePreview({
         group: 'Driver',
         title: 'Driver optional informational update SMS',
-        body: `CCG Transit: Dispatch Updated.\n${dispatchLine}\n\nPlease open the app to view and confirm.`,
+        body: `CCG Transit: Assignment Updated.\n${dispatchLine}\n\nPlease open the app to view.`,
         description: 'Driver non-status-change update SMS format (supported).',
       }),
 

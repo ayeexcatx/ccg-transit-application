@@ -348,7 +348,7 @@ function ScoringDetailDialog({ company, score, eventForm, setEventForm, onCreate
               <div key={truck.truckNumber} className="rounded-lg border border-slate-200 p-3 text-sm flex items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold text-slate-800">Truck {truck.truckNumber}</p>
-                  <p className="text-slate-600">Dispatches: {truck.dispatchCount} • Breakdowns: {truck.breakdowns} • Late events: {truck.lateIssues}</p>
+                  <p className="text-slate-600">Assignments: {truck.dispatchCount} • Breakdowns: {truck.breakdowns} • Late events: {truck.lateIssues}</p>
                   <p className="text-slate-600">Completion rate: {Math.round(truck.completionRate)}%</p>
                 </div>
                 <p className={`text-4xl font-bold leading-none ${truck.truckScore >= 80 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -366,7 +366,7 @@ function ScoringDetailDialog({ company, score, eventForm, setEventForm, onCreate
               <div key={driver.driverId} className="rounded-lg border border-slate-200 p-3 text-sm flex items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold text-slate-800">{driver.driverName}</p>
-                  <p className="text-slate-600">Dispatches: {driver.dispatchCount} • Confirmation rate: {Math.round(driver.confirmationRate)}%</p>
+                  <p className="text-slate-600">Assignments: {driver.dispatchCount} • Confirmation rate: {Math.round(driver.confirmationRate)}%</p>
                   <p className="text-slate-600">Logged performance events: {driver.eventCount}</p>
                 </div>
                 <p className={`text-4xl font-bold leading-none ${driver.driverScore >= 80 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -394,11 +394,11 @@ function ScoringDetailDialog({ company, score, eventForm, setEventForm, onCreate
               <Input type="date" value={eventForm.event_date} onChange={(e) => setEventForm((prev) => ({ ...prev, event_date: e.target.value }))} />
             </div>
             <div>
-              <Label>Related Dispatch (optional)</Label>
+              <Label>Related Assignment (optional)</Label>
               <Select value={eventForm.dispatch_id || 'none'} onValueChange={(value) => setEventForm((prev) => ({ ...prev, dispatch_id: value === 'none' ? '' : value }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No linked dispatch</SelectItem>
+                  <SelectItem value="none">No linked assignment</SelectItem>
                   {dispatchOptions.map((dispatch) => (
                     <SelectItem key={dispatch.id} value={dispatch.id}>{formatDispatchOptionLabel(dispatch)}</SelectItem>
                   ))}
@@ -455,7 +455,7 @@ function ScoringDetailDialog({ company, score, eventForm, setEventForm, onCreate
                   <p className="font-semibold text-slate-800">{event.event_type || '—'}</p>
                   <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1 text-slate-600">
                     <p><span className="font-medium text-slate-700">Event Date:</span> {event.event_date ? new Date(event.event_date).toLocaleDateString() : '—'}</p>
-                    <p><span className="font-medium text-slate-700">Related Dispatch:</span> {event.dispatch_id || '—'}</p>
+                    <p><span className="font-medium text-slate-700">Related Assignment:</span> {event.dispatch_id || '—'}</p>
                     <p><span className="font-medium text-slate-700">Related Truck:</span> {event.truck_number || '—'}</p>
                     <p><span className="font-medium text-slate-700">Related Driver:</span> {drivers.find((driver) => driver.id === event.driver_id)?.driver_name || '—'}</p>
                     <p><span className="font-medium text-slate-700">Severity:</span> {event.severity || '—'}</p>

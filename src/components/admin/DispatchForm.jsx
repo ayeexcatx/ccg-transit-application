@@ -462,8 +462,8 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
           >
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="Scheduled">Scheduled (pending dispatch)</SelectItem>
-              <SelectItem value="Dispatch">Dispatch (full details)</SelectItem>
+              <SelectItem value="Scheduled">Scheduled (assignment opportunity found)</SelectItem>
+              <SelectItem value="Dispatch">Assignment Opportunity (full details)</SelectItem>
               <SelectItem value="Amended">Amended</SelectItem>
               <SelectItem value="Cancelled">Cancelled</SelectItem>
             </SelectContent>
@@ -509,8 +509,8 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
       <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-medium text-slate-800">Reuse dispatch details</p>
-            <p className="text-xs text-slate-500">Copy operational fields from a previous dispatch into this form.</p>
+            <p className="text-sm font-medium text-slate-800">Reuse assignment details</p>
+            <p className="text-xs text-slate-500">Copy operational fields from a previous assignment into this form.</p>
           </div>
           <Button
             type="button"
@@ -729,7 +729,7 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
       <div className="flex gap-3 pt-2">
         <Button variant="outline" onClick={onCancel} className="bg-background text-red-600 px-4 py-2 text-sm font-medium rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input shadow-sm hover:bg-accent hover:text-accent-foreground h-9 flex-1">Cancel</Button>
         <Button onClick={handleSubmit} disabled={saving} className="flex-1 bg-slate-900 hover:bg-slate-800">
-          {saving ? 'Saving...' : dispatch ? 'Update Dispatch' : 'Create Dispatch'}
+          {saving ? 'Saving...' : dispatch ? 'Update Assignment' : 'Create Assignment'}
         </Button>
       </div>
 
@@ -834,7 +834,7 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
             />
             <div className="overflow-y-auto border rounded-md">
               {copyEligibleDispatches.length === 0 &&
-              <p className="text-sm text-slate-500 px-3 py-4">No matching dispatches found.</p>
+              <p className="text-sm text-slate-500 px-3 py-4">No matching assignments found.</p>
               }
               {copyEligibleDispatches.map((candidate) => {
                 return (
