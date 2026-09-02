@@ -887,13 +887,13 @@ export default function Home() {
         </section>
       )}
 
-      {/* Today's Dispatches */}
+      {/* Today's Assignments */}
       <section data-tour="dispatch-preview">
         <Card className={homeSectionCardClass}>
           <div className={`${homeSectionHeaderClass} bg-green-700`}>
             <div className="flex items-center gap-2">
               <Sun className="h-4 w-4 text-white" />
-              <h3 className="text-sm font-semibold text-white">Today's Dispatches</h3>
+              <h3 className="text-sm font-semibold text-white">Today's Assignments</h3>
               {todayDispatches.length > 0 && (
                 <Badge className="bg-white text-green-700 text-xs px-1.5 py-0">{todayDispatches.length}</Badge>
               )}
@@ -901,7 +901,7 @@ export default function Home() {
           </div>
           <CardContent className="p-1 space-y-2">
             {todayDispatches.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">No dispatches today</p>
+              <p className="text-sm text-slate-400 text-center py-4">No assignments today</p>
             ) : (
               todayDispatches.map(d => <MiniDispatchCard key={d.id} dispatch={d} companyName={d.company_name} truckNumbers={getVisibleTrucksForDispatch(d)} />)
             )}
@@ -909,13 +909,13 @@ export default function Home() {
         </Card>
       </section>
 
-      {/* Upcoming Dispatches */}
+      {/* Upcoming Assignments */}
       <section>
         <Card className={homeSectionCardClass}>
           <div className={`${homeSectionHeaderClass} bg-indigo-700`}>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-white" />
-              <h3 className="text-sm font-semibold text-white">Upcoming Dispatches</h3>
+              <h3 className="text-sm font-semibold text-white">Upcoming Assignments</h3>
               {upcomingDispatches.length > 0 && (
                 <Badge className="bg-white text-indigo-700 text-xs px-1.5 py-0">{upcomingDispatches.length}</Badge>
               )}
@@ -923,7 +923,7 @@ export default function Home() {
           </div>
           <CardContent className="p-1 space-y-2">
             {upcomingDispatches.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">No upcoming dispatches</p>
+              <p className="text-sm text-slate-400 text-center py-4">No upcoming assignments</p>
             ) : (
               upcomingDispatches.map(d => <MiniDispatchCard key={d.id} dispatch={d} companyName={d.company_name} truckNumbers={getVisibleTrucksForDispatch(d)} />)
             )}
@@ -933,7 +933,7 @@ export default function Home() {
 
       <Link to={createPageUrl('Portal')}>
         <Button className="w-full bg-slate-900 hover:bg-slate-800">
-          View All Dispatches
+          View All Assignments
           <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
       </Link>

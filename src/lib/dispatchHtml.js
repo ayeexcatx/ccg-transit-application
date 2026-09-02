@@ -197,7 +197,7 @@ export const buildDispatchHtml = ({
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>CCG Dispatch Record</title>
+  <title>CCG Assignment Record</title>
   <style>
     body {
       font-family: Arial, Helvetica, sans-serif;
@@ -487,8 +487,8 @@ export const buildDispatchHtml = ({
     <div class="header">
       <div class="title-row">
         <div class="title-block">
-          <h1>CCG Dispatch Record</h1>
-          <div class="subtitle">Truck-specific dispatch archive record</div>
+          <h1>CCG Assignment Record</h1>
+          <div class="subtitle">Truck-specific assignment archive record</div>
         </div>
         <div class="status-meta">
           <div class="status-badge ${escapeHtml(statusBadgeClass)}">Status: ${escapeHtml(dispatch?.status || '—')}</div>
@@ -508,7 +508,7 @@ export const buildDispatchHtml = ({
 
       <div class="summary-grid">
         <div class="summary-card">
-          <div class="summary-label">Dispatch Date</div>
+          <div class="summary-label">Assignment Date</div>
           <div class="summary-value">${escapeHtml(formatDateDisplay(dispatch?.date))}</div>
         </div>
         <div class="summary-card">

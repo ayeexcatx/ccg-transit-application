@@ -26,7 +26,7 @@ export default function PortalDispatchList({
       <div className="text-center py-16">
         <Inbox className="h-12 w-12 text-slate-300 mx-auto mb-3" />
         <p className="text-sm text-slate-500">
-          {tab === 'today' ? 'No dispatches today' : tab === 'upcoming' ? 'No upcoming dispatches' : 'No history'}
+          {tab === 'today' ? 'No assignments today' : tab === 'upcoming' ? 'No upcoming assignments' : 'No history'}
         </p>
       </div>
     );

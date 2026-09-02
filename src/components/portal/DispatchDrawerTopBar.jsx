@@ -8,6 +8,7 @@ import { statusBadgeColors } from './statusConfig';
 
 export default function DispatchDrawerTopBar({
   dispatch,
+  assignmentDetailsLabel,
   session,
   displayDate,
   isOwner,
@@ -48,11 +49,11 @@ export default function DispatchDrawerTopBar({
                 size="sm"
                 className="h-9 w-9 rounded-lg px-0 text-xs font-medium sm:w-auto sm:px-3"
                 onClick={onAdminEditDispatch}
-                aria-label="Edit dispatch"
-                title="Edit dispatch"
+                aria-label="Edit assignment"
+                title="Edit assignment"
               >
                 <Pencil className="h-3.5 w-3.5 sm:mr-1.5" />
-                <span className="sr-only">Edit dispatch</span>
+                <span className="sr-only">Edit assignment</span>
                 <span className="hidden sm:inline">Edit</span>
               </Button>
             )}
@@ -82,7 +83,7 @@ export default function DispatchDrawerTopBar({
                 data-tour="dispatch-screenshot"
               >
                 <Camera className="mr-1.5 h-3.5 w-3.5" />
-                {isCreatingScreenshot ? 'Creating…' : (isAdmin ? 'Screenshot' : 'Screenshot Dispatch')}
+                {isCreatingScreenshot ? 'Creating…' : (isAdmin ? 'Screenshot' : 'Screenshot Assignment')}
               </Button>
             )}
           </div>
@@ -91,10 +92,11 @@ export default function DispatchDrawerTopBar({
 
       <div className="border-t border-slate-200 px-5 py-4">
         <SheetHeader>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{assignmentDetailsLabel}</p>
           <SheetTitle className="flex flex-wrap items-center justify-between gap-3 text-base">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Badge className={`${statusBadgeColors[dispatch.status]} border text-xs font-medium`}>
-                {dispatch.status}
+                {dispatch.status === 'Scheduled' ? 'Opportunity Found' : assignmentDetailsLabel.replace(' Details', '')}
               </Badge>
               <span className="flex items-center gap-1 text-xs font-normal text-slate-500">
                 {dispatch.shift_time === 'Day Shift' ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}

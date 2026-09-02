@@ -1196,7 +1196,7 @@ export default function AdminDispatches() {
         liveStatusOptions={LIVE_STATUS_OPTIONS} /> :
 
       currentList.length === 0 ?
-      <div className="text-center py-16 text-slate-500 text-sm">No dispatches found</div> :
+      <div className="text-center py-16 text-slate-500 text-sm">No assignments found</div> :
 
       <div className="grid gap-3">
 
@@ -1243,7 +1243,7 @@ export default function AdminDispatches() {
       }}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing && !editing._isCopy ? 'Edit Dispatch' : 'New Dispatch'}</DialogTitle>
+            <DialogTitle>{editing && !editing._isCopy ? 'Edit Assignment' : 'New Assignment Opportunity'}</DialogTitle>
           </DialogHeader>
           <DispatchForm
             dispatch={editing}

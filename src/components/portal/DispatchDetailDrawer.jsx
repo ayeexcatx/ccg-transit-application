@@ -31,6 +31,7 @@ import { deactivateDriverAssignment, sendDriverAssignment, upsertDriverAssignmen
 import { appendDispatchActivityEntries, getSessionActorName } from '@/lib/dispatchActivity';
 import { resolveCompanyOwnerCompanyId, resolveDriverIdentity } from '@/services/currentAppIdentityService';
 import { listDriverDispatchesForDriver } from '@/lib/driverDispatch';
+import { getAssignmentTerminology } from '@/lib/assignmentTerminology';
 
 const UNASSIGNED_DRIVER_VALUE = '__unassigned__';
 const DRIVER_SHIFT_CONFLICT_MESSAGE = 'That driver is already assigned on a different dispatch for the same shift. Please remove the driver from that assignment or select a different driver.';
@@ -548,9 +549,9 @@ export default function DispatchDetailDrawer({
       await refetchDriverAssignments();
       queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', dispatch?.id] });
       queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', driverIdentity] });
-      toast.success('Dispatch sent to driver.');
+      toast.success('Assignment opportunity sent to driver.');
     },
-    onError: (error) => toast.error(error?.message || 'Unable to send dispatch.')
+    onError: (error) => toast.error(error?.message || 'Unable to send assignment opportunity.')
   });
 
   const cancelDriverDispatchMutation = useMutation({
@@ -559,9 +560,9 @@ export default function DispatchDetailDrawer({
       await refetchDriverAssignments();
       queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', dispatch?.id] });
       queryClient.invalidateQueries({ queryKey: ['driver-dispatch-assignments', driverIdentity] });
-      toast.success('Driver dispatch cancelled.');
+      toast.success('Driver assignment cancelled.');
     },
-    onError: (error) => toast.error(error?.message || 'Unable to cancel driver dispatch.')
+    onError: (error) => toast.error(error?.message || 'Unable to cancel driver assignment.')
   });
 
   const handleSendDriverDispatch = async (truckNumber) => sendDriverDispatchMutation.mutateAsync(truckNumber);
@@ -726,6 +727,8 @@ export default function DispatchDetailDrawer({
 
     return merged;
   }, [timeEntries, optimisticTimeEntries]);
+
+  const assignmentTerminology = getAssignmentTerminology(dispatch, confirmations, myTrucks);
 
   if (!dispatch) return null;
 
@@ -1039,7 +1042,7 @@ export default function DispatchDetailDrawer({
 
     const target = screenshotSectionRef.current;
     if (!target) {
-      toast.error('Dispatch details are not ready to capture yet.');
+      toast.error('Assignment details are not ready to capture yet.');
       return;
     }
 
@@ -1099,9 +1102,9 @@ export default function DispatchDetailDrawer({
         URL.revokeObjectURL(objectUrl);
       }
 
-      toast.success('Dispatch screenshot created.');
+      toast.success('Assignment screenshot created.');
     } catch (error) {
-      toast.error(error?.message || 'Unable to create dispatch screenshot on this device/browser.');
+      toast.error(error?.message || 'Unable to create assignment screenshot on this device/browser.');
     } finally {
       if (screenshotRoot?.parentNode) {
         screenshotRoot.parentNode.removeChild(screenshotRoot);
@@ -1120,6 +1123,7 @@ export default function DispatchDetailDrawer({
         
         <DispatchDrawerTopBar
           dispatch={dispatch}
+          assignmentDetailsLabel={assignmentTerminology.details}
           session={session}
           displayDate={displayDate}
           isOwner={isOwner}
