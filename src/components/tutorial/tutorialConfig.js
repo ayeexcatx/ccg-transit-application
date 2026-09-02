@@ -28,8 +28,8 @@ const COMPANY_OWNER_TUTORIAL_COMPLETION_STEPS = {
 
 const DISPATCH_DRAWER_TUTORIAL_COMPLETION_STEPS = {
   [DISPATCH_DRAWER_TUTORIAL_LANGUAGE.ENGLISH]: {
-    title: 'Dispatch Tutorial Complete',
-    description: 'You can replay this tutorial anytime using the Tutorial button in the dispatch drawer.',
+    title: 'Assignment Tutorial Complete',
+    description: 'You can replay this tutorial anytime using the Tutorial button in the assignment drawer.',
   },
   [DISPATCH_DRAWER_TUTORIAL_LANGUAGE.PORTUGUESE]: {
     title: 'Está tudo pronto!',
@@ -45,7 +45,7 @@ export const companyOwnerTutorialSteps = {
       target: '[data-tour="home-overview"]',
       title: 'Home Page',
       description:
-        'The Home Screen provides a quick snapshot of your pending actions and upcoming dispatches.',
+        'The Home Screen provides a quick snapshot of your pending actions and upcoming assignments.',
     },
     {
       id: 'announcement-center',
@@ -61,22 +61,22 @@ export const companyOwnerTutorialSteps = {
       target: '[data-tour="action-needed"]',
       title: 'Home: Action Needed',
       description:
-        'This section highlights dispatches that require your immediate attention, such as confirming receipt.',
-      warningText: 'Items will remain in this section until you confirm receipt of your dispatch.',
+        'This section highlights assignment opportunities that require your immediate attention, such as accepting.',
+      warningText: 'Items will remain in this section until you accept of your assignment opportunity.',
     },
     {
       id: 'dispatch-preview',
       page: createPageUrl('Home'),
       target: '[data-tour="dispatch-preview"]',
-      title: 'Home: Dispatch Preview',
-      description: 'This area provides a quick view of your next few assigned dispatches.',
+      title: 'Home: Assignment Preview',
+      description: 'This area provides a quick view of your next few confirmed assignments.',
     },
     {
       id: 'dispatches-page',
       page: createPageUrl('Home'),
       target: '[data-tour="dispatches-nav"]',
-      title: 'Dispatches Page',
-      description: 'The Dispatches page shows your full dispatch history as well as all upcoming dispatches.',
+      title: 'Assignments Page',
+      description: 'The Assignments page shows your full assignment history as well as all upcoming assignments.',
     },
     {
       id: 'availability-page',
@@ -212,15 +212,15 @@ export const dispatchDrawerTutorialSteps = {
     {
       id: 'screenshot-dispatch',
       target: '[data-tour="dispatch-screenshot"]',
-      title: 'Screenshot Dispatch',
+      title: 'Screenshot Assignment',
       description:
-        'Click here to take a clean screenshot of your dispatch without the any of the action buttons or editable sections.',
+        'Click here to take a clean screenshot of your assignment without the any of the action buttons or editable sections.',
     },
     {
       id: 'edit-trucks',
       target: '[data-tour="dispatch-edit-trucks"]',
       title: 'Edit Trucks',
-      description: 'Click here to edit the truck numbers assigned to this dispatch.',
+      description: 'Click here to edit the truck numbers assigned to this assignment.',
     },
     {
       id: 'assignment-details',
@@ -231,22 +231,22 @@ export const dispatchDrawerTutorialSteps = {
     {
       id: 'dispatch-notes',
       target: '[data-tour="dispatch-notes"]',
-      title: 'Dispatch Notes',
-      description: 'These are dispatch notes and reminders that are included every dispatch.',
+      title: 'Assignment Notes',
+      description: 'These are assignment notes and reminders that are included with every assignment.',
     },
     {
       id: 'confirm-receipt',
       target: '[data-tour="dispatch-confirm-receipt"]',
-      title: 'Confirm Receipt',
+      title: 'Accept',
       description:
-        'Click here to confirm receipt of the dispatch.',
-      warningText: 'You must confirm any time you receive: a new schedule, dispatch, amendment, and/or cancellation.',
+        'Click here to accept of the assignment opportunity.',
+      warningText: 'You must confirm any time you receive: a new opportunity, assignment, amendment, and/or cancellation.',
     },
     {
       id: 'driver-assignments',
       target: '[data-tour="dispatch-driver-assignments"]',
       title: 'Driver Assignments',
-      description: 'After confirming receipt, use this dropdown menu to assign/unassign drivers to your dispatch.',
+      description: 'After accepting, use this dropdown menu to assign/unassign drivers to your assignment.',
       warningText: 'Please familiarize yourself with the instructions on the Drivers page before using this feature.',
     },
     {

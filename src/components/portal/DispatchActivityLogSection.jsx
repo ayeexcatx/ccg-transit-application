@@ -1,5 +1,6 @@
 import React from 'react';
 import { History } from 'lucide-react';
+import { formatAssignmentActivityMessage } from '@/lib/assignmentTerminology';
 
 export default function DispatchActivityLogSection({ activityLog, formatActivityTimestamp }) {
   return (
@@ -13,7 +14,7 @@ export default function DispatchActivityLogSection({ activityLog, formatActivity
             <li key={`${entry.timestamp || 'activity'}-${idx}`} className="text-[11px] leading-tight text-slate-700 flex items-start gap-1.5">
               <span className="text-amber-600 mt-[1px]">•</span>
               <span className="min-w-0">
-                {entry.message || entry.action || 'Activity update'}
+                {formatAssignmentActivityMessage(entry.message || entry.action || 'Activity update')}
                 <span className="text-slate-400">{' — '}{formatActivityTimestamp(entry.timestamp)}</span>
               </span>
             </li>

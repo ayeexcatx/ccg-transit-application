@@ -98,23 +98,23 @@ function getDriverDispatchStatusNotification(status) {
 
   if (normalized === 'amended') {
     return {
-      title: 'Dispatch Amended',
-      message: 'A dispatch assigned to you has been amended',
+      title: 'Assignment Amended',
+      message: 'Your assignment has been amended',
       notificationType: 'driver_amended',
     };
   }
 
   if (normalized === 'cancelled' || normalized === 'canceled') {
     return {
-      title: 'Dispatch Cancelled',
-      message: 'A dispatch assigned to you has been cancelled',
+      title: 'Assignment Cancelled',
+      message: 'Your assignment has been cancelled',
       notificationType: 'driver_cancelled',
     };
   }
 
   return {
-    title: 'Dispatch Assigned',
-    message: 'You have been assigned to a dispatch',
+    title: 'Assignment Opportunity Received',
+    message: 'You have received a new assignment opportunity.',
     notificationType: 'driver_assigned',
   };
 }
@@ -420,8 +420,8 @@ export async function notifyDriverAssignmentChanges(dispatch, previousAssignment
       ...addedDriverIds.map((driverId) => createDriverDispatchNotification({
         dispatch,
         driverAccessCodeId: driverAccessCodeMap.get(driverId),
-        title: 'Dispatch Assigned',
-        message: 'You have been assigned to a dispatch',
+        title: 'Assignment Opportunity Received',
+        message: 'You have received a new assignment opportunity.',
         notificationType: 'driver_assigned',
         requiredTrucks: nextAssignments
           .filter((assignment) => assignment?.active_flag !== false && assignment?.is_visible_to_driver !== false && ['sent','seen'].includes(String(assignment?.delivery_status || 'sent').toLowerCase()) && assignment?.driver_id === driverId)
@@ -509,8 +509,8 @@ export async function notifyDriversForDispatchEdit({
     await Promise.all(driverIdsToNotify.map((driverId) => createDriverDispatchNotification({
       dispatch: nextDispatch,
       driverAccessCodeId: driverAccessCodeMap.get(driverId),
-      title: 'Dispatch Updated',
-      message: 'Your dispatch has been updated',
+      title: 'Assignment Updated',
+      message: 'Your assignment has been updated',
       notificationType: 'driver_updated',
       requiredTrucks: driverAssignments
         .filter((assignment) => assignment?.active_flag !== false && assignment?.is_visible_to_driver !== false && ['sent','seen'].includes(String(assignment?.delivery_status || 'sent').toLowerCase()) && assignment?.driver_id === driverId)

@@ -9,6 +9,7 @@ import { format, parseISO } from 'date-fns';
 import DispatchDetailDrawer from './DispatchDetailDrawer';
 import { statusBadgeColors, statusBorderAccent, scheduledStatusMessage } from './statusConfig';
 import { getVisibleTrucksForDispatch } from '@/lib/dispatchVisibility';
+import { getAssignmentStatusLabel, getAssignmentTerminology } from '@/lib/assignmentTerminology';
 
 const formatDispatchTime = (startTime) => {
   if (!startTime) return '';
@@ -66,6 +67,7 @@ const DispatchCard = React.forwardRef(function DispatchCard({
     : session.code_type === 'Driver'
       ? (dispatch.trucks_assigned || [])
       : myTrucks;
+  const terminology = getAssignmentTerminology(dispatch, confirmations, visibleTrucks);
 
   return (
     <div ref={ref}>
@@ -78,7 +80,7 @@ const DispatchCard = React.forwardRef(function DispatchCard({
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={`${statusBadgeColors[dispatch.status]} border text-xs font-medium`}>
-                  {dispatch.status}
+                  {getAssignmentStatusLabel(dispatch, confirmations, visibleTrucks)}
                 </Badge>
                 <span className="text-xs text-slate-400 flex items-center gap-1">
                   {dispatch.shift_time === 'Day Shift' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-400" />}
@@ -99,7 +101,7 @@ const DispatchCard = React.forwardRef(function DispatchCard({
             <div className="space-y-2">
               {dispatch.status === 'Scheduled' ? (
                 <>
-                  <h3 className="text-sm font-semibold text-slate-700">Scheduled</h3>
+                  <h3 className="text-sm font-semibold text-slate-700">Pending Opportunity</h3>
                   <p className="text-xs text-blue-600 italic mt-0.5">{scheduledStatusMessage}</p>
                 </>
               ) : (
@@ -137,7 +139,7 @@ const DispatchCard = React.forwardRef(function DispatchCard({
               className="mt-3 flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
             >
               <ChevronDown className="h-3.5 w-3.5" />
-              View details
+              {terminology.view}
             </button>
           </div>
         </CardContent>

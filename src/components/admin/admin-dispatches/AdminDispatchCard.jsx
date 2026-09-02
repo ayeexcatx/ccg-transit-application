@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Archive, ArchiveX, Copy, Eye, FileText, Lock, Moon, Pencil, Sun, Trash2, Truck } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { formatAssignmentActivityMessage, getAssignmentStatusLabel } from '@/lib/assignmentTerminology';
 import { scheduledStatusMessage, statusBadgeColors, statusBorderAccent } from '@/components/portal/statusConfig';
 
 export default function AdminDispatchCard({
   dispatch,
   session,
+  confirmations,
   companyName,
   firstLineTimeText,
   latestActivity,
@@ -30,7 +32,7 @@ export default function AdminDispatchCard({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-2">
-                <Badge className={`${statusBadgeColors[dispatch.status]} border text-xs`}>{dispatch.status}</Badge>
+                <Badge className={`${statusBadgeColors[dispatch.status]} border text-xs`}>{getAssignmentStatusLabel(dispatch, confirmations, dispatch.trucks_assigned)}</Badge>
                 {dispatch.archived_flag &&
                   <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-xs flex items-center gap-1">
                     <Archive className="h-2.5 w-2.5" />Archived
@@ -101,7 +103,7 @@ export default function AdminDispatchCard({
               <div className="text-right max-w-[210px]">
                 {latestActivity?.message ?
                   <>
-                    <p className="text-[10px] text-slate-500 leading-tight line-clamp-1">{latestActivity.message}</p>
+                    <p className="text-[10px] text-slate-500 leading-tight line-clamp-1">{formatAssignmentActivityMessage(latestActivity.message)}</p>
                     {latestActivityTimestamp && <p className="text-[10px] text-slate-400">{latestActivityTimestamp}</p>}
                   </> :
                   <p className="text-[10px] text-slate-400 italic">No activity yet.</p>
@@ -121,7 +123,7 @@ export default function AdminDispatchCard({
             <div className="mb-2">
               {latestActivity?.message ?
                 <>
-                  <p className="text-[10px] text-slate-500 leading-tight">{latestActivity.message}</p>
+                  <p className="text-[10px] text-slate-500 leading-tight">{formatAssignmentActivityMessage(latestActivity.message)}</p>
                   {latestActivityTimestamp && <p className="text-[10px] text-slate-400">{latestActivityTimestamp}</p>}
                 </> :
                 <p className="text-[10px] text-slate-400 italic">No activity yet.</p>
