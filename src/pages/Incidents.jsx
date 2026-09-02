@@ -629,7 +629,7 @@ export default function Incidents() {
                     {dispatch &&
                     <div className="text-xs text-slate-600 mt-2 space-y-0.5">
                         <p>
-                          Dispatch:{' '}
+                          Job #
                           <Link
                           to={dispatchHref}
                           className="text-blue-700 hover:underline"
@@ -647,7 +647,7 @@ export default function Incidents() {
                         <p>
                           {formatDispatchDate(dispatch.date)}
                           {dispatch.start_time ? ` • ${dispatch.start_time}` : ''}
-                          {dispatch.status ? ` • ${getAssignmentStatusLabel(dispatch)}` : ''}
+                          {dispatch.status ? ` • ${getAssignmentStatusLabel(dispatch, [], null, { audience: 'incident' })}` : ''}
                         </p>
                       </div>
                     }

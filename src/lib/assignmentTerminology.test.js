@@ -19,6 +19,25 @@ test('presents fully confirmed work as an assignment', () => {
   assert.equal(getAssignmentTerminology(dispatch, confirmations).view, 'View Assignment');
 });
 
+test('driver work is always presented as an assignment independent of history and Seen state', () => {
+  for (const seen of [false, true]) {
+    const driverRecord = { ...dispatch, seen };
+    assert.equal(getAssignmentStatusLabel(driverRecord, [], null, { audience: 'driver' }), 'Assignment');
+    assert.equal(getAssignmentTerminology(driverRecord, [], null, { audience: 'driver' }).details, 'Assignment Details');
+    assert.equal(getAssignmentTerminology(driverRecord, [], null, { audience: 'driver' }).view, 'View Assignment');
+  }
+
+  assert.equal(
+    getAssignmentStatusLabel({ ...dispatch, status: 'Scheduled' }, [], null, { audience: 'driver' }),
+    'Assignment'
+  );
+});
+
+test('incident-associated work is an assignment without confirmation data', () => {
+  assert.equal(getAssignmentStatusLabel(dispatch, [], null, { audience: 'incident' }), 'Assignment');
+  assert.equal(getAssignmentTerminology(dispatch, [], null, { audience: 'incident' }).singular, 'Assignment');
+});
+
 test('scheduled work remains an opportunity even if a legacy confirmation exists', () => {
   const scheduled = { ...dispatch, status: 'Scheduled' };
   const confirmations = scheduled.trucks_assigned.map((truck_number) => ({ dispatch_id: 'd1', truck_number, confirmation_type: 'Scheduled' }));

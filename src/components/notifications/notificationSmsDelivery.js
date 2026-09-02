@@ -1,6 +1,7 @@
 import { base44 } from '@/api/base44Client';
 import { formatDispatchDateTimeLine } from '@/components/notifications/dispatchDateTimeFormat';
 import { getAdminSmsProductState, getCompanyOwnerSmsState, getDriverSmsState } from '@/lib/sms';
+import { normalizeDriverSmsHeadline } from '@/lib/driverMessaging';
 import { getEffectiveTruckStartTime } from '@/lib/dispatchTruckOverrides';
 import { normalizeUsSmsPhone } from '@/lib/smsPhone';
 import { getSmsRules, resolveEffectiveSharedAdminAccessCode, resolveSmsRuleKeyForNotification } from '@/lib/smsConfig';
@@ -205,7 +206,9 @@ async function buildSmsMessage(notification, recipient, options = {}) {
     if (ownerDispatchMessage) return ownerDispatchMessage;
   }
 
-  const headline = normalizeHeadline(notification?.title || 'Dispatch update');
+  const fallbackHeadline = recipient?.code_type === 'Driver' ? 'Assignment update' : 'Dispatch update';
+  const rawHeadline = normalizeHeadline(notification?.title || fallbackHeadline);
+  const headline = recipient?.code_type === 'Driver' ? normalizeDriverSmsHeadline(rawHeadline) : rawHeadline;
   const dispatchDateTimeLine = resolveDriverDispatchDateTimeLine(notification, dispatch);
   const dispatchLine = dispatchDateTimeLine || 'Assignment details are available in the app.';
 

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, ArrowLeft, Camera, Moon, Pencil, Sun } from 'lucide-react';
 import DispatchDrawerTutorial from '@/components/tutorial/DispatchDrawerTutorial';
-import { statusBadgeColors } from './statusConfig';
+import { getAssignmentBadgeColor } from './statusConfig';
 
 export default function DispatchDrawerTopBar({
   dispatch,
@@ -96,7 +96,7 @@ export default function DispatchDrawerTopBar({
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{assignmentDetailsLabel}</p>
           <SheetTitle className="flex flex-wrap items-center justify-between gap-3 text-base">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <Badge className={`${statusBadgeColors[dispatch.status]} border text-xs font-medium`}>
+              <Badge className={`${getAssignmentBadgeColor(dispatch.status, assignmentStatusLabel)} border text-xs font-medium`}>
                 {assignmentStatusLabel}
               </Badge>
               <span className="flex items-center gap-1 text-xs font-normal text-slate-500">
