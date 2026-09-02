@@ -52,7 +52,7 @@ export function getAssignmentStatusLabel(dispatch, confirmations = [], relevantT
   // Driver and Incident records enter their respective workflows only after owner
   // acceptance, so confirmation rows are neither necessary nor authoritative here.
   if (isAssignmentOnlyAudience(audience)) return 'Assignment';
-  if (status === 'scheduled') return 'Pending Opportunity';
+  if (status === 'scheduled') return 'Pending';
   if (status === 'dispatch' || status === 'dispatched') {
     return isAssignmentConfirmed(dispatch, confirmations, relevantTrucks) ? 'Assignment' : 'Opportunity';
   }
