@@ -53,7 +53,7 @@ test('scheduled work remains an opportunity even if a legacy confirmation exists
 
 
 test('uses the concise visible status progression without changing internal statuses', () => {
-  assert.equal(getAssignmentStatusLabel({ ...dispatch, status: 'Scheduled' }), 'Pending');
+  assert.equal(getAssignmentStatusLabel({ ...dispatch, status: 'Scheduled' }), 'Pending Opportunity');
   assert.equal(getAssignmentStatusLabel(dispatch), 'Opportunity');
   assert.equal(getAssignmentStatusLabel({ ...dispatch, status: 'Dispatched' }), 'Opportunity');
   assert.equal(getAssignmentStatusLabel(dispatch, [
