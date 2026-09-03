@@ -15,8 +15,8 @@ export function buildCompanyOwnerAssignmentSms({ status, truckCount = 0, dateLin
   if (status === 'Scheduled') {
     const count = truckCount > 0 ? truckCount : 1;
     const truckLine = count === 1
-      ? '(1) truck scheduled pending acceptance.'
-      : `(${count}) trucks scheduled pending acceptance.`;
+      ? '(1) truck scheduled'
+      : `(${count}) trucks scheduled`;
     return [
       'CCG Transit: Pending',
       truckLine,
