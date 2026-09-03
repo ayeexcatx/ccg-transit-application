@@ -1,5 +1,6 @@
 import { format, isValid, parseISO } from 'date-fns';
 import { formatDispatchDateTimeLine } from '@/components/notifications/dispatchDateTimeFormat';
+import { getCompanyOwnerNotificationTitle } from '@/lib/ownerAssignmentMessaging';
 
 const STATUS_LINE_VALUES = new Set([
   'Scheduled',
@@ -9,6 +10,7 @@ const STATUS_LINE_VALUES = new Set([
   'Dispatch',
   'Dispatched',
   'Opportunity',
+  'New Opportunity',
   'Amended',
   'Assignment Amended',
   'Cancelled',
@@ -17,12 +19,12 @@ const STATUS_LINE_VALUES = new Set([
 ]);
 
 const OWNER_STATUS_HEADLINES = {
-  Scheduled: 'Pending Opportunity',
-  Dispatch: 'Opportunity',
-  Dispatched: 'Opportunity',
-  Amended: 'Assignment Amended',
-  Cancelled: 'Assignment Canceled',
-  Canceled: 'Assignment Canceled',
+  Scheduled: getCompanyOwnerNotificationTitle('Scheduled'),
+  Dispatch: getCompanyOwnerNotificationTitle('Dispatch'),
+  Dispatched: getCompanyOwnerNotificationTitle('Dispatched'),
+  Amended: getCompanyOwnerNotificationTitle('Amended'),
+  Cancelled: getCompanyOwnerNotificationTitle('Cancelled'),
+  Canceled: getCompanyOwnerNotificationTitle('Canceled'),
 };
 
 export function formatNotificationDetailsMessage(message) {

@@ -1,26 +1,36 @@
+export function getCompanyOwnerNotificationTitle(status) {
+  return {
+    Scheduled: 'Pending Opportunity',
+    Dispatch: 'New Opportunity',
+    Dispatched: 'New Opportunity',
+    Amended: 'Assignment Amended',
+    Cancelled: 'Assignment Canceled',
+    Canceled: 'Assignment Canceled',
+  }[status] || status;
+}
+
 export function buildCompanyOwnerAssignmentSms({ status, truckCount = 0, dateLine = '' }) {
   const details = dateLine || 'Assignment details are available in the app.';
 
   if (status === 'Scheduled') {
     const count = truckCount > 0 ? truckCount : 1;
     const truckLine = count === 1
-      ? '(1) truck has received a pending opportunity for:'
-      : `(${count}) trucks have received pending opportunities for:`;
+      ? '(1) truck scheduled pending acceptance.'
+      : `(${count}) trucks scheduled pending acceptance.`;
     return [
       'CCG Transit: Pending Opportunity',
       truckLine,
       details,
       '',
-      'Details to follow.',
-      'Please open the app to view and ACCEPT.',
+      'Please open app to ACCEPT.',
     ].join('\n');
   }
 
   const lifecycleCopy = {
-    Dispatch: ['CCG Transit: Opportunity', 'You have received a new assignment for:'],
-    Amended: ['CCG Transit: Assignment Amended', 'Your assignment has been amended to:'],
-    Cancelled: ['CCG Transit: Assignment Canceled', 'Your assignment has been canceled.'],
-    Canceled: ['CCG Transit: Assignment Canceled', 'Your assignment has been canceled.'],
+    Dispatch: ['CCG Transit: Opportunity', 'You have received a new assignment opportunity for:'],
+    Amended: ['CCG Transit: AMENDED', 'Your assignment has been amended to:'],
+    Cancelled: ['CCG Transit: CANCELLED', 'Your assignment has been canceled.'],
+    Canceled: ['CCG Transit: CANCELLED', 'Your assignment has been canceled.'],
     Update: ['CCG Transit: Assignment Update', 'Your assignment has been updated:'],
   }[status];
 
@@ -30,7 +40,7 @@ export function buildCompanyOwnerAssignmentSms({ status, truckCount = 0, dateLin
     lifecycleCopy[1],
     details,
     '',
-    'Please open the app to view and ACCEPT.',
+    status === 'Dispatch' ? 'Please open app to view and ACCEPT.' : 'Please open the app to view and ACCEPT.',
   ].join('\n');
 }
 
