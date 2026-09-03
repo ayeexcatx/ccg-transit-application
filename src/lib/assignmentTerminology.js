@@ -65,8 +65,8 @@ export function getScheduledPresentation({ audience } = {}) {
   }
   return {
     title: 'Pending Opportunity',
-    message: 'We’ve found an assignment opportunity for your truck. Details will follow.',
-    note: 'Note: The assignment is subject to cancellation by the customer. Your acknowledgement constitutes acceptance of the assignment and a commitment to perform as scheduled.',
+    message: 'An assignment opportunity is pending for your truck. Details will follow.',
+    note: 'Note: The assignment opportunity is subject to cancellation by the customer. Your acknowledgement constitutes acceptance of the assignment and a commitment to perform as scheduled.',
   };
 }
 
