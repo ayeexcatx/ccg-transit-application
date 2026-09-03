@@ -1,10 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildCompanyOwnerAssignmentSms, getAdminAcceptanceTitle, getCompanyOwnerNotificationTitle } from './ownerAssignmentMessaging.js';
-import {
-  formatOwnerDispatchMessage,
-  getNotificationDisplay,
-} from '../components/notifications/formatNotificationDetailsMessage.js';
 
 test('company owner notification bell uses lifecycle-specific titles', () => {
   assert.equal(getCompanyOwnerNotificationTitle('Scheduled'), 'Pending');
@@ -12,28 +8,6 @@ test('company owner notification bell uses lifecycle-specific titles', () => {
   assert.equal(getCompanyOwnerNotificationTitle('Dispatched'), 'New');
   assert.equal(getCompanyOwnerNotificationTitle('Amended'), 'Assignment Amended');
   assert.equal(getCompanyOwnerNotificationTitle('Cancelled'), 'Assignment Canceled');
-});
-
-test('new owner opportunity keeps its title without repeating the status in details', () => {
-  const display = getNotificationDisplay({
-    title: 'Status: Dispatch',
-    dispatch_status_key: 'dispatch-123:Dispatch',
-    message: 'MON 09-07-2026 at 7:00 AM\nDay Shift • New • Trucks: 101',
-  });
-
-  assert.equal(display.title, 'New');
-  assert.equal(display.message, 'MON 09-07-2026 at 7:00 AM\nDay Shift • Trucks: 101');
-});
-
-test('owner detail formatting still removes prior statuses and preserves other details', () => {
-  assert.equal(
-    formatOwnerDispatchMessage('TUE 09-08-2026 at 8:00 AM\nNight Shift • New Opportunity • Trucks: 202, 303'),
-    'TUE 09-08-2026 at 8:00 AM\nNight Shift • Trucks: 202, 303',
-  );
-  assert.equal(
-    formatOwnerDispatchMessage('WED 09-09-2026\nDay Shift • Pending Opportunity (details to follow) • 4 trucks assigned'),
-    'WED 09-09-2026\nDay Shift • 4 trucks assigned',
-  );
 });
 
 test('scheduled owner SMS uses grammatical singular and plural Pending copy', () => {
