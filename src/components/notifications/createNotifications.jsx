@@ -11,13 +11,15 @@ import {
   expandRequiredTruckList,
 } from '@/components/notifications/confirmationStateHelpers';
 import { getDriverAssignmentReceivedCopy } from '@/lib/driverMessaging';
+import { getAdminAcceptanceTitle } from '@/lib/ownerAssignmentMessaging';
 import { NON_CONFIRMATION_NOTIFICATION_CATEGORIES } from '@/components/notifications/ownerActionStatus';
 
 const statusLabels = {
-  Scheduled: 'Scheduled (details to follow)',
-  Dispatch: 'Dispatch',
-  Amended: 'Amended',
-  Cancelled: 'Cancelled',
+  Scheduled: 'Pending Opportunity (details to follow)',
+  Dispatch: 'Opportunity',
+  Amended: 'Assignment Amended',
+  Cancelled: 'Assignment Canceled',
+  Canceled: 'Assignment Canceled',
 };
 
 const NON_CONFIRMATION_CATEGORIES = NON_CONFIRMATION_NOTIFICATION_CATEGORIES;
@@ -75,18 +77,18 @@ function getDriverSeenTitle(driverName, seenKind) {
   const normalizedKind = String(seenKind || '').toLowerCase();
 
   if (normalizedKind === 'amended') {
-    return `${actorLabel} has seen the amended dispatch`;
+    return `${actorLabel} has seen the amended assignment`;
   }
 
   if (normalizedKind === 'cancelled' || normalizedKind === 'canceled') {
-    return `${actorLabel} has seen the cancelled dispatch`;
+    return `${actorLabel} has seen the canceled assignment`;
   }
 
   if (normalizedKind === 'removed') {
-    return `${actorLabel} has seen that the dispatch assignment is no longer available`;
+    return `${actorLabel} has seen that the assignment is no longer available`;
   }
 
-  return `${actorLabel} has seen the dispatch`;
+  return `${actorLabel} has seen the assignment`;
 }
 
 function isDispatchCanceledStatus(status) {
@@ -100,15 +102,15 @@ function getDriverDispatchStatusNotification(status) {
   if (normalized === 'amended') {
     return {
       title: 'Assignment Amended',
-      message: 'Your assignment has been amended',
+      message: 'Your assignment has been amended.',
       notificationType: 'driver_amended',
     };
   }
 
   if (normalized === 'cancelled' || normalized === 'canceled') {
     return {
-      title: 'Assignment Cancelled',
-      message: 'Your assignment has been cancelled',
+      title: 'Assignment Canceled',
+      message: 'Your assignment has been canceled.',
       notificationType: 'driver_cancelled',
     };
   }
@@ -319,7 +321,7 @@ export async function notifyOwnerDriverSeen({
     if (!scopedConfirmedTrucks.length) return;
 
     const jobTag = dispatch.reference_tag || dispatch.job_number || dispatch.id;
-    const statusText = statusLabels[dispatch.status] || dispatch.status || 'Dispatch';
+    const statusText = statusLabels[dispatch.status] || dispatch.status || 'Assignment';
     const title = getDriverSeenTitle(driverName, seenKind);
     const normalizedDriverKey = String(driverId || driverName || 'driver').trim().toLowerCase();
     const normalizedSeenKind = String(seenKind || 'assigned').toLowerCase();
@@ -539,7 +541,7 @@ function buildOwnerDispatchMessage(dispatch, statusText, relevantTrucks) {
     : `${relevantTrucks.length} trucks assigned`;
 
   const dateText = formatDispatchDateTimeLine(dispatch);
-  const isScheduledDetails = statusText === 'Scheduled (details to follow)' || statusText === 'Confirmed (details to follow)';
+  const isScheduledDetails = statusText === 'Pending Opportunity (details to follow)' || statusText === 'Confirmed (details to follow)';
   const dateTimeText = isScheduledDetails ? dateText.split(' at ')[0] : dateText;
 
   const secondLineParts = [
@@ -721,7 +723,7 @@ export async function notifyDispatchInformationalUpdate(dispatch, customMessage,
         recipient_access_code_id: ac.id,
         recipient_id: ac.id,
         recipient_company_id: company.id,
-        title: 'Dispatch Update',
+        title: 'Assignment Update',
         message: messageText,
         related_dispatch_id: dispatch.id,
         read_flag: false,
@@ -1076,7 +1078,7 @@ export async function notifyOwnerTruckReassignment({
 export async function notifyTruckConfirmation(dispatch, truckNumber, companyName) {
   try {
     const statusText = dispatch.status === 'Scheduled'
-      ? 'Scheduled'
+      ? 'Pending Opportunity'
       : (statusLabels[dispatch.status] || dispatch.status);
     const dateText = format(parseISO(dispatch.date), 'EEE MM-dd-yyyy').toUpperCase();
     const shiftText = dispatch.shift_time || '';
@@ -1108,17 +1110,9 @@ export async function notifyTruckConfirmation(dispatch, truckNumber, companyName
     const lineTwo = [dateText, shiftText, statusText].filter(Boolean).join(' • ');
     const jobTag = dispatch.reference_tag || dispatch.job_number || dispatch.id;
     const lineThree = [jobTag, assignedTrucks.join(', ')].filter(Boolean).join(' • ');
-    const confirmationTitleByStatus = {
-      Scheduled: `${companyDisplayName} has confirmed the schedule`,
-      Dispatch: `${companyDisplayName} has confirmed the dispatch`,
-      Amended: `${companyDisplayName} has confirmed the amendment`,
-      Canceled: `${companyDisplayName} has confirmed the cancellation`,
-      Cancelled: `${companyDisplayName} has confirmed the cancellation`,
-    };
-
     await base44.entities.Notification.create({
       recipient_type: 'Admin',
-      title: confirmationTitleByStatus[dispatch.status] || `${companyDisplayName} has confirmed the dispatch`,
+      title: getAdminAcceptanceTitle(dispatch.status, companyDisplayName),
       message: `${lineTwo}\n${lineThree}`,
       related_dispatch_id: dispatch.id,
       read_flag: false,
