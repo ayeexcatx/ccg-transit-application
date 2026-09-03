@@ -1,6 +1,6 @@
 import { format, isValid, parseISO } from 'date-fns';
-import { formatDispatchDateTimeLine } from './dispatchDateTimeFormat.js';
-import { getCompanyOwnerNotificationTitle } from '../../lib/ownerAssignmentMessaging.js';
+import { formatDispatchDateTimeLine } from '@/components/notifications/dispatchDateTimeFormat';
+import { getCompanyOwnerNotificationTitle } from '@/lib/ownerAssignmentMessaging';
 
 const STATUS_LINE_VALUES = new Set([
   'Scheduled',
@@ -10,7 +10,6 @@ const STATUS_LINE_VALUES = new Set([
   'Dispatch',
   'Dispatched',
   'Opportunity',
-  'New',
   'New Opportunity',
   'Amended',
   'Assignment Amended',
