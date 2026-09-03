@@ -54,6 +54,24 @@ export function getAdminAcceptanceTitle(status, ...companyNameCandidates) {
   return `${company} has accepted the assignment`;
 }
 
+export function resolveAdminAcceptanceCompanyName({ mapCompanyName, dispatchCompanyId, session } = {}) {
+  const normalizedMapCompanyName = typeof mapCompanyName === 'string' ? mapCompanyName.trim() : '';
+  if (normalizedMapCompanyName) return normalizedMapCompanyName;
+
+  const sessionCompanyName = typeof session?.company_name === 'string' ? session.company_name.trim() : '';
+  const normalizedDispatchCompanyId = String(dispatchCompanyId || '').trim();
+  const normalizedSessionCompanyId = String(session?.company_id || '').trim();
+  if (
+    sessionCompanyName &&
+    normalizedDispatchCompanyId &&
+    normalizedSessionCompanyId === normalizedDispatchCompanyId
+  ) {
+    return sessionCompanyName;
+  }
+
+  return undefined;
+}
+
 export function buildAdminAcceptanceMessage({ dateText, shiftText, statusText, jobTag, assignedTrucks = [] }) {
   const lineTwo = [dateText, shiftText, statusText].filter(Boolean).join(' • ');
   const lineThree = [jobTag, assignedTrucks.join(', ')].filter(Boolean).join(' • ');

@@ -50,6 +50,7 @@ import { appendDispatchActivityEntries } from '@/lib/dispatchActivity';
 import { toast } from 'sonner';
 import { recordDispatchDriveSyncFailure, syncDispatchRecordHtml } from '@/lib/dispatchDriveSync';
 import { countDispatchTrucksInBucket } from '@/lib/dispatchTruckCounts';
+import { resolveAdminAcceptanceCompanyName } from '@/lib/ownerAssignmentMessaging';
 
 function getSessionActorMetadata(session) {
   const actorName = session?.label || session?.name || session?.driver_name || session?.code || '';
@@ -367,7 +368,11 @@ export default function Portal() {
         message: `${actorMetadata.actorName || 'Company Owner'} confirmed Truck ${truck} for ${confType}`,
       }]);
 
-      const companyName = companyMap[dispatch.company_id];
+      const companyName = resolveAdminAcceptanceCompanyName({
+        mapCompanyName: companyMap[dispatch.company_id],
+        dispatchCompanyId: dispatch.company_id,
+        session,
+      });
       notifyTruckConfirmation(dispatch, truck, companyName);
 
       if (effectiveView === 'CompanyOwner') {

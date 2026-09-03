@@ -5,6 +5,7 @@ import {
   buildCompanyOwnerAssignmentSms,
   getAdminAcceptanceTitle,
   getCompanyOwnerNotificationTitle,
+  resolveAdminAcceptanceCompanyName,
 } from './ownerAssignmentMessaging.js';
 import {
   formatOwnerDispatchMessage,
@@ -78,6 +79,41 @@ test('admin assignment acceptance title includes the actual company name', () =>
 test('admin acceptance title only falls back to Company when no company name resolves', () => {
   assert.equal(getAdminAcceptanceTitle('Dispatch', '', 'Acme Hauling'), 'Acme Hauling has accepted the assignment');
   assert.equal(getAdminAcceptanceTitle('Scheduled', '   ', null), 'Company has accepted the pending opportunity');
+});
+
+test('admin acceptance company name prefers the company map', () => {
+  assert.equal(resolveAdminAcceptanceCompanyName({
+    mapCompanyName: 'Map Hauling',
+    dispatchCompanyId: 'company-1',
+    session: { company_id: 'company-1', company_name: 'Session Hauling' },
+  }), 'Map Hauling');
+});
+
+test('admin acceptance company name uses the matching session company', () => {
+  const companyName = resolveAdminAcceptanceCompanyName({
+    dispatchCompanyId: 'company-1',
+    session: { company_id: 'company-1', company_name: 'Session Hauling' },
+  });
+
+  assert.equal(companyName, 'Session Hauling');
+  assert.equal(getAdminAcceptanceTitle('Scheduled', companyName), 'Session Hauling has accepted the pending opportunity');
+  assert.equal(getAdminAcceptanceTitle('Dispatch', companyName), 'Session Hauling has accepted the assignment');
+});
+
+test('admin acceptance company name rejects a session company for another dispatch company', () => {
+  assert.equal(resolveAdminAcceptanceCompanyName({
+    dispatchCompanyId: 'company-1',
+    session: { company_id: 'company-2', company_name: 'Wrong Hauling' },
+  }), undefined);
+});
+
+test('admin acceptance title retains its downstream fallback without a resolved company name', () => {
+  const companyName = resolveAdminAcceptanceCompanyName({
+    dispatchCompanyId: 'company-1',
+    session: { company_id: 'company-1', company_name: '   ' },
+  });
+
+  assert.equal(getAdminAcceptanceTitle('Scheduled', companyName), 'Company has accepted the pending opportunity');
 });
 
 test('admin acceptance notification detail formatting remains unchanged', () => {
