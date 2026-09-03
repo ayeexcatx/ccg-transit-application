@@ -302,11 +302,6 @@
     "trucks_assigned"
   ],
   "rls": {
-    "delete": {
-      "user_condition": {
-        "data.app_role": "admin"
-      }
-    },
     "create": {
       "user_condition": {
         "data.app_role": "admin"
@@ -315,26 +310,31 @@
     "read": {
       "$or": [
         {
+          "data.company_id": "{{user.data.company_id}}"
+        },
+        {
           "user_condition": {
             "data.app_role": "admin"
           }
-        },
-        {
-          "data.company_id": "{{user.data.company_id}}"
         }
       ]
     },
     "update": {
       "$or": [
         {
+          "data.company_id": "{{user.data.company_id}}"
+        },
+        {
           "user_condition": {
             "data.app_role": "admin"
           }
-        },
-        {
-          "data.company_id": "{{user.data.company_id}}"
         }
       ]
+    },
+    "delete": {
+      "user_condition": {
+        "data.app_role": "admin"
+      }
     }
   }
 }
