@@ -9,7 +9,7 @@ import { format, parseISO } from 'date-fns';
 import DispatchDetailDrawer from './DispatchDetailDrawer';
 import { getAssignmentBadgeColor, getAssignmentBorderAccent, scheduledStatusMessage } from './statusConfig';
 import { getVisibleTrucksForDispatch } from '@/lib/dispatchVisibility';
-import { getAssignmentStatusLabel, getAssignmentTerminology, getScheduledPresentation } from '@/lib/assignmentTerminology';
+import { getAssignmentStatusLabel, getAssignmentTerminology } from '@/lib/assignmentTerminology';
 
 const formatDispatchTime = (startTime) => {
   if (!startTime) return '';
@@ -70,7 +70,6 @@ const DispatchCard = React.forwardRef(function DispatchCard({
   const audience = session.code_type === 'Driver' ? 'driver' : undefined;
   const terminology = getAssignmentTerminology(dispatch, confirmations, visibleTrucks, { audience });
   const statusLabel = getAssignmentStatusLabel(dispatch, confirmations, visibleTrucks, { audience });
-  const scheduledPresentation = getScheduledPresentation({ audience });
 
   return (
     <div ref={ref}>
@@ -104,8 +103,8 @@ const DispatchCard = React.forwardRef(function DispatchCard({
             <div className="space-y-2">
               {dispatch.status === 'Scheduled' ? (
                 <>
-                  <h3 className="text-sm font-semibold text-slate-700">{scheduledPresentation.title}</h3>
-                  <p className="text-xs text-blue-600 italic mt-0.5">{audience === 'driver' ? scheduledPresentation.message : scheduledStatusMessage}</p>
+                  <h3 className="text-sm font-semibold text-slate-700">Pending Opportunity</h3>
+                  <p className="text-xs text-blue-600 italic mt-0.5">{scheduledStatusMessage}</p>
                 </>
               ) : (
                 <>
