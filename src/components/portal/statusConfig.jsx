@@ -24,7 +24,7 @@ export function getAssignmentBorderAccent(status, label) {
   return label === 'Opportunity' ? opportunityBorderAccent : (statusBorderAccent[status] || '');
 }
 
-export const scheduledStatusMessage = 'We’ve found an assignment opportunity for your truck. Details will follow.';
+export const scheduledStatusMessage = 'An assignment opportunity is pending for your truck. Details will follow.';
 
 export const scheduledDispatchNote =
   'Note: The assignment is subject to cancellation by the customer. Your acknowledgement constitutes acceptance of the assignment and a commitment to perform as scheduled.';
