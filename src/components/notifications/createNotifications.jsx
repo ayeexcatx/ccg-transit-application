@@ -11,7 +11,11 @@ import {
   expandRequiredTruckList,
 } from '@/components/notifications/confirmationStateHelpers';
 import { getDriverAssignmentLifecycleCopy, getDriverAssignmentReceivedCopy } from '@/lib/driverMessaging';
-import { getAdminAcceptanceTitle, getCompanyOwnerNotificationTitle } from '@/lib/ownerAssignmentMessaging';
+import {
+  buildAdminAcceptanceMessage,
+  getAdminAcceptanceTitle,
+  getCompanyOwnerNotificationTitle,
+} from '@/lib/ownerAssignmentMessaging';
 import { NON_CONFIRMATION_NOTIFICATION_CATEGORIES } from '@/components/notifications/ownerActionStatus';
 
 const statusLabels = {
@@ -1061,7 +1065,11 @@ export async function notifyTruckConfirmation(dispatch, truckNumber, companyName
       : (statusLabels[dispatch.status] || dispatch.status);
     const dateText = format(parseISO(dispatch.date), 'EEE MM-dd-yyyy').toUpperCase();
     const shiftText = dispatch.shift_time || '';
-    const companyDisplayName = companyName || (await base44.entities.Company.filter({ id: dispatch.company_id }, '-created_date', 1))?.[0]?.name || 'Company';
+    const companyDisplayNameFromContext = [companyName, dispatch.company?.name, dispatch.company_name]
+      .find((candidate) => typeof candidate === 'string' && candidate.trim())
+      ?.trim();
+    const companyDisplayName = companyDisplayNameFromContext
+      || (await base44.entities.Company.filter({ id: dispatch.company_id }, '-created_date', 1))?.[0]?.name;
 
     const assignedTrucks = [...new Set((dispatch.trucks_assigned || []).filter(Boolean))];
     if (!assignedTrucks.length) return;
@@ -1086,13 +1094,17 @@ export async function notifyTruckConfirmation(dispatch, truckNumber, companyName
 
     if (existingAllConfirmed?.length) return;
 
-    const lineTwo = [dateText, shiftText, statusText].filter(Boolean).join(' • ');
     const jobTag = dispatch.reference_tag || dispatch.job_number || dispatch.id;
-    const lineThree = [jobTag, assignedTrucks.join(', ')].filter(Boolean).join(' • ');
     await base44.entities.Notification.create({
       recipient_type: 'Admin',
       title: getAdminAcceptanceTitle(dispatch.status, companyDisplayName),
-      message: `${lineTwo}\n${lineThree}`,
+      message: buildAdminAcceptanceMessage({
+        dateText,
+        shiftText,
+        statusText,
+        jobTag,
+        assignedTrucks,
+      }),
       related_dispatch_id: dispatch.id,
       read_flag: false,
       admin_group_key: `${dispatch.id}:${dispatch.status}`,

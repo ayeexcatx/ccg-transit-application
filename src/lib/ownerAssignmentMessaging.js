@@ -44,10 +44,18 @@ export function buildCompanyOwnerAssignmentSms({ status, truckCount = 0, dateLin
   ].join('\n');
 }
 
-export function getAdminAcceptanceTitle(status, companyName = 'Company') {
-  const company = companyName || 'Company';
+export function getAdminAcceptanceTitle(status, ...companyNameCandidates) {
+  const company = companyNameCandidates
+    .find((candidate) => typeof candidate === 'string' && candidate.trim())
+    ?.trim() || 'Company';
   if (status === 'Scheduled') return `${company} has accepted the pending opportunity`;
   if (status === 'Amended') return `${company} has accepted the amended assignment`;
   if (status === 'Cancelled' || status === 'Canceled') return `${company} has accepted the assignment cancellation`;
   return `${company} has accepted the assignment`;
+}
+
+export function buildAdminAcceptanceMessage({ dateText, shiftText, statusText, jobTag, assignedTrucks = [] }) {
+  const lineTwo = [dateText, shiftText, statusText].filter(Boolean).join(' • ');
+  const lineThree = [jobTag, assignedTrucks.join(', ')].filter(Boolean).join(' • ');
+  return `${lineTwo}\n${lineThree}`;
 }
