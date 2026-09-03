@@ -1161,7 +1161,6 @@ export default function DispatchDetailDrawer({
               dispatch={dispatch}
               isAdmin={isAdmin}
               isOwner={isOwner}
-              isDriver={isDriverUser}
               visibleTrucks={visibleTrucks}
               getTruckDriverSummaryLabel={getTruckDriverSummaryLabel}
               hasTruckSeenStatus={hasTruckSeenStatus}

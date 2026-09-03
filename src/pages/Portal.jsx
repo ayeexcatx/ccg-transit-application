@@ -545,12 +545,12 @@ export default function Portal() {
     <div className="space-y-6">
       {dispatchNotFound && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
-          {isDriverUser ? 'Assignment' : 'Opportunity'} no longer available.
+          Dispatch no longer available.
         </div>
       )}
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <h2 className="text-2xl font-semibold text-slate-900">{isDriverUser ? 'Assignments' : 'Assignment Opportunities'}</h2>
+          <h2 className="text-2xl font-semibold text-slate-900">Assignment Opportunities</h2>
         </div>
         {!isDriverUser && (
           <div className="flex items-center gap-2 flex-wrap">
