@@ -1,5 +1,6 @@
 import { base44 } from '@/api/base44Client';
 import { createDriverDispatchNotification } from '@/components/notifications/createNotifications';
+import { getDriverAssignmentReceivedCopy } from '@/lib/driverMessaging';
 
 const nowIso = () => new Date().toISOString();
 
@@ -122,8 +123,7 @@ export async function sendDriverAssignment({ dispatch, driverDispatch, session }
     await createDriverDispatchNotification({
       dispatch,
       driverAccessCodeId: saved.driver_user_id,
-      title: 'Assignment Opportunity Received',
-      message: 'You have received a new assignment opportunity.',
+      ...getDriverAssignmentReceivedCopy(),
       notificationType: 'driver_assigned',
       requiredTrucks: [saved.truck_number],
     });

@@ -4,20 +4,25 @@ import { formatDispatchDateTimeLine } from '@/components/notifications/dispatchD
 const STATUS_LINE_VALUES = new Set([
   'Scheduled',
   'Scheduled (details to follow)',
+  'Pending Opportunity',
+  'Pending Opportunity (details to follow)',
   'Dispatch',
   'Dispatched',
+  'Opportunity',
   'Amended',
+  'Assignment Amended',
   'Cancelled',
   'Canceled',
+  'Assignment Canceled',
 ]);
 
 const OWNER_STATUS_HEADLINES = {
-  Scheduled: 'We’ve found an assignment opportunity for your truck.',
-  Dispatch: 'You have received a new assignment opportunity.',
-  Dispatched: 'You have received a new assignment opportunity.',
-  Amended: 'Your assignment has been amended',
-  Cancelled: 'Your assignment has been canceled',
-  Canceled: 'Your assignment has been canceled',
+  Scheduled: 'Pending Opportunity',
+  Dispatch: 'Opportunity',
+  Dispatched: 'Opportunity',
+  Amended: 'Assignment Amended',
+  Cancelled: 'Assignment Canceled',
+  Canceled: 'Assignment Canceled',
 };
 
 export function formatNotificationDetailsMessage(message) {
