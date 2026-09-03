@@ -245,7 +245,7 @@ export default function AdminSmsCenter() {
         group: 'Company Owner',
         title: 'Pending Opportunity SMS',
         body: [
-          'CCG Transit: Pending',
+          'CCG Transit: Pending Opportunity',
           '(2) trucks scheduled pending acceptance.',
           sampleOwnerDispatchDateShiftLine(),
           '',
@@ -257,7 +257,7 @@ export default function AdminSmsCenter() {
         group: 'Company Owner',
         title: 'Opportunity SMS',
         body: [
-          'CCG Transit: NEW',
+          'CCG Transit: Opportunity',
           'You have received a new assignment opportunity for:',
           dispatchLine,
           '',

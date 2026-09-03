@@ -1,8 +1,8 @@
 export function getCompanyOwnerNotificationTitle(status) {
   return {
-    Scheduled: 'Pending',
-    Dispatch: 'New',
-    Dispatched: 'New',
+    Scheduled: 'Pending Opportunity',
+    Dispatch: 'New Opportunity',
+    Dispatched: 'New Opportunity',
     Amended: 'Assignment Amended',
     Cancelled: 'Assignment Canceled',
     Canceled: 'Assignment Canceled',
@@ -15,10 +15,10 @@ export function buildCompanyOwnerAssignmentSms({ status, truckCount = 0, dateLin
   if (status === 'Scheduled') {
     const count = truckCount > 0 ? truckCount : 1;
     const truckLine = count === 1
-      ? '(1) truck scheduled pending acceptance.'
-      : `(${count}) trucks scheduled pending acceptance.`;
+      ? '(1) truck scheduled'
+      : `(${count}) trucks scheduled`;
     return [
-      'CCG Transit: Pending',
+      'CCG Transit: Pending Opportunity',
       truckLine,
       details,
       '',
@@ -27,7 +27,7 @@ export function buildCompanyOwnerAssignmentSms({ status, truckCount = 0, dateLin
   }
 
   const lifecycleCopy = {
-    Dispatch: ['CCG Transit: NEW', 'You have received a new assignment opportunity for:'],
+    Dispatch: ['CCG Transit: Opportunity', 'You have received a new assignment opportunity for:'],
     Amended: ['CCG Transit: AMENDED', 'Your assignment has been amended to:'],
     Cancelled: ['CCG Transit: CANCELLED', 'Your assignment has been canceled.'],
     Canceled: ['CCG Transit: CANCELLED', 'Your assignment has been canceled.'],
