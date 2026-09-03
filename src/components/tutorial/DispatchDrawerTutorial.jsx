@@ -10,6 +10,8 @@ import {
 } from './tutorialConfig';
 import { buildTutorialStorageKey } from './tutorialStorage';
 
+const DISPATCH_DRAWER_TUTORIAL_ENABLED = false;
+
 export default function DispatchDrawerTutorial({ isOwner, drawerOpen, dispatchStatus, session }) {
   const tutorialConfig = tutorialRegistry.dispatchDrawer;
   const { seen: seenKeyBase, completed: completedKeyBase } = tutorialConfig.storageKeys;
@@ -48,6 +50,7 @@ export default function DispatchDrawerTutorial({ isOwner, drawerOpen, dispatchSt
   }, [setTargetRect]);
 
   const openTutorialWelcome = useCallback(({ markSeen = false } = {}) => {
+    if (!DISPATCH_DRAWER_TUTORIAL_ENABLED) return;
     if (!isOwner || !drawerOpen) return;
     if (markSeen) {
       localStorage.setItem(seenKey, 'true');
@@ -57,6 +60,7 @@ export default function DispatchDrawerTutorial({ isOwner, drawerOpen, dispatchSt
   }, [drawerOpen, isOwner, seenKey, stopTutorial]);
 
   const startTutorial = useCallback((language = tutorialConfig.defaultLanguage) => {
+    if (!DISPATCH_DRAWER_TUTORIAL_ENABLED) return;
     if (!isOwner || !drawerOpen) return;
     localStorage.setItem(seenKey, 'true');
     setSelectedLanguage(language);
@@ -101,6 +105,7 @@ export default function DispatchDrawerTutorial({ isOwner, drawerOpen, dispatchSt
   }, [handleStepChange, isCompletion, stepIndex, totalSteps]);
 
   useEffect(() => {
+    if (!DISPATCH_DRAWER_TUTORIAL_ENABLED) return;
     const isEligibleStatus = dispatchStatus !== 'Scheduled';
     if (!isOwner || !drawerOpen || !isEligibleStatus || isRunning || showWelcome) return;
     const seen = localStorage.getItem(seenKey) === 'true';
@@ -120,7 +125,7 @@ export default function DispatchDrawerTutorial({ isOwner, drawerOpen, dispatchSt
 
   return (
     <>
-      {isOwner && (
+      {DISPATCH_DRAWER_TUTORIAL_ENABLED && isOwner && (
         <Button
           type="button"
           size="sm"
