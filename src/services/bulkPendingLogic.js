@@ -21,14 +21,13 @@ export function buildPendingPayload({ companyId, date, shift, trucks }) {
 }
 
 export async function createBulkPending({ selections, createPending }) {
-  const results = [];
-  for (const selection of selections.filter((item) => item.trucks?.length)) {
-    try {
-      const dispatch = await createPending(buildPendingPayload(selection));
-      results.push({ ...selection, ok: true, dispatch });
-    } catch (error) {
-      results.push({ ...selection, ok: false, error });
-    }
-  }
-  return results;
+  const validSelections = selections.filter((item) => item.trucks?.length);
+  const settled = await Promise.allSettled(
+    validSelections.map((selection) => createPending(buildPendingPayload(selection)))
+  );
+  return settled.map((result, index) => {
+    const selection = validSelections[index];
+    if (result.status === 'fulfilled') return { ...selection, ok: true, dispatch: result.value };
+    return { ...selection, ok: false, error: result.reason };
+  });
 }

@@ -56,7 +56,7 @@ export default function BulkPendingDialog({ target, companies, dispatches, onClo
 
   const send = async () => {
     setSending(true);
-    const latestDispatches = await base44.entities.Dispatch.list('-date', 1000);
+    const latestDispatches = await base44.entities.Dispatch.filter({ date: target.dateKey }, '-date', 500);
     const stillValid = selections.map((selection) => ({
       ...selection,
       trucks: selection.trucks.filter((truck) => !getAssignedTruckNumbers(
