@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { getDateRelation } from '@/components/admin/admin-availability/adminWeeklyAvailability';
+import { ChevronDown } from 'lucide-react';
+import { getDateRelation, getDefaultExpandedDayKeys, toggleExpandedDay } from '@/components/admin/admin-availability/adminWeeklyAvailability';
 import {
   STATUS_AVAILABLE,
   countUsedTrucksForCompanyShift,
@@ -179,33 +180,7 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
       return groups;
     }, []);
 
-    return (
-      <div className="space-y-4">
-        {days.map((day) => {
-          const relation = getDateRelation(day.date, referenceDate || new Date());
-          return (
-            <section
-              key={day.dateKey}
-              className={cn(
-                'rounded-xl border p-3 sm:p-4',
-                relation === 'today' && 'border-sky-400 bg-sky-50/50 ring-1 ring-sky-200',
-                relation === 'past' && 'border-slate-200 bg-slate-100/70',
-                relation === 'future' && 'border-slate-200 bg-white'
-              )}>
-              <div className="mb-3 flex items-center gap-2">
-                <h3 className={cn('text-sm font-bold uppercase tracking-[0.12em]', relation === 'past' ? 'text-slate-600' : 'text-slate-900')}>
-                  {format(day.date, 'EEEE, MMM d')}
-                </h3>
-                {relation === 'today' && <span className="rounded-full bg-sky-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Today</span>}
-              </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {day.boxes.map((box) => <ShiftSummaryCard key={`${box.dateKey}-${box.shift}`} box={box} relation={relation} />)}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-    );
+    return <AdminWeeklyBoard key={days[0]?.dateKey} days={days} referenceDate={referenceDate} />;
   }
 
   return (
@@ -262,16 +237,60 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
 
 }
 
-function ShiftSummaryCard({ box, relation }) {
+function AdminWeeklyBoard({ days, referenceDate }) {
+  const [expandedDayKeys, setExpandedDayKeys] = useState(() =>
+    getDefaultExpandedDayKeys(days[0]?.date || referenceDate || new Date(), referenceDate || new Date())
+  );
+
+  return (
+    <div className="space-y-4">
+      {days.map((day) => {
+        const relation = getDateRelation(day.date, referenceDate || new Date());
+        const isExpanded = expandedDayKeys.has(day.dateKey);
+        const contentId = `availability-day-${day.dateKey}`;
+        return (
+            <section
+              key={day.dateKey}
+              className={cn(
+                'overflow-hidden rounded-xl border bg-white',
+                relation === 'today' ? 'border-2 border-sky-500 bg-sky-50/30 shadow-sm' : 'border-slate-200'
+              )}>
+              <h3>
+                <button
+                  type="button"
+                  aria-expanded={isExpanded}
+                  aria-controls={contentId}
+                  onClick={() => setExpandedDayKeys((current) => toggleExpandedDay(current, day.dateKey))}
+                  className={cn(
+                    'flex w-full items-center gap-2 px-3 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 sm:px-4',
+                    relation === 'today' && 'bg-sky-50/60 hover:bg-sky-50'
+                  )}>
+                  <span className="text-sm font-bold uppercase tracking-[0.12em] text-slate-900">{format(day.date, 'EEEE, MMM d')}</span>
+                  {relation === 'today' && <span className="rounded-full bg-sky-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Today</span>}
+                  <ChevronDown aria-hidden="true" className={cn('ml-auto size-5 shrink-0 text-slate-500 transition-transform', isExpanded && 'rotate-180')} />
+                </button>
+              </h3>
+              {isExpanded && (
+                <div id={contentId} className="grid grid-cols-1 gap-3 border-t border-slate-200 p-3 sm:p-4 md:grid-cols-2">
+                  {day.boxes.map((box) => <ShiftSummaryCard key={`${box.dateKey}-${box.shift}`} box={box} />)}
+                </div>
+              )}
+            </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function ShiftSummaryCard({ box }) {
   const isNight = box.shift === 'Night';
   return (
     <Card className={cn(
       'overflow-hidden shadow-sm',
-      isNight ? 'border-slate-300 bg-slate-50' : 'border-slate-200 bg-white',
-      relation === 'past' && 'opacity-80'
+      isNight ? 'border-slate-300 bg-slate-50' : 'border-slate-200 bg-white'
     )}>
       <CardContent className="p-0">
-        <div className={cn('border-b px-3.5 py-3', isNight ? 'border-slate-300 bg-slate-200/80' : 'border-slate-200/80 bg-amber-50/70')}>
+        <div className={cn('border-b px-3.5 py-3', isNight ? 'border-slate-300 bg-slate-200/80' : 'border-slate-200/80 bg-white')}>
           <p className="text-sm font-semibold leading-tight text-slate-900">{box.shift} Shift</p>
         </div>
         <div className="space-y-3 px-3.5 py-3">
