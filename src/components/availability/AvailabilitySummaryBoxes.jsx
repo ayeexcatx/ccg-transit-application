@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { getDateRelation } from '@/components/admin/admin-availability/adminWeeklyAvailability';
 import {
   STATUS_AVAILABLE,
   countUsedTrucksForCompanyShift,
@@ -13,7 +15,7 @@ import {
   toDateKey } from
 './availabilityRules';
 
-export default function AvailabilitySummaryBoxes({ companyId = null, includeAllCompanies = false, variant = 'default', referenceDate = null }) {
+export default function AvailabilitySummaryBoxes({ companyId = null, includeAllCompanies = false, variant = 'default', referenceDate = null, targets = null }) {
   const { data: companies = [] } = useQuery({
     queryKey: ['availability-summary-companies', companyId, includeAllCompanies],
     queryFn: () => base44.entities.Company.list()
@@ -45,7 +47,7 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
     const overrideMap = new Map();
     overrides.forEach((o) => overrideMap.set(`${o.company_id}-${o.date}-${o.shift}`, o));
 
-    return getAvailabilitySummaryTargets(referenceDate || new Date()).map((target) => {
+    return (targets || getAvailabilitySummaryTargets(referenceDate || new Date())).map((target) => {
       const dateKey = toDateKey(target.date);
       const isOperational = getOperationalShifts(target.date.getDay()).includes(target.shift);
 
@@ -98,7 +100,7 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
         rows
       };
     });
-  }, [companies, companyId, defaults, dispatches, includeAllCompanies, overrides, referenceDate]);
+  }, [companies, companyId, defaults, dispatches, includeAllCompanies, overrides, referenceDate, targets]);
 
   const compactDefaultMap = useMemo(() => {
     const map = new Map();
@@ -169,6 +171,43 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
 
   }
 
+  if (variant === 'adminWeekly') {
+    const days = summaryData.reduce((groups, box) => {
+      const existing = groups.find((group) => group.dateKey === box.dateKey);
+      if (existing) existing.boxes.push(box);
+      else groups.push({ dateKey: box.dateKey, date: box.date, boxes: [box] });
+      return groups;
+    }, []);
+
+    return (
+      <div className="space-y-4">
+        {days.map((day) => {
+          const relation = getDateRelation(day.date, referenceDate || new Date());
+          return (
+            <section
+              key={day.dateKey}
+              className={cn(
+                'rounded-xl border p-3 sm:p-4',
+                relation === 'today' && 'border-sky-400 bg-sky-50/50 ring-1 ring-sky-200',
+                relation === 'past' && 'border-slate-200 bg-slate-100/70',
+                relation === 'future' && 'border-slate-200 bg-white'
+              )}>
+              <div className="mb-3 flex items-center gap-2">
+                <h3 className={cn('text-sm font-bold uppercase tracking-[0.12em]', relation === 'past' ? 'text-slate-600' : 'text-slate-900')}>
+                  {format(day.date, 'EEEE, MMM d')}
+                </h3>
+                {relation === 'today' && <span className="rounded-full bg-sky-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Today</span>}
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {day.boxes.map((box) => <ShiftSummaryCard key={`${box.dateKey}-${box.shift}`} box={box} relation={relation} />)}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {summaryData.map((box) =>
@@ -221,4 +260,51 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
       )}
     </div>);
 
+}
+
+function ShiftSummaryCard({ box, relation }) {
+  const isNight = box.shift === 'Night';
+  return (
+    <Card className={cn(
+      'overflow-hidden shadow-sm',
+      isNight ? 'border-slate-300 bg-slate-50' : 'border-slate-200 bg-white',
+      relation === 'past' && 'opacity-80'
+    )}>
+      <CardContent className="p-0">
+        <div className={cn('border-b px-3.5 py-3', isNight ? 'border-slate-300 bg-slate-200/80' : 'border-slate-200/80 bg-amber-50/70')}>
+          <p className="text-sm font-semibold leading-tight text-slate-900">{box.shift} Shift</p>
+        </div>
+        <div className="space-y-3 px-3.5 py-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <Metric label="Total" value={box.total} className="border-emerald-100 bg-emerald-50/70 text-emerald-600" />
+            <Metric label="Dispatched" value={box.dispatched} className="border-sky-100 bg-sky-50/70 text-sky-700" />
+            <Metric label="Remaining" value={box.remaining} className="border-slate-200 bg-white/80 text-slate-700" />
+          </div>
+          {box.rows.length === 0 ? (
+            <div className="rounded-md border border-dashed border-slate-300 bg-white/60 px-3 py-2 text-center">
+              <p className="text-[11px] font-medium text-slate-500">No counted availability</p>
+            </div>
+          ) : (
+            <ul className="space-y-1.5">
+              {box.rows.map((row) => (
+                <li key={`${box.dateKey}-${box.shift}-${row.companyId}`} className="rounded-md bg-white/70 px-2.5 py-2 text-[11px] leading-snug text-slate-600">
+                  <span className="font-medium text-slate-700">{row.companyName}</span>
+                  <span> — {row.total} total, {row.dispatched} dispatched, {row.remaining} remaining</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Metric({ label, value, className }) {
+  return (
+    <div className={cn('rounded-lg border px-2.5 py-2.5', className)}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      <p className="mt-1.5 text-2xl font-semibold leading-none sm:text-3xl">{value}</p>
+    </div>
+  );
 }
