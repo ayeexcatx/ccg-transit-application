@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import BulkPendingDialog from '@/components/admin/admin-availability/BulkPendingDialog';
 import { cn } from '@/lib/utils';
 import { ChevronDown } from 'lucide-react';
 import { getDateRelation, getDefaultExpandedDayKeys, toggleExpandedDay } from '@/components/admin/admin-availability/adminWeeklyAvailability';
@@ -180,7 +182,7 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
       return groups;
     }, []);
 
-    return <AdminWeeklyBoard key={days[0]?.dateKey} days={days} referenceDate={referenceDate} />;
+    return <AdminWeeklyBoard key={days[0]?.dateKey} days={days} referenceDate={referenceDate} companies={companies} dispatches={dispatches} />;
   }
 
   return (
@@ -237,10 +239,11 @@ export default function AvailabilitySummaryBoxes({ companyId = null, includeAllC
 
 }
 
-function AdminWeeklyBoard({ days, referenceDate }) {
+function AdminWeeklyBoard({ days, referenceDate, companies, dispatches }) {
   const [expandedDayKeys, setExpandedDayKeys] = useState(() =>
     getDefaultExpandedDayKeys(days[0]?.date || referenceDate || new Date(), referenceDate || new Date())
   );
+  const [pendingTarget, setPendingTarget] = useState(null);
 
   return (
     <div className="space-y-4">
@@ -272,17 +275,18 @@ function AdminWeeklyBoard({ days, referenceDate }) {
               </h3>
               {isExpanded && (
                 <div id={contentId} className="grid grid-cols-1 gap-3 border-t border-slate-200 p-3 sm:p-4 md:grid-cols-2">
-                  {day.boxes.map((box) => <ShiftSummaryCard key={`${box.dateKey}-${box.shift}`} box={box} />)}
+                  {day.boxes.map((box) => <ShiftSummaryCard key={`${box.dateKey}-${box.shift}`} box={box} onSendPending={setPendingTarget} />)}
                 </div>
               )}
             </section>
         );
       })}
+      <BulkPendingDialog target={pendingTarget} companies={companies} dispatches={dispatches} onClose={() => setPendingTarget(null)} />
     </div>
   );
 }
 
-function ShiftSummaryCard({ box }) {
+function ShiftSummaryCard({ box, onSendPending }) {
   const isNight = box.shift === 'Night';
   return (
     <Card className={cn(
@@ -313,6 +317,9 @@ function ShiftSummaryCard({ box }) {
               ))}
             </ul>
           )}
+          <Button type="button" size="sm" className="w-full sm:w-auto" disabled={!box.remaining} onClick={() => onSendPending(box)}>
+            Send Pending
+          </Button>
         </div>
       </CardContent>
     </Card>
