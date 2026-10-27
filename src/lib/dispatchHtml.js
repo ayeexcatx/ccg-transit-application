@@ -120,6 +120,7 @@ export const buildDispatchHtml = ({
   );
   const assignments = [
     {
+      client_name: dispatch?.client_name,
       job_number: dispatch?.job_number,
       start_time: dispatch?.start_time,
       start_location: dispatch?.start_location,
@@ -564,6 +565,8 @@ export const buildDispatchHtml = ({
           <div class="assignment-header">${escapeHtml(index === 0 ? 'Assignment 1' : `Additional Assignment ${index}`)}</div>
           <div class="assignment-body">
             <div class="assignment-grid">
+              <div class="label">Client Name</div>
+              <div class="value">${escapeHtml(assignment?.client_name || dispatch?.client_name || "—")}</div>
               <div class="label">Job Number</div>
               <div class="value">${escapeHtml(assignment?.job_number || '—')}</div>
 
