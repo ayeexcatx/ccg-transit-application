@@ -161,6 +161,11 @@
       "items": {
         "type": "object",
         "properties": {
+          "client_name": {
+            "type": "string",
+            "required": false,
+            "description": "Optional client override; blank inherits the primary Dispatch client"
+          },
           "job_number": {
             "type": "string"
           },

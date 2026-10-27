@@ -133,6 +133,7 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
   const normalizeAdditionalAssignments = (assignments) => {
     if (!Array.isArray(assignments)) return [];
     return assignments.map((assignment) => ({
+      client_name: assignment?.client_name || '',
       job_number: assignment?.job_number || '',
       start_time: assignment?.start_time || '',
       start_location: assignment?.start_location || '',
@@ -198,6 +199,7 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
         const current = assignments[copyTargetAssignmentIndex] || {};
         assignments[copyTargetAssignmentIndex] = {
           ...current,
+          client_name: sourceDispatch.client_name || '',
           job_number: sourceDispatch.job_number || '',
           reference_tag: sourceDispatch.reference_tag || '',
           start_time: sourceDispatch.start_time || '',
@@ -281,7 +283,7 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
   const addAssignment = () => {
     setForm((prev) => ({
       ...prev,
-      additional_assignments: [...prev.additional_assignments, { job_number: '', reference_tag: '', start_time: '', start_location: '', instructions: '', notes: '', toll_status: '' }]
+      additional_assignments: [...prev.additional_assignments, { client_name: '', job_number: '', reference_tag: '', start_time: '', start_location: '', instructions: '', notes: '', toll_status: '' }]
     }));
   };
 
@@ -681,6 +683,10 @@ export default function DispatchForm({ dispatch, dispatches = [], companies, onS
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
+              </div>
+              <div>
+                <Label className="text-xs">Client Name (optional)</Label>
+                <Input placeholder="Inherits primary client when blank" value={a.client_name || ''} onChange={(e) => updateAssignment(i, 'client_name', e.target.value)} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
