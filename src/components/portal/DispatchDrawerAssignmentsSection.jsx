@@ -113,8 +113,15 @@ export default function DispatchDrawerAssignmentsSection({ dispatch, hasAddition
           <div className="space-y-2.5">
             {dispatch.additional_assignments.map((assignment, i) => {
               const entry = { ...assignment, formatTimeToAmPm, contentTextClass: 'text-slate-600', contentExtraClass: '' };
+              const clientName = String(assignment?.client_name || '').trim() || String(dispatch.client_name || '').trim();
+              const previousAssignment = dispatch.additional_assignments[i - 1];
+              const previousClientName = i === 0
+                ? String(dispatch.client_name || '').trim()
+                : String(previousAssignment?.client_name || '').trim() || String(dispatch.client_name || '').trim();
+              const showClientHeading = clientName && clientName.toLowerCase() !== previousClientName.toLowerCase();
               return (
                 <div key={i} className={`rounded-xl border border-slate-200/80 p-3 text-sm ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/55'}`}>
+                  {showClientHeading && <h2 className="mb-3 text-xl font-semibold leading-tight text-slate-900 sm:text-2xl">{clientName}</h2>}
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Assignment {i + 2}</p>
                   <div className="space-y-3">
                     <AssignmentDetailBlock assignment={entry} iconSize="h-3.5 w-3.5" textColor="text-slate-700" />
