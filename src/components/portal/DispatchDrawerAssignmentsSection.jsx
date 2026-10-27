@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock } from 'lucide-react';
+import { Building2, Clock } from 'lucide-react';
 import { getEffectiveTruckStartTime, hasMixedTruckStartTimes } from '@/lib/dispatchTruckOverrides';
 
 function DetailTextRow({ label, value, valueClassName = '' }) {
@@ -121,7 +121,18 @@ export default function DispatchDrawerAssignmentsSection({ dispatch, hasAddition
               const showClientHeading = clientName && clientName.toLowerCase() !== previousClientName.toLowerCase();
               return (
                 <div key={i} className={`rounded-xl border border-slate-200/80 p-3 text-sm ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/55'}`}>
-                  {showClientHeading && <h2 className="mb-3 text-xl font-semibold leading-tight text-slate-900 sm:text-2xl">{clientName}</h2>}
+                  {showClientHeading && (
+                    <div className="mb-3 space-y-2 border-b border-slate-200/80 pb-3">
+                      <h2 className="text-xl font-semibold leading-tight text-slate-900 sm:text-2xl">{clientName}</h2>
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <Building2 className="h-4 w-4 text-slate-400" />
+                        <span>
+                          <span className="text-slate-500">Working for</span>{' '}
+                          <span className="font-medium text-slate-700">CCG Transit</span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Assignment {i + 2}</p>
                   <div className="space-y-3">
                     <AssignmentDetailBlock assignment={entry} iconSize="h-3.5 w-3.5" textColor="text-slate-700" />
