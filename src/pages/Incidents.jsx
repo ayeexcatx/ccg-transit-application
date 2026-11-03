@@ -109,6 +109,7 @@ export default function Incidents() {
   const navigate = useNavigate();
   const { openAdminDispatchDrawer } = useAdminDispatchDrawer();
   const [createOpen, setCreateOpen] = useState(false);
+  const [createError, setCreateError] = useState('');
   const [form, setForm] = useState(INITIAL_FORM);
   const [filters, setFilters] = useState({ status: 'all', truck: '', type: 'all' });
   const [draftUpdates, setDraftUpdates] = useState({});
@@ -343,6 +344,7 @@ export default function Incidents() {
   const createMutation = useMutation({
     mutationFn: (payload) => base44.entities.IncidentReport.create(payload),
     onSuccess: () => {
+      setCreateError('');
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
       setCreateOpen(false);
       setForm({ ...INITIAL_FORM, company_id: activeCompanyId || '' });
@@ -353,7 +355,9 @@ export default function Incidents() {
       }
     },
     onError: (error) => {
-      toast.error(error?.message || 'Failed to create incident report.');
+      const message = error?.message || 'Failed to create incident report.';
+      setCreateError(message);
+      toast.error(message);
     }
   });
 
@@ -487,26 +491,44 @@ export default function Incidents() {
 
   const handleCreate = (e) => {
     e.preventDefault();
+    setCreateError('');
 
-    if (!form.truck_number || !form.incident_type || !form.summary) {
-      toast.error('Please complete truck, incident type, and summary.');
+    if (!form.truck_number || !form.incident_type || !form.summary.trim()) {
+      const message = 'Please complete truck, incident type, and summary.';
+      setCreateError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (!session?.id || !effectiveView) {
+      const message = 'Your session could not be verified. Please sign in again.';
+      setCreateError(message);
+      toast.error(message);
+      return;
+    }
+
+    const companyId = form.dispatch_id ? dispatchMap[form.dispatch_id]?.company_id : (form.company_id || activeCompanyId);
+    if (!isAdmin && !companyId) {
+      const message = 'Unable to determine your company. Please select an assignment or sign in again.';
+      setCreateError(message);
+      toast.error(message);
       return;
     }
 
     createMutation.mutate({
       dispatch_id: form.dispatch_id || null,
-      company_id: form.company_id || activeCompanyId || null,
+      company_id: companyId || null,
       truck_number: form.truck_number,
-      reported_by_access_code_id: session?.id,
+      reported_by_access_code_id: session.id,
       reported_by_name: getBestReadableName(session, effectiveView),
-      reported_by_code_type: effectiveView,
-      incident_type: form.incident_type,
+      reported_by_code_type: isDriver ? 'Truck' : effectiveView,
+      incident_type: form.incident_type === 'DPF Regen' ? 'DEPF Regen' : form.incident_type,
       status: 'Open',
       incident_datetime: new Date().toISOString(),
       time_stopped_from: toIsoOrNull(form.time_stopped_from),
       time_stopped_to: toIsoOrNull(form.time_stopped_to),
       location: form.location || null,
-      summary: form.summary,
+      summary: form.summary.trim(),
       details: form.details || null,
       created_from_dispatch: Boolean(form.dispatch_id)
     });
@@ -659,7 +681,7 @@ export default function Incidents() {
         })}
       </div>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (open) setCreateError(''); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Incident</DialogTitle>
@@ -755,6 +777,7 @@ export default function Incidents() {
               <p className="text-xs text-slate-500 mb-1">Please submit any photos or documents (.jpg, .png, .pdf) to alex@ccgnj.com and reference the incident.</p>
             </div>
 
+            {createError && <p role="alert" className="text-sm text-red-700" aria-live="assertive">{createError}</p>}
             <div className="flex justify-end">
               <Button type="submit" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Creating...' : 'Create Incident'}
