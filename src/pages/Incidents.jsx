@@ -500,7 +500,8 @@ export default function Incidents() {
       return;
     }
 
-    if (!session?.id || !effectiveView) {
+    const reporterId = session?.id || session?.user_id || currentAppIdentity?.user_id;
+    if (!reporterId || !effectiveView) {
       const message = 'Your session could not be verified. Please sign in again.';
       setCreateError(message);
       toast.error(message);
@@ -519,7 +520,8 @@ export default function Incidents() {
       dispatch_id: form.dispatch_id || null,
       company_id: companyId || null,
       truck_number: form.truck_number,
-      reported_by_access_code_id: session.id,
+      // Legacy field: linked-user sessions may have a User ID but no resolved AccessCode ID.
+      reported_by_access_code_id: reporterId,
       reported_by_name: getBestReadableName(session, effectiveView),
       reported_by_code_type: isDriver ? 'Truck' : effectiveView,
       incident_type: form.incident_type === 'DPF Regen' ? 'DEPF Regen' : form.incident_type,
