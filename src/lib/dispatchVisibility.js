@@ -98,13 +98,13 @@ export function canUserSeeIncident(session, incident, {
   if (effectiveView === 'Admin') return true;
 
   if (effectiveView === 'Driver') {
-    const createdByDriver = incident.reported_by_access_code_id === session.id;
+    const createdByDriver = [session.id, session.user_id].filter(Boolean).some((id) => String(incident.reported_by_access_code_id || '') === String(id));
     const tiedToAssignedDispatch = incident.dispatch_id && visibleDispatchIds.has(normalizeId(incident.dispatch_id));
     return createdByDriver || tiedToAssignedDispatch;
   }
 
   if (effectiveView === 'CompanyOwner') {
-    const createdByOwner = incident.reported_by_access_code_id === session.id;
+    const createdByOwner = [session.id, session.user_id].filter(Boolean).some((id) => String(incident.reported_by_access_code_id || '') === String(id));
     const forOwnerCompany = incident.company_id === getActiveCompanyId(session);
     return createdByOwner || forOwnerCompany;
   }
